@@ -13,20 +13,45 @@ What this does, in plain terms:
   changes anything on greens.com.mt -- it only asks for public product pages,
   the same way your browser does when you look at the site.
 
+How this evolved (worth knowing if something breaks later):
+  The first version of this file just asked Greens' product-list address
+  directly, the way you'd fetch any ordinary web page. Testing (thank you
+  for running it!) showed that doesn't work on its own: Greens' site quietly
+  attaches two extra things to every request its own page makes --
+    1. A "Cart" value (any placeholder works -- it doesn't need to be a real
+       shopping cart, the site's code just expects the field to be present).
+    2. An "Authorization" token that the page's own JavaScript computes
+       fresh, each time you load the page. It isn't a login or anything
+       tied to a person -- it's a general "this request came from a real
+       browser" check -- but it means a plain, bare request can't get in.
+
+  So this crawler now does two things in combination:
+    - It briefly opens a real, invisible (headless) browser (using a tool
+      called Playwright) to load one Greens page per outlet, the same way
+      you did by hand in the browser -- and reads off the Authorization
+      token and cookies that the page's own script generates when it asks
+      for products.
+    - It then reuses that token for the rest of that outlet's crawl using
+      plain, lightweight requests (no browser needed for every single
+      product page -- just the one page load to get a valid token).
+    - If a request fails partway through a crawl (the token can expire),
+      it opens the browser again for a fresh token and retries that one
+      request once before giving up on it.
+
 Before you rely on this:
-  This was built from one real, hand-captured example of Greens' product
-  address (see "Scraper Spike Findings.md"), not from a live test run from
-  inside the environment that wrote it -- that environment has no general
-  internet access, so this genuinely could not be tested end-to-end before
-  landing in your hands. The very first thing to do is run it once (see
-  SETUP.md) and check the crawl_run table afterwards. If item_count comes
-  back as 0 or very low across the board, something about the request shape
-  needs adjusting -- see the NOTE near CART_PLACEHOLDER below for the most
-  likely culprit.
+  This version has still not been tested against the live site from inside
+  the environment that wrote it (no general internet access there) -- but
+  every piece of it (the Cart value, the Authorization token, the request
+  headers) was built from what your own browser was actually observed
+  sending, via DevTools, rather than guessed. Run it once (see SETUP.md) and
+  check the crawl_run table afterwards, the same as before.
 
 How to run it:
   See SETUP.md. In short: set the DATABASE_URL environment variable to your
-  Neon connection string, then run `python greens_crawler.py`.
+  Neon connection string, then run `python greens_crawler.py`. GitHub
+  Actions (see .github/workflows/crawl-greens.yml) now also installs a
+  headless Chromium browser before running this, which the token step
+  needs.
 """
 
 import os
@@ -40,6 +65,7 @@ from datetime import datetime, timezone
 
 import psycopg2
 import psycopg2.extras
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # ----------------------------------------------------------------------------
 # Configuration
@@ -47,17 +73,21 @@ import psycopg2.extras
 
 STORE_ID = "greens"
 BASE_URL = "https://www.greens.com.mt/apiservices/retail/sync/productlist"
+CATEGORY_PAGE_URL = "https://www.greens.com.mt/products"
 
-# Identify ourselves honestly, per the README's legal-footing guidance.
-# Replace the contact address if you'd rather a different one shows up in
-# Greens' server logs.
+# A normal-looking browser identity, with an honest, contactable extra bit
+# tacked on -- per the README's legal-footing guidance, Greens' server logs
+# should be able to tell this apart from an ordinary shopper if they look.
 USER_AGENT = (
-    "XirjaCrawler/0.1 (+https://github.com/; "
-    "contact: ranier.chircop@gmail.com; polite, low-volume, once-daily crawl)"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 "
+    "XirjaCrawler/0.2 (+contact: ranier.chircop@gmail.com; polite, low-volume, once-daily crawl)"
 )
 
 # Robots.txt for greens.com.mt specifies a 5-second crawl delay. We sleep at
-# least that long between every request, no exceptions.
+# least that long between every product-list request, no exceptions. (The
+# one-off browser page load used to fetch a token is a single page visit,
+# same as a shopper opening the site -- not part of this budget.)
 REQUEST_DELAY_SECONDS = 5
 
 # Each outlet's id here MUST match the outlet.id rows inserted by seed.sql.
@@ -67,16 +97,10 @@ OUTLETS = [
     {"outlet_id": "greens_gozo", "source_code": "GZ"},
 ]
 
-# NOTE on the "Cart" parameter:
-# The real request we captured from a live browser session included a
-# Cart=<uuid> value tied to that browser's shopping-cart session. We're
-# deliberately omitting it below -- most retail platforms treat a missing
-# cart id as "no cart yet" rather than an error, but we do not know that for
-# certain for Greens specifically. If a test run comes back with item_count
-# near 0 for every category, this is the first thing to investigate: try
-# adding a random placeholder UUID as the Cart value and see if that changes
-# anything.
-CART_PLACEHOLDER = None  # e.g. "00000000-0000-0000-0000-000000000000"
+# Confirmed via testing: the site's product-list address needs *a* Cart
+# value to be present to be recognised as a valid request at all, but it
+# doesn't need to be a real one.
+CART_PLACEHOLDER = "00000000-0000-0000-0000-000000000000"
 
 # The full category / subcategory tree, captured from greens.com.mt's own
 # navigation menu. Each pair is (cat, typ) exactly as the site's URLs use
@@ -171,10 +195,56 @@ WEIGHT_UNITS = {"Kilogram": "kg", "Litre": "l"}
 
 
 # ----------------------------------------------------------------------------
-# Fetching
+# Getting a valid access token (real browser, once per outlet)
 # ----------------------------------------------------------------------------
 
-def fetch_page(cat, typ, loc, page):
+def fetch_fresh_session(loc, timeout_ms=45000):
+    """Opens a real, invisible browser, loads one Greens category page for
+    this outlet -- the same as a shopper would -- and reads off the
+    Authorization token and cookies the page's own script sends when it
+    asks Greens for products. Returns (auth_header_value, cookie_header)."""
+    url = f"{CATEGORY_PAGE_URL}?cat=Bakery&typ=Bread&loc={loc}"
+    captured = {}
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(args=["--no-sandbox"])
+        context = browser.new_context(user_agent=USER_AGENT)
+        page = context.new_page()
+
+        def handle_request(request):
+            if "apiservices/retail/sync/productlist" in request.url and "token" not in captured:
+                auth = request.headers.get("authorization")
+                if auth:
+                    captured["token"] = auth
+
+        page.on("request", handle_request)
+
+        try:
+            page.goto(url, wait_until="networkidle", timeout=timeout_ms)
+        except PlaywrightTimeoutError:
+            # Some background tracking requests never fully go quiet -- that
+            # doesn't mean the page (or our token) failed to load.
+            pass
+
+        # A little extra headroom in case the request fires just after our
+        # wait above finishes.
+        page.wait_for_timeout(3000)
+
+        cookies = context.cookies()
+        browser.close()
+
+    if "token" not in captured:
+        raise RuntimeError(f"Could not capture an Authorization token while loading {url}")
+
+    cookie_header = "; ".join(f"{c['name']}={c['value']}" for c in cookies)
+    return captured["token"], cookie_header
+
+
+# ----------------------------------------------------------------------------
+# Fetching product pages (plain, lightweight requests, reusing the token)
+# ----------------------------------------------------------------------------
+
+def fetch_page(cat, typ, loc, page, session):
     """Ask Greens for one page of one category, at one outlet. Returns the
     parsed JSON response, or raises an exception on failure."""
     params = {
@@ -191,19 +261,46 @@ def fetch_page(cat, typ, loc, page):
         "Category3": "",
         "Type": typ,
         "Cid": "00000000-0000-0000-0000-000000000000",
+        "Cart": CART_PLACEHOLDER,
         "SubType": "",
         "Brand": "",
         "ProductListType": "products",
         "Mobdev": "False",
         "Detailed": "True",
     }
-    if CART_PLACEHOLDER:
-        params["Cart"] = CART_PLACEHOLDER
-
     url = BASE_URL + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Authorization": session["token"],
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": f"{CATEGORY_PAGE_URL}?cat={cat}&typ={typ}&loc={loc}",
+        "Content-Type": "application/json",
+    }
+    if session.get("cookie"):
+        headers["Cookie"] = session["cookie"]
+
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=30) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
+
+def fetch_page_with_retry(cat, typ, loc, page, session):
+    """Same as fetch_page, but if the token has gone stale (the request
+    fails), fetches one fresh token+cookie pair and retries exactly once
+    before giving up."""
+    try:
+        return fetch_page(cat, typ, loc, page, session)
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.read().decode("utf-8", errors="replace")[:300]
+        except Exception:
+            pass
+        print(f"    request failed ({exc.code}), refreshing token and retrying once: {detail}")
+        session["token"], session["cookie"] = fetch_fresh_session(loc)
+        time.sleep(REQUEST_DELAY_SECONDS)
+        return fetch_page(cat, typ, loc, page, session)
 
 
 # ----------------------------------------------------------------------------
@@ -310,10 +407,15 @@ def crawl_outlet(conn, outlet_id, source_code):
     error_message = None
 
     try:
+        print(f"  Opening a real browser to fetch a valid access token for {outlet_id}...")
+        session = {}
+        session["token"], session["cookie"] = fetch_fresh_session(source_code)
+        print(f"  Got a token, starting category crawl for {outlet_id}...")
+
         for cat, typ in CATEGORIES:
             page = 1
             while True:
-                payload = fetch_page(cat, typ, source_code, page)
+                payload = fetch_page_with_retry(cat, typ, source_code, page, session)
                 products = parse_products(payload)
 
                 for product in products:

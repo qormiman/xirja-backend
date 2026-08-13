@@ -102,10 +102,12 @@ even though the repository could later be made public).
 3. Click **Run workflow** (a button on the right) → **Run workflow** again
    to confirm.
 4. It'll show as a yellow dot (running), then either a green tick
-   (succeeded) or a red cross (failed) after a minute or two — this run
-   goes through every product category at all three Greens branches with a
-   polite 5-second pause between requests, so it can take a while (possibly
-   10–20 minutes) to finish. That's expected — no need to keep watching it.
+   (succeeded) or a red cross (failed) after a while — this run installs a
+   small invisible browser (a one-time-per-run download, adds a minute or
+   so), then goes through every product category at all three Greens
+   branches with a polite 5-second pause between requests, so the whole
+   thing can take 20–30 minutes to finish. That's expected — no need to
+   keep watching it.
 
 ## 7. Check it actually worked
 
@@ -128,12 +130,12 @@ LIMIT 20;
 You want to see real product names and prices that look right (not all
 €0.00).
 
-**If `item_count` is 0 or very low**, the most likely cause is the one
-flagged in the crawler's own comments: the Greens site's product API might
-require a live shopping-cart identifier that we couldn't verify from
-outside a real browser session. If this happens, come back and tell me —
-paste the failed run's log (Actions tab → the failed run → click into it →
-copy the text) and I'll adjust the crawler.
+**If `item_count` is 0 or very low, or the run fails outright**, come back
+and tell me — paste the failed run's log (Actions tab → the failed run →
+click into it → copy the text). The crawler now depends on Greens' site
+behaving the same way it did when we last checked it by hand (in DevTools);
+if they change something about how their access token works, this is where
+it would show up.
 
 ## What happens next
 
