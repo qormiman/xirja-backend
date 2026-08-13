@@ -59,6 +59,20 @@ How this evolved (worth knowing if something breaks later):
       Greens category should ever come close to it. If it's ever hit, it's
       logged loudly and marked "partial", not hidden.
 
+  Version 3 also turned up a second, unrelated gap once tested: the
+  browser-launch step that fetches the access token had NO ceiling of its
+  own (only the page-load part inside it did) -- so if opening the browser
+  itself ever stalled, nothing would stop it. That's now covered by the
+  same kind of independent stopwatch (90 seconds, since a real browser
+  legitimately takes longer than a plain request). Separately, the run
+  also appeared to "freeze" in the GitHub Actions log for long stretches
+  even when it might have still been working -- that turned out to be
+  Python quietly holding print() output in memory rather than showing it
+  immediately, which happens by default whenever output isn't going
+  straight to a screen (exactly GitHub Actions' situation). The workflow
+  now explicitly disables that buffering, so the log can be trusted to
+  show what's actually happening as it happens.
+
 Before you rely on this:
   This version has still not been tested end-to-end from inside the
   environment that wrote it (no general internet access there) -- but every
@@ -227,6 +241,47 @@ WEIGHT_UNITS = {"Kilogram": "kg", "Litre": "l"}
 
 
 # ----------------------------------------------------------------------------
+# A genuine, independent wall-clock ceiling, reusable for anything that
+# might hang -- confirmed safe to use around Playwright's browser calls too
+# (tested: launching, navigating, reading cookies, and closing all work
+# fine from inside a background thread).
+# ----------------------------------------------------------------------------
+
+def run_with_timeout(fn, timeout_seconds, *args, **kwargs):
+    """Runs fn(*args, **kwargs) on a background thread and gives up waiting
+    after timeout_seconds if it hasn't finished -- unlike a plain request
+    timeout (which only counts quiet gaps between bits of data, and can be
+    dodged by a slow trickle), this is a hard ceiling on the whole call, no
+    matter what it's doing internally. If we do give up, the background
+    thread is left to finish (or fail) harmlessly on its own -- it's marked
+    as a daemon thread so it can never stop the program from exiting."""
+    outcome = {}
+
+    def worker():
+        try:
+            outcome["value"] = fn(*args, **kwargs)
+        except Exception as exc:  # noqa: BLE001 -- report back to the caller, whatever it is
+            outcome["error"] = exc
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    thread.join(timeout_seconds)
+
+    if thread.is_alive():
+        raise TimeoutError(f"No result within {timeout_seconds}s")
+    if "error" in outcome:
+        raise outcome["error"]
+    return outcome["value"]
+
+
+# How long we'll wait for the whole token-fetching step (opening a browser,
+# loading a page, reading cookies) before giving up on it entirely. Longer
+# than a plain product request, since a real browser genuinely takes longer
+# to do its thing than a lightweight HTTP call does.
+TOKEN_FETCH_HARD_TIMEOUT_SECONDS = 90
+
+
+# ----------------------------------------------------------------------------
 # Getting a valid access token (real browser, once per outlet)
 # ----------------------------------------------------------------------------
 
@@ -319,33 +374,14 @@ def fetch_page(cat, typ, loc, page, session):
 
 def fetch_page_bounded(cat, typ, loc, page, session):
     """Same as fetch_page, but enforces a genuine, independent wall-clock
-    ceiling (REQUEST_HARD_TIMEOUT_SECONDS). Plain request timeouts only
-    count quiet gaps between bits of data -- a response trickled in slowly
-    enough can dodge that indefinitely, which is what happened during
-    testing. Running the request on its own background thread and simply
-    refusing to wait past our own ceiling closes that gap. If we do give up,
-    the background thread is left to finish (or fail) harmlessly on its own
-    -- it's marked as a daemon thread so it can never stop the program from
-    exiting."""
-    outcome = {}
-
-    def worker():
-        try:
-            outcome["value"] = fetch_page(cat, typ, loc, page, session)
-        except Exception as exc:  # noqa: BLE001 -- report back to the caller, whatever it is
-            outcome["error"] = exc
-
-    thread = threading.Thread(target=worker, daemon=True)
-    thread.start()
-    thread.join(REQUEST_HARD_TIMEOUT_SECONDS)
-
-    if thread.is_alive():
-        raise TimeoutError(
-            f"No response within {REQUEST_HARD_TIMEOUT_SECONDS}s for {cat}/{typ} page {page}"
-        )
-    if "error" in outcome:
-        raise outcome["error"]
-    return outcome["value"]
+    ceiling (REQUEST_HARD_TIMEOUT_SECONDS) via run_with_timeout. Plain
+    request timeouts only count quiet gaps between bits of data -- a
+    response trickled in slowly enough can dodge that indefinitely, which
+    is what happened during testing."""
+    try:
+        return run_with_timeout(fetch_page, REQUEST_HARD_TIMEOUT_SECONDS, cat, typ, loc, page, session)
+    except TimeoutError:
+        raise TimeoutError(f"No response within {REQUEST_HARD_TIMEOUT_SECONDS}s for {cat}/{typ} page {page}")
 
 
 # ----------------------------------------------------------------------------
@@ -468,7 +504,14 @@ def crawl_outlet(conn, outlet_id, source_code):
     try:
         print(f"  Opening a real browser to fetch a valid access token for {outlet_id}...")
         session = {}
-        session["token"], session["cookie"] = fetch_fresh_session(source_code)
+        try:
+            session["token"], session["cookie"] = run_with_timeout(
+                fetch_fresh_session, TOKEN_FETCH_HARD_TIMEOUT_SECONDS, source_code
+            )
+        except TimeoutError:
+            raise TimeoutError(
+                f"Browser/token step did not finish within {TOKEN_FETCH_HARD_TIMEOUT_SECONDS}s for {outlet_id}"
+            )
         print(f"  Got a token, starting first pass for {outlet_id}...")
 
         # ---- First pass: walk every category once. Anything that fails is
