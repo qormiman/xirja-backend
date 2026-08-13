@@ -1,0 +1,52 @@
+# ============================================================================
+# Runs the Greens crawler on a schedule, using GitHub's own computers --
+# nothing needs to stay running on your own machine.
+#
+# Two ways this runs:
+#   1. Automatically, every night (see the "schedule" below).
+#   2. Manually, whenever you want, by clicking a button -- see SETUP.md for
+#      exactly where. Use this the first time, to check it actually works,
+#      before waiting for the nightly run.
+#
+# Every run's outcome (worked / failed, how many products found) is recorded
+# in the crawl_run table in the database, and also visible in GitHub's own
+# "Actions" tab for this repository as a green tick or red cross.
+# ============================================================================
+
+name: Crawl Greens prices
+
+on:
+  schedule:
+    # Runs at 02:15 UTC every night (around 3:15am or 4:15am Malta time,
+    # depending on the season) -- late enough that the site is quiet.
+    # Cron format is "minute hour day month weekday"; this means
+    # "15 minutes past 2am, every day".
+    - cron: '15 2 * * *'
+
+  # Adds a "Run workflow" button on the Actions tab, so you can trigger a
+  # run by hand at any time -- this is how you'll do the first test run.
+  workflow_dispatch: {}
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run the Greens crawler
+        env:
+          # This value comes from a GitHub "repo secret" named DATABASE_URL,
+          # not from anything stored in this file -- see SETUP.md for how
+          # to add it. GitHub keeps secrets encrypted and hides them from
+          # logs automatically.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python greens_crawler.py

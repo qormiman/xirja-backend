@@ -1,0 +1,6 @@
+# Python packages the crawler needs.
+# GitHub Actions will install these automatically before every run
+# (see .github/workflows/crawl-greens.yml) -- you don't need to install
+# anything yourself.
+
+psycopg2-binary==2.9.9
