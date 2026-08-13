@@ -1,0 +1,66 @@
+# ============================================================================
+# Runs the PAVI PAMA crawler on a schedule, using GitHub's own computers --
+# nothing needs to stay running on your own machine.
+#
+# Simpler than the Greens workflow: PAVI PAMA needs no login and no headless
+# browser step, so this just installs Python packages and runs the script.
+#
+# Two ways this runs:
+#   1. Automatically, every night (see the "schedule" below) -- staggered
+#      30 minutes after the Greens crawl, so they're not both hitting the
+#      database's connection limit at exactly the same moment.
+#   2. Manually, whenever you want, by clicking a button -- see SETUP.md for
+#      exactly where. Use this the first time, to check it actually works.
+#
+# Every run's outcome (worked / failed, how many products found) is recorded
+# in the crawl_run table in the database, and also visible in GitHub's own
+# "Actions" tab for this repository as a green tick or red cross.
+# ============================================================================
+
+name: Crawl PAVI PAMA prices
+
+on:
+  schedule:
+    # Runs at 02:45 UTC every night -- 30 minutes after the Greens crawl
+    # (02:15 UTC), so the two don't compete for the database at once.
+    - cron: '45 2 * * *'
+
+  # Adds a "Run workflow" button on the Actions tab, so you can trigger a
+  # run by hand at any time -- this is how you'll do the first test run.
+  workflow_dispatch:
+    inputs:
+      only_categories:
+        description: >-
+          Optional. Leave blank for a normal, full run of every category
+          (this is what you want almost all the time). Fill this in only to
+          patch specific categories without waiting through a full crawl
+          again -- comma-separated category codes, e.g. "0003" or
+          "0003,0004". Must match a code in pavipama_crawler.py's
+          CATEGORIES list.
+        required: false
+        default: ''
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run the PAVI PAMA crawler
+        env:
+          # Same secret the Greens workflow uses -- one database, shared
+          # across every chain's crawler. See SETUP.md if this isn't set
+          # yet.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PYTHONUNBUFFERED: "1"
+          ONLY_CATEGORIES: ${{ github.event.inputs.only_categories }}
+        run: python pavipama_crawler.py
