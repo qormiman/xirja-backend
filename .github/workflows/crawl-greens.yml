@@ -42,6 +42,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Install the headless browser Playwright needs
+        # This downloads a real (invisible) copy of Chromium for the
+        # crawler's token-fetching step to drive -- takes a minute or so,
+        # only on this one job, nothing to do on your end.
+        run: playwright install --with-deps chromium
+
       - name: Run the Greens crawler
         env:
           # This value comes from a GitHub "repo secret" named DATABASE_URL,
