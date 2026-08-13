@@ -55,4 +55,11 @@ jobs:
           # to add it. GitHub keeps secrets encrypted and hides them from
           # logs automatically.
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Without this, Python can silently hold print() output in memory
+          # for a long time before showing it in this log (it behaves
+          # differently when its output isn't going straight to a screen,
+          # which is exactly the case here) -- this makes every line show
+          # up immediately as it happens, so the log is trustworthy to
+          # watch live.
+          PYTHONUNBUFFERED: "1"
         run: python greens_crawler.py
