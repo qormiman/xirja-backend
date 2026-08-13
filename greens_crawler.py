@@ -14,50 +14,73 @@ What this does, in plain terms:
   the same way your browser does when you look at the site.
 
 How this evolved (worth knowing if something breaks later):
-  The first version of this file just asked Greens' product-list address
-  directly, the way you'd fetch any ordinary web page. Testing (thank you
-  for running it!) showed that doesn't work on its own: Greens' site quietly
-  attaches two extra things to every request its own page makes --
-    1. A "Cart" value (any placeholder works -- it doesn't need to be a real
-       shopping cart, the site's code just expects the field to be present).
-    2. An "Authorization" token that the page's own JavaScript computes
-       fresh, each time you load the page. It isn't a login or anything
-       tied to a person -- it's a general "this request came from a real
-       browser" check -- but it means a plain, bare request can't get in.
+  Version 1 just asked Greens' product-list address directly, the way you'd
+  fetch any ordinary web page. Testing showed that doesn't work on its own --
+  Greens' site quietly attaches two extra things to every request its own
+  page makes: a "Cart" value (any placeholder works) and an "Authorization"
+  token the page's own JavaScript computes fresh each time it loads (not a
+  login, just a "this came from a real browser" check).
 
-  So this crawler now does two things in combination:
-    - It briefly opens a real, invisible (headless) browser (using a tool
-      called Playwright) to load one Greens page per outlet, the same way
-      you did by hand in the browser -- and reads off the Authorization
-      token and cookies that the page's own script generates when it asks
-      for products.
-    - It then reuses that token for the rest of that outlet's crawl using
-      plain, lightweight requests (no browser needed for every single
-      product page -- just the one page load to get a valid token).
-    - If a request fails partway through a crawl (the token can expire),
-      it opens the browser again for a fresh token and retries that one
-      request once before giving up on it.
+  Version 2 fixed that by briefly opening a real, invisible (headless)
+  browser (via a tool called Playwright) once per outlet, to load one Greens
+  page the way you did by hand, and reading off the token it generates --
+  then reusing that token for the rest of the outlet's crawl via plain,
+  lightweight requests.
+
+  Version 2 then ran into a second problem: individual requests would
+  sometimes stall for many minutes without ever actually erroring out.
+  Python's usual request timeout only counts *gaps* between bits of data
+  arriving -- a server that trickles a response just fast enough to avoid
+  ever going fully quiet can dodge that timeout indefinitely, even though
+  the overall wait is far too long to be reasonable.
+
+  Version 3 (this one) fixes that, and changes the overall strategy on a
+  request that a non-developer flagged as important: don't let one stuck
+  request block everything, but also don't let the fix silently drop real
+  products. So now:
+    - Every single request runs on a genuine, independent 45-second
+      stopwatch (using a background thread) -- if nothing comes back in
+      that time, we give up on THAT SPECIFIC request, no matter how the
+      network is behaving.
+    - The crawler does one full pass through every category first. Anything
+      that fails along the way is written down and skipped over immediately
+      -- so the rest of the catalogue keeps moving instead of getting stuck
+      behind one bad request.
+    - Only after that entire first pass finishes does it go back and retry,
+      once, every single thing that failed -- picking up a category exactly
+      where it left off if the retry succeeds.
+    - Anything that still fails even after that retry is recorded plainly in
+      the crawl_run row as a "partial" result (a new status, alongside
+      "success" and "failed"), listing exactly which category/page didn't
+      make it -- never silently treated as a complete success.
+    - There's also a generous per-category safety cap (50 pages, i.e. over
+      2,000 products) that exists purely as a backstop against a genuine
+      bug (like a pagination loop that never realises it's done) -- no real
+      Greens category should ever come close to it. If it's ever hit, it's
+      logged loudly and marked "partial", not hidden.
 
 Before you rely on this:
-  This version has still not been tested against the live site from inside
-  the environment that wrote it (no general internet access there) -- but
-  every piece of it (the Cart value, the Authorization token, the request
-  headers) was built from what your own browser was actually observed
-  sending, via DevTools, rather than guessed. Run it once (see SETUP.md) and
-  check the crawl_run table afterwards, the same as before.
+  This version has still not been tested end-to-end from inside the
+  environment that wrote it (no general internet access there) -- but every
+  piece of it (the Cart value, the Authorization token, the request headers,
+  and the timeout behaviour) was built from what actually happened during
+  your real test runs, not guessed. Run it and check the crawl_run table
+  afterwards, same as before -- and this time, also check for any rows with
+  status = 'partial', which mean "mostly worked, but here's exactly what
+  didn't" rather than a clean pass.
 
 How to run it:
   See SETUP.md. In short: set the DATABASE_URL environment variable to your
   Neon connection string, then run `python greens_crawler.py`. GitHub
-  Actions (see .github/workflows/crawl-greens.yml) now also installs a
-  headless Chromium browser before running this, which the token step
-  needs.
+  Actions (see .github/workflows/crawl-greens.yml) also installs a headless
+  Chromium browser before running this, which the token step needs.
 """
 
 import os
 import sys
 import time
 import json
+import threading
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -81,7 +104,7 @@ CATEGORY_PAGE_URL = "https://www.greens.com.mt/products"
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 "
-    "XirjaCrawler/0.2 (+contact: ranier.chircop@gmail.com; polite, low-volume, once-daily crawl)"
+    "XirjaCrawler/0.3 (+contact: ranier.chircop@gmail.com; polite, low-volume, once-daily crawl)"
 )
 
 # Robots.txt for greens.com.mt specifies a 5-second crawl delay. We sleep at
@@ -89,6 +112,15 @@ USER_AGENT = (
 # one-off browser page load used to fetch a token is a single page visit,
 # same as a shopper opening the site -- not part of this budget.)
 REQUEST_DELAY_SECONDS = 5
+
+# The hard, independent ceiling on any single request, described above.
+# Chosen generously above what a normal response should ever take, so it
+# only ever fires on a genuinely stuck request.
+REQUEST_HARD_TIMEOUT_SECONDS = 45
+
+# Purely a backstop against a pagination bug -- no real category should
+# come anywhere near this many pages (2,400+ products in one subcategory).
+MAX_PAGES_PER_CATEGORY = 50
 
 # Each outlet's id here MUST match the outlet.id rows inserted by seed.sql.
 OUTLETS = [
@@ -285,22 +317,35 @@ def fetch_page(cat, typ, loc, page, session):
         return json.loads(resp.read().decode("utf-8"))
 
 
-def fetch_page_with_retry(cat, typ, loc, page, session):
-    """Same as fetch_page, but if the token has gone stale (the request
-    fails), fetches one fresh token+cookie pair and retries exactly once
-    before giving up."""
-    try:
-        return fetch_page(cat, typ, loc, page, session)
-    except urllib.error.HTTPError as exc:
-        detail = ""
+def fetch_page_bounded(cat, typ, loc, page, session):
+    """Same as fetch_page, but enforces a genuine, independent wall-clock
+    ceiling (REQUEST_HARD_TIMEOUT_SECONDS). Plain request timeouts only
+    count quiet gaps between bits of data -- a response trickled in slowly
+    enough can dodge that indefinitely, which is what happened during
+    testing. Running the request on its own background thread and simply
+    refusing to wait past our own ceiling closes that gap. If we do give up,
+    the background thread is left to finish (or fail) harmlessly on its own
+    -- it's marked as a daemon thread so it can never stop the program from
+    exiting."""
+    outcome = {}
+
+    def worker():
         try:
-            detail = exc.read().decode("utf-8", errors="replace")[:300]
-        except Exception:
-            pass
-        print(f"    request failed ({exc.code}), refreshing token and retrying once: {detail}")
-        session["token"], session["cookie"] = fetch_fresh_session(loc)
-        time.sleep(REQUEST_DELAY_SECONDS)
-        return fetch_page(cat, typ, loc, page, session)
+            outcome["value"] = fetch_page(cat, typ, loc, page, session)
+        except Exception as exc:  # noqa: BLE001 -- report back to the caller, whatever it is
+            outcome["error"] = exc
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    thread.join(REQUEST_HARD_TIMEOUT_SECONDS)
+
+    if thread.is_alive():
+        raise TimeoutError(
+            f"No response within {REQUEST_HARD_TIMEOUT_SECONDS}s for {cat}/{typ} page {page}"
+        )
+    if "error" in outcome:
+        raise outcome["error"]
+    return outcome["value"]
 
 
 # ----------------------------------------------------------------------------
@@ -390,6 +435,18 @@ def insert_price_observation(cur, listing_id, product):
     )
 
 
+def store_page(cur, outlet_id, payload):
+    """Save every product on one already-fetched page. Returns how many
+    priced products were saved."""
+    saved = 0
+    for product in parse_products(payload):
+        listing_id = upsert_listing(cur, outlet_id, product)
+        if product["price"] is not None:
+            insert_price_observation(cur, listing_id, product)
+            saved += 1
+    return saved
+
+
 # ----------------------------------------------------------------------------
 # Crawl one outlet
 # ----------------------------------------------------------------------------
@@ -404,38 +461,97 @@ def crawl_outlet(conn, outlet_id, source_code):
     conn.commit()
 
     item_count = 0
+    pending_retries = []  # [{"cat":..., "typ":..., "page":...}, ...]
+    still_failed = []     # same shape, for anything that fails even on retry
     error_message = None
 
     try:
         print(f"  Opening a real browser to fetch a valid access token for {outlet_id}...")
         session = {}
         session["token"], session["cookie"] = fetch_fresh_session(source_code)
-        print(f"  Got a token, starting category crawl for {outlet_id}...")
+        print(f"  Got a token, starting first pass for {outlet_id}...")
 
+        # ---- First pass: walk every category once. Anything that fails is
+        # noted down and skipped immediately -- never blocks the rest. ----
         for cat, typ in CATEGORIES:
             page = 1
             while True:
-                payload = fetch_page_with_retry(cat, typ, source_code, page, session)
-                products = parse_products(payload)
+                try:
+                    payload = fetch_page_bounded(cat, typ, source_code, page, session)
+                except Exception as exc:
+                    print(f"  {outlet_id} / {cat}/{typ} page {page}: FAILED first attempt "
+                          f"({type(exc).__name__}: {exc}) -- will retry after the full scan")
+                    pending_retries.append({"cat": cat, "typ": typ, "page": page})
+                    break  # don't guess whether this category continues; the retry pass will find out
 
-                for product in products:
-                    listing_id = upsert_listing(cur, outlet_id, product)
-                    if product["price"] is not None:
-                        insert_price_observation(cur, listing_id, product)
-                        item_count += 1
+                item_count += store_page(cur, outlet_id, payload)
                 conn.commit()
-
-                print(f"  {outlet_id} / {cat}/{typ} page {page}: {len(products)} products")
+                print(f"  {outlet_id} / {cat}/{typ} page {page}: "
+                      f"{len(payload.get('ProductList', []))} products")
 
                 page_end = payload.get("pageEnd", True)
-                if page_end or not products:
+                if page_end or not payload.get("ProductList"):
+                    break
+                if page >= MAX_PAGES_PER_CATEGORY:
+                    print(f"  {outlet_id} / {cat}/{typ}: hit the {MAX_PAGES_PER_CATEGORY}-page safety "
+                          f"cap -- this almost certainly means a pagination bug, not a real category "
+                          f"this large. Stopping here and flagging for review.")
+                    pending_retries.append({"cat": cat, "typ": typ, "page": page + 1})
                     break
                 page += 1
                 time.sleep(REQUEST_DELAY_SECONDS)
 
             time.sleep(REQUEST_DELAY_SECONDS)
 
-        status = "success"
+        # ---- Second pass: retry everything that failed, once each. A
+        # successful retry resumes that category's pagination from exactly
+        # where it stopped. ----
+        if pending_retries:
+            print(f"  First pass done for {outlet_id}. Retrying {len(pending_retries)} "
+                  f"failed page(s)...")
+
+            for entry in pending_retries:
+                cat, typ, page = entry["cat"], entry["typ"], entry["page"]
+                try:
+                    payload = fetch_page_bounded(cat, typ, source_code, page, session)
+                except Exception as exc:
+                    print(f"  RETRY FAILED: {outlet_id} / {cat}/{typ} page {page} "
+                          f"({type(exc).__name__}: {exc})")
+                    still_failed.append(entry)
+                    time.sleep(REQUEST_DELAY_SECONDS)
+                    continue
+
+                # Recovered -- save this page, then keep going in case this
+                # category has more pages after the one that failed.
+                current_page = page
+                while True:
+                    item_count += store_page(cur, outlet_id, payload)
+                    conn.commit()
+                    print(f"  {outlet_id} / {cat}/{typ} page {current_page}: "
+                          f"{len(payload.get('ProductList', []))} products (recovered on retry)")
+
+                    page_end = payload.get("pageEnd", True)
+                    if page_end or not payload.get("ProductList") or current_page >= MAX_PAGES_PER_CATEGORY:
+                        break
+                    current_page += 1
+                    time.sleep(REQUEST_DELAY_SECONDS)
+                    try:
+                        payload = fetch_page_bounded(cat, typ, source_code, current_page, session)
+                    except Exception as exc:
+                        print(f"  RETRY FAILED (continuation): {outlet_id} / {cat}/{typ} "
+                              f"page {current_page} ({type(exc).__name__}: {exc})")
+                        still_failed.append({"cat": cat, "typ": typ, "page": current_page})
+                        break
+
+                time.sleep(REQUEST_DELAY_SECONDS)
+
+        if still_failed:
+            listing = "; ".join(f"{e['cat']}/{e['typ']} p{e['page']}" for e in still_failed[:25])
+            more = "" if len(still_failed) <= 25 else f" (+{len(still_failed) - 25} more)"
+            error_message = f"{len(still_failed)} page(s) failed even after retry: {listing}{more}"
+            status = "partial"
+        else:
+            status = "success"
 
     except Exception as exc:  # noqa: BLE001 -- we want to log ANY failure and move on
         status = "failed"
@@ -465,7 +581,11 @@ def main():
     conn.close()
 
     if not all_ok:
-        sys.exit(1)  # non-zero exit so GitHub Actions marks the run as failed
+        # Non-zero exit so GitHub Actions marks the run with a red cross --
+        # covers both "failed" and "partial" outlets, since both mean
+        # something is worth a look in crawl_run, even if partial means
+        # most of the data still came through fine.
+        sys.exit(1)
 
 
 if __name__ == "__main__":

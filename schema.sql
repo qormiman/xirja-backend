@@ -118,7 +118,10 @@ CREATE TABLE crawl_run (
     outlet_id      TEXT NOT NULL REFERENCES outlet(id),
     started_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     finished_at    TIMESTAMPTZ,
-    status         TEXT NOT NULL DEFAULT 'running', -- 'running' | 'success' | 'failed'
+    status         TEXT NOT NULL DEFAULT 'running', -- 'running' | 'success' | 'partial' | 'failed'
+                                                       -- 'partial' = mostly worked, but some
+                                                       -- pages failed even after a retry --
+                                                       -- see error_message for exactly which
     item_count     INTEGER,
     error_message  TEXT
 );

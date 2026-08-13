@@ -105,9 +105,12 @@ even though the repository could later be made public).
    (succeeded) or a red cross (failed) after a while — this run installs a
    small invisible browser (a one-time-per-run download, adds a minute or
    so), then goes through every product category at all three Greens
-   branches with a polite 5-second pause between requests, so the whole
-   thing can take 20–30 minutes to finish. That's expected — no need to
-   keep watching it.
+   branches with a polite 5-second pause between requests. Real-world
+   testing showed Greens can respond slowly, so budget more like an hour
+   or two for all three branches together, not the 20–30 minutes originally
+   guessed. That's expected — no need to keep watching it; a red cross
+   here doesn't necessarily mean total failure (see step 7 below, "partial"
+   results are a real, useful outcome, not just success/failure).
 
 ## 7. Check it actually worked
 
@@ -119,6 +122,16 @@ SELECT * FROM crawl_run ORDER BY started_at DESC LIMIT 5;
 
 You want to see rows with `status = 'success'` and an `item_count` that's a
 real number (hundreds or thousands, not 0 or 1).
+
+You might instead see `status = 'partial'` — that means the crawl mostly
+worked but a handful of specific pages failed even after being retried once.
+That's a real, useful outcome, not a broken run: `item_count` will still
+reflect everything that *did* come through, and the `error_message` column
+spells out exactly which category/page(s) didn't make it, e.g.
+`"3 page(s) failed even after retry: Bakery/Bread p2; ..."`. GitHub Actions
+will still show this run with a red cross (since something's worth a look),
+but don't read that cross as "nothing worked" — check `item_count` and
+`error_message` before assuming the worst.
 
 ```sql
 SELECT chain_product_name, price
