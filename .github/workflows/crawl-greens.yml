@@ -25,7 +25,18 @@ on:
 
   # Adds a "Run workflow" button on the Actions tab, so you can trigger a
   # run by hand at any time -- this is how you'll do the first test run.
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      only_categories:
+        description: >-
+          Optional. Leave blank for a normal, full run of every category
+          (this is what you want almost all the time). Fill this in only to
+          patch specific categories without waiting through a full crawl
+          again -- comma-separated, e.g. "FruitsAndVegetables" or
+          "FruitsAndVegetables,Bakery". Must match the category name used
+          inside greens_crawler.py's CATEGORIES list.
+        required: false
+        default: ''
 
 jobs:
   crawl:
@@ -62,4 +73,9 @@ jobs:
           # up immediately as it happens, so the log is trustworthy to
           # watch live.
           PYTHONUNBUFFERED: "1"
+          # Passes through whatever you typed into the "only_categories" box
+          # when manually running this workflow. Empty for the automatic
+          # nightly run and for a normal manual run -- see greens_crawler.py
+          # for what this does.
+          ONLY_CATEGORIES: ${{ github.event.inputs.only_categories }}
         run: python greens_crawler.py
