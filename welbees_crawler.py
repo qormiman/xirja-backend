@@ -177,14 +177,23 @@ CATEGORIES = [
     ("D-5446", "tobacco", "Tobacco"),
 ]
 
-# Recognised suffixes on Welbee's own ready-made per-unit price (e.g.
-# "EUR1.99/l"). "l" and "kg" were seen in the real page pastes checked
-# before writing this; "g" and "ml" were added defensively as the same
-# style of unit, and "p" (confirmed for real by an actual crawl run -- shows
-# up constantly on Baby items, e.g. nappies sold "per piece" rather than by
-# weight/volume) maps to "piece" rather than a physical unit. Anything else
-# is logged and left out rather than guessed.
-KNOWN_UNITS = {"kg": "kg", "l": "l", "g": "g", "ml": "ml", "p": "piece"}
+# The real PHYSICAL units Welbee's per-unit price could reasonably be in --
+# "l" and "kg" were seen in the real page pastes checked before writing
+# this; "g" and "ml" were added defensively as the same style of unit.
+# "m" was added after seeing it for real on a 500ml cider bottle ("0.5m"
+# size, "EUR8.98/m" per-unit price) -- confirmed as litres, not metres, by
+# checking the arithmetic: the bottle's EUR4.59 price includes a 10c
+# refundable BCRS bottle deposit, and (4.59 - 0.10) / 0.5 = 8.98 exactly,
+# matching the displayed per-unit price. So this is Welbee's own shorthand
+# for litres on drinks, computed on the deposit-free price, not a length.
+#
+# Anything else that shows up in this position (confirmed for real by
+# actual crawl runs: "p", "ea", "pots" so far) has turned out to mean
+# "priced per item/container" rather than a physical measure, so rather
+# than maintaining a growing list of every English word a per-item price
+# might use, anything that ISN'T one of the physical units below is treated
+# as "piece" -- see parse_products, where this is used.
+PHYSICAL_UNITS = {"kg": "kg", "l": "l", "g": "g", "ml": "ml", "m": "l"}
 
 # Optional: restrict a run to just one or a few categories -- see
 # greens_crawler.py's ONLY_CATEGORIES for the full explanation. Matched
@@ -326,13 +335,17 @@ def parse_products(html, category_label):
         unit_m = PER_UNIT_RE.search(rest)
         if unit_m:
             unit_raw = unit_m.group(2).strip().lower()
-            unit = KNOWN_UNITS.get(unit_raw)
-            if unit:
-                price_per_unit = _parse_amount(unit_m.group(1))
-                price_per_unit_measure = unit
+            price_per_unit = _parse_amount(unit_m.group(1))
+            if unit_raw in PHYSICAL_UNITS:
+                price_per_unit_measure = PHYSICAL_UNITS[unit_raw]
             else:
-                print(f"    (note: unrecognised per-unit suffix {unit_raw!r} on product "
-                      f"{code!r} -- storing the product, just without a per-unit price)")
+                # Not one of the four physical units -- some other way of
+                # saying "priced per item" (see the PHYSICAL_UNITS comment
+                # above). Logged so you can still see new ones as they show
+                # up, but no longer needs a code change to handle.
+                price_per_unit_measure = "piece"
+                print(f"    (note: per-unit suffix {unit_raw!r} on product {code!r} isn't one "
+                      f"of the physical units -- treating it as \"per piece\" pricing)")
 
         name_m = NAME_RE.search(rest)
         href = name_m.group(1).strip() if name_m else None

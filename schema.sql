@@ -87,7 +87,22 @@ CREATE TABLE price_observation (
     regular_price    NUMERIC(10,2),            -- non-promo price, when it differs from price
     price_per_unit   NUMERIC(10,4),            -- normalised, e.g. price per kg -- nullable
                                                  -- when we can't derive it
-    price_per_unit_measure  TEXT,              -- 'kg', 'l', etc -- what price_per_unit is in
+    price_per_unit_measure  TEXT,              -- 'kg', 'l', 'piece', etc -- what
+                                                 -- price_per_unit is in.
+                                                 --
+                                                 -- IMPORTANT for whoever builds the app UI:
+                                                 -- 'piece' here is a VALUE-COMPARISON figure
+                                                 -- only, e.g. price-per-capsule for a box of 16
+                                                 -- coffee pods -- it is NOT a real purchasable
+                                                 -- price. Nothing is sold one piece at a time;
+                                                 -- this exists purely so two different pack
+                                                 -- sizes of the same product (e.g. a 16-pack vs
+                                                 -- a 36-pack) can be compared, the same way
+                                                 -- price-per-kg compares a 1kg bag to a 2kg bag
+                                                 -- of something you also only buy whole. Display
+                                                 -- it as "€0.24/capsule (for comparison)" or
+                                                 -- similar -- never as if it were a real price a
+                                                 -- shopper could pay.
     in_stock         BOOLEAN NOT NULL DEFAULT TRUE,
     observed_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     source           TEXT NOT NULL DEFAULT 'site'  -- always 'site' here;

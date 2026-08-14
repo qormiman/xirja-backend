@@ -285,6 +285,23 @@ PAGE_SIZE = 48  # matches the value confirmed working in the spike capture
 # there should be). See the logging added below for unrecognised values.
 WEIGHT_UNITS = {"Kilogram": "kg", "Litre": "l"}
 
+# "Piece" is different in kind from the two above -- it doesn't mean a
+# physical weight or volume, it means Greens prices this item as a whole
+# count of items (most packaged goods: coffee pods, stock cubes, bottled
+# drinks, jars...). Confirmed for real via two DevTools captures: SIZE_VALUE
+# for these holds the count within the pack, not a weight -- "Knorr Rich
+# Beef Cubes 8pcs" has SIZE_VALUE 8.0, "Lavazza A Modo Mio Soavemente 16
+# Caps" has SIZE_VALUE 16.0. So the same price / size_value division that
+# works for weight/volume gives a genuinely useful "price per piece" here
+# too, for comparing different pack sizes of the same product. (For a
+# single-item product -- e.g. one bottle, SIZE_VALUE 1 -- this just comes
+# out equal to the regular price, which is correct, not a bug.)
+COUNT_UNITS = {"Piece": "piece"}
+
+# Everything this crawler knows how to divide the price by to get a
+# meaningful per-unit price -- weight/volume units and count units combined.
+PER_UNIT_DIVISORS = {**WEIGHT_UNITS, **COUNT_UNITS}
+
 # Optional: restrict a run to just one or a few top-level categories, instead
 # of the full list above -- e.g. to patch a single category once its correct
 # codes are confirmed, without waiting through a multi-hour full crawl again.
@@ -485,14 +502,14 @@ def parse_products(payload):
 
         price_per_unit = None
         price_per_unit_measure = None
-        if size_value and size_uom in WEIGHT_UNITS and price is not None:
+        if size_value and size_uom in PER_UNIT_DIVISORS and price is not None:
             try:
                 if float(size_value) > 0:
                     price_per_unit = round(float(price) / float(size_value), 4)
-                    price_per_unit_measure = WEIGHT_UNITS[size_uom]
+                    price_per_unit_measure = PER_UNIT_DIVISORS[size_uom]
             except (TypeError, ValueError, ZeroDivisionError):
                 pass
-        elif size_uom and size_uom not in WEIGHT_UNITS:
+        elif size_uom and size_uom not in PER_UNIT_DIVISORS:
             # Previously this just silently skipped -- added after finding
             # the Mriehel location-code bug, specifically so a wrong/missing
             # unit spelling here shows up in the log instead of quietly
