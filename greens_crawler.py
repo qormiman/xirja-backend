@@ -73,6 +73,23 @@ How this evolved (worth knowing if something breaks later):
   now explicitly disables that buffering, so the log can be trusted to
   show what's actually happening as it happens.
 
+  Version 4 added an optional "only run these categories" filter (see
+  ONLY_CATEGORIES below), so a single wrong/missing category can be patched
+  by itself once its correct codes are confirmed, instead of needing a full
+  multi-hour crawl again just to fix one spot.
+
+  Version 5 fixed the CATEGORIES list itself. It used to be a long, hand-
+  guessed list of (top-level category, subcategory) pairs, scraped from the
+  site's navigation menu before any real request had been confirmed. A real
+  request captured straight out of Chrome (a "cURL" copy, not a guess)
+  proved that leaving the subcategory blank and only specifying the
+  top-level category returns EVERYTHING in that category in one go, exactly
+  matching the site's own category page. So the list is now just the
+  top-level category codes, each fetched with no subcategory filter --
+  removing the entire class of "guessed a subcategory spelling wrong, lost
+  those products silently" bugs. The same captured request also fixed the
+  Referer header to match the real one exactly.
+
 Before you rely on this:
   This version has still not been tested end-to-end from inside the
   environment that wrote it (no general internet access there) -- but every
@@ -148,96 +165,74 @@ OUTLETS = [
 # doesn't need to be a real one.
 CART_PLACEHOLDER = "00000000-0000-0000-0000-000000000000"
 
-# The full category / subcategory tree, captured from greens.com.mt's own
-# navigation menu. Each pair is (cat, typ) exactly as the site's URLs use
-# them. This is deliberately the complete list rather than a sample, since a
-# missed category is a missed set of products with no visible symptom.
+# Version 5 change (worth knowing if you're reading this later): this used
+# to be a much longer list of (top-level category, guessed subcategory)
+# pairs, scraped by hand from the site's navigation menu before we had a
+# real, working API request to check it against. A real captured request
+# (a "cURL" a non-developer copied out of Chrome's DevTools) proved that
+# guess was subtly wrong -- and also proved something more useful: asking
+# for a top-level category with NO subcategory filter (Type left blank)
+# returns EVERY product in that category in one go, paginated, the exact
+# same way the site's own category landing page works. That's a direct
+# copy of a real, confirmed-working request -- not a guess -- and it
+# sidesteps the whole problem of guessing subcategory spellings, since we
+# don't need them at all.
+#
+# So this list is now just the top-level category codes (still originally
+# sourced from the site's navigation menu, so still worth re-checking
+# against the real site occasionally in case Greens adds/renames one), each
+# queried with an empty subcategory ("" for Type) to pull everything in it.
 CATEGORIES = [
-    ("Baby", "BabyCareAndAccessories"), ("Baby", "BabyFood"), ("Baby", "MumToBe"),
-    ("Bakery", "BakedGoods"), ("Bakery", "BiscuitsAndCrackers"), ("Bakery", "Bread"),
-    ("Bakery", "CerealsAndCerealBars"), ("Bakery", "Confectionery"),
-    ("Bakery", "FrozenGoods"), ("Bakery", "OtherConfectionery"),
-    ("Bakery", "PastaRiceAndCouscous"), ("Bakery", "ReadyToEat"),
-    ("Bakery", "SeasonalGoods"),
-    ("Beverages", "BeerAndCiders"), ("Beverages", "Ciders"),
-    ("Beverages", "EnergyDrinks"), ("Beverages", "IceTea"),
-    ("Beverages", "JuicesAndSmoothies"), ("Beverages", "MixersAndSquashes"),
-    ("Beverages", "SoftDrinks"), ("Beverages", "Water"),
-    ("Butcher", "Bacon"), ("Butcher", "Beef"), ("Butcher", "Chicken"),
-    ("Butcher", "Duck"), ("Butcher", "Lamb"), ("Butcher", "OtherButcherItems"),
-    ("Butcher", "Pork"), ("Butcher", "Rabbit"), ("Butcher", "Sausages"),
-    ("Butcher", "Turkey"),
-    ("CheeseCounter", "Salads"),
-    ("ChilledAndDairy", "ButterDipsAndSpreadables"), ("ChilledAndDairy", "ChilledBeverages"),
-    ("ChilledAndDairy", "ChilledFoods"), ("ChilledAndDairy", "FreshCream"),
-    ("ChilledAndDairy", "MilkAndEggs"), ("ChilledAndDairy", "MortadellaAndLuncheonMeat"),
-    ("ChilledAndDairy", "OtherChilled"), ("ChilledAndDairy", "YoghurtsAndDesserts"),
-    ("CondimentsAndSeasoning", "HerbsSpicesAndCubes"), ("CondimentsAndSeasoning", "SpicesAndHerbs"),
-    ("Confectionery", "BiscuitsAndCrackers"), ("Confectionery", "Bread"),
-    ("Confectionery", "ChocolatesAndSweets"), ("Confectionery", "Confectionery"),
-    ("Confectionery", "CrispsPopcornAndOtherSnacks"), ("Confectionery", "Dips"),
-    ("Confectionery", "PastaRiceAndCouscous"), ("Confectionery", "PastriesAndPrepackedCakes"),
-    ("Cosmetics", "BeautyTools"), ("Cosmetics", "Brows"), ("Cosmetics", "Complection"),
-    ("Cosmetics", "Eyes"), ("Cosmetics", "Lips"), ("Cosmetics", "Nails"),
-    ("Cosmetics", "Perfume"), ("Cosmetics", "SkinCare"),
-    ("Delicatessen", "AntipastoFood"), ("Delicatessen", "Cheeses"),
-    ("Delicatessen", "FreshPasta"), ("Delicatessen", "HamAndSalami"),
-    ("Delicatessen", "MortadellaAndLuncheonMeat"), ("Delicatessen", "Seasonal"),
-    ("Fish", "FreshFish"), ("Fish", "FrozenFish"),
-    ("FlowersAndPlants", "Flowers"), ("FlowersAndPlants", "Plants"),
-    ("FrozenFoods", "ChipsAndOtherPotatoProducts"), ("FrozenFoods", "DisposableGoods"),
-    ("FrozenFoods", "FrozenFruitAndVegetables"), ("FrozenFoods", "FrozenMeat"),
-    ("FrozenFoods", "FrozenPizzasAndPastries"), ("FrozenFoods", "IceCreamAndDesserts"),
-    ("FrozenFoods", "OtherFrozenFood"),
-    ("FruitsAndVegetables", "BabyFruitAndVegetables"), ("FruitsAndVegetables", "BeansPeasAndSprouts"),
-    ("FruitsAndVegetables", "DriedFruit"), ("FruitsAndVegetables", "Fruit"),
-    ("FruitsAndVegetables", "FruitAndVegetable(freshlyCut)"), ("FruitsAndVegetables", "HerbsAndSpices"),
-    ("FruitsAndVegetables", "HerbsSpicesAndCubes"), ("FruitsAndVegetables", "Organic"),
-    ("FruitsAndVegetables", "Pre-packed"), ("FruitsAndVegetables", "ReadyToEat"),
-    ("FruitsAndVegetables", "Salads"), ("FruitsAndVegetables", "Vegetables"),
-    ("Groceries", "BakedGoods"), ("Groceries", "BakingNeeds"),
-    ("Groceries", "ButterDipsAndSpreadables"), ("Groceries", "CakeMix"),
-    ("Groceries", "CoffeeTeaAndHotChocolate"), ("Groceries", "DisposableGoods"),
-    ("Groceries", "DriedFruitLegumeeAndNuts"), ("Groceries", "DriedFruitLegumeesAndNuts"),
-    ("Groceries", "Flour"), ("Groceries", "HerbsSpicesAndCubes"),
-    ("Groceries", "HotBeverages"), ("Groceries", "InternationalCuisine"),
-    ("Groceries", "JamsHoneyAndPeanutButter"), ("Groceries", "Jelly"),
-    ("Groceries", "MilkAndEggs"), ("Groceries", "MiscellaneousSnacks"),
-    ("Groceries", "OilAndVinegar"), ("Groceries", "PastaRiceAndCouscous"),
-    ("Groceries", "SaucesAndCondiments"), ("Groceries", "SeasonalAndFestiveFood"),
-    ("Groceries", "Soups"), ("Groceries", "SugarAndSweetners"),
-    ("Groceries", "SweetCreamAndPanna"), ("Groceries", "TinnedGoods"),
-    ("Health", "DairyFree"), ("Health", "Diet"), ("Health", "GlutenFree"),
-    ("Health", "LactoseFree"), ("Health", "LowFat"), ("Health", "OrganicAndBio"),
-    ("Health", "Protein"), ("Health", "ProteinBars"),
-    ("Health", "SugarFreeAndNoAddedSugar"), ("Health", "Vegetarian"),
-    ("HomeGarden", "FurnitureCare"), ("HomeGarden", "GardenAndAccessories"),
-    ("HomeGarden", "HouseholdGoods"), ("HomeGarden", "Ironmongery"),
-    ("HomeGarden", "PicnicAndBbqEssentials"),
-    ("Household", "BabyCareAndAccessories"), ("Household", "BathroomCareAndEssentials"),
-    ("Household", "Batteries"), ("Household", "CarProducts"),
-    ("Household", "DisposableGoods"), ("Household", "Footwear"),
-    ("Household", "Garments"), ("Household", "Health"),
-    ("Household", "HouseholdCareAndEssentials"), ("Household", "KitchenCareAndAccessories"),
-    ("Household", "LaundryProducts"), ("Household", "PartyItems"),
-    ("Household", "SeasonalItems"), ("Household", "Sports"),
-    ("Household", "Stationery"), ("Household", "StationeryGoods"),
-    ("Household", "Toys"), ("Household", "Vouchers"),
-    ("New", "New"),
-    ("Organic", "DietaryFood"),
-    ("PersonalCare", "BathroomCareAndEssentials"), ("PersonalCare", "Cosmetics"),
-    ("PersonalCare", "GiftSets"), ("PersonalCare", "MensSection"),
-    ("PersonalCare", "PersonalHygieneAndCare"), ("PersonalCare", "WomensSection"),
-    ("Pets", "CatSection"), ("Pets", "DogSection"), ("Pets", "OtherPets"),
-    ("Pets", "PetAccessoriesAndHygiene"), ("Pets", "PetTreats"),
-    ("WineCellar", "PortAndSherryWine"), ("WineCellar", "Spirits"),
-    ("WineCellar", "Wines"), ("WineCellar", "WinesAndChampagne"),
+    ("Baby", ""),
+    ("Bakery", ""),
+    ("Beverages", ""),
+    ("Butcher", ""),
+    ("CheeseCounter", ""),
+    ("ChilledAndDairy", ""),
+    ("CondimentsAndSeasoning", ""),
+    ("Confectionery", ""),
+    ("Cosmetics", ""),
+    ("Delicatessen", ""),
+    ("Fish", ""),
+    ("FlowersAndPlants", ""),
+    ("FrozenFoods", ""),
+    ("FruitsAndVegetables", ""),
+    ("Groceries", ""),
+    ("Health", ""),
+    ("HomeGarden", ""),
+    ("Household", ""),
+    ("New", ""),
+    ("Organic", ""),
+    ("PersonalCare", ""),
+    ("Pets", ""),
+    ("WineCellar", ""),
 ]
 
 PAGE_SIZE = 48  # matches the value confirmed working in the spike capture
 
 # Sizes that make a per-kg / per-litre price meaningful to compute.
 WEIGHT_UNITS = {"Kilogram": "kg", "Litre": "l"}
+
+# Optional: restrict a run to just one or a few top-level categories, instead
+# of the full list above -- e.g. to patch a single category once its correct
+# codes are confirmed, without waiting through a multi-hour full crawl again.
+# Set via the "only_categories" box when manually running the GitHub Actions
+# workflow (see .github/workflows/crawl-greens.yml) -- comma-separated,
+# case-insensitive, matched against the FIRST part of each (cat, typ) pair
+# above, e.g. "FruitsAndVegetables" or "FruitsAndVegetables,Bakery". Leave it
+# blank (the normal case, and always the case for the automatic nightly run)
+# and every category above runs, same as before this existed.
+ONLY_CATEGORIES_RAW = os.environ.get("ONLY_CATEGORIES", "").strip()
+if ONLY_CATEGORIES_RAW:
+    _wanted = {c.strip().lower() for c in ONLY_CATEGORIES_RAW.split(",") if c.strip()}
+    ACTIVE_CATEGORIES = [pair for pair in CATEGORIES if pair[0].lower() in _wanted]
+    if not ACTIVE_CATEGORIES:
+        print(f"WARNING: ONLY_CATEGORIES={ONLY_CATEGORIES_RAW!r} didn't match any category "
+              f"in the CATEGORIES list above -- check spelling. Running EVERY category instead, "
+              f"same as a normal full run.", file=sys.stderr)
+        ACTIVE_CATEGORIES = CATEGORIES
+else:
+    ACTIVE_CATEGORIES = CATEGORIES
 
 
 # ----------------------------------------------------------------------------
@@ -279,6 +274,16 @@ def run_with_timeout(fn, timeout_seconds, *args, **kwargs):
 # than a plain product request, since a real browser genuinely takes longer
 # to do its thing than a lightweight HTTP call does.
 TOKEN_FETCH_HARD_TIMEOUT_SECONDS = 90
+
+# Same idea, for saving one page's products to the database. Generous --
+# a normal save is dozens of small statements plus a commit, which should
+# take a small fraction of a second on a healthy connection.
+DB_WRITE_HARD_TIMEOUT_SECONDS = 30
+
+# If a save fails, how long we'll wait for a plain rollback (cleaning up so
+# the connection is usable again) before giving up on that connection
+# entirely and opening a fresh one instead.
+DB_RECOVERY_TIMEOUT_SECONDS = 15
 
 
 # ----------------------------------------------------------------------------
@@ -361,7 +366,10 @@ def fetch_page(cat, typ, loc, page, session):
         "Accept": "application/json, text/javascript, */*; q=0.01",
         "Authorization": session["token"],
         "X-Requested-With": "XMLHttpRequest",
-        "Referer": f"{CATEGORY_PAGE_URL}?cat={cat}&typ={typ}&loc={loc}",
+        # Matches the real address the site's own page shows when browsing
+        # this category (confirmed via a captured real request) -- e.g.
+        # https://www.greens.com.mt/products?cat=FruitsAndVegetables&srch=
+        "Referer": f"{CATEGORY_PAGE_URL}?cat={cat}&srch=",
         "Content-Type": "application/json",
     }
     if session.get("cookie"):
@@ -439,7 +447,29 @@ def get_connection():
     if not database_url:
         print("ERROR: DATABASE_URL environment variable is not set.", file=sys.stderr)
         sys.exit(1)
-    return psycopg2.connect(database_url)
+    return psycopg2.connect(
+        database_url,
+        # A crawl can hold this one connection open for well over an hour.
+        # Without these, a connection that's quietly gone stale (a dropped
+        # network path, the database going idle and not waking up cleanly)
+        # can make the *next* write just hang forever, with nothing ever
+        # raising an error to catch. These are standard, well-documented
+        # Postgres/psycopg2 settings for exactly that situation:
+        connect_timeout=30,
+        # Ask the operating system to actively check the connection is
+        # still alive during quiet periods, instead of assuming silence
+        # means "fine" -- so a truly dead connection gets noticed quickly.
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5,
+        # Tell Postgres itself to cancel any single statement that runs
+        # longer than 30 seconds, rather than let a stuck query sit there
+        # indefinitely. Every write this crawler does should normally take
+        # a small fraction of a second, so this is a generous ceiling that
+        # only ever fires on something genuinely wrong.
+        options="-c statement_timeout=30000",
+    )
 
 
 def upsert_listing(cur, outlet_id, product):
@@ -483,6 +513,35 @@ def store_page(cur, outlet_id, payload):
     return saved
 
 
+def save_page(cur, conn, outlet_id, payload):
+    """store_page, plus the commit, as one unit -- used together with
+    run_with_timeout so a database write can never hang forever either
+    (the fetch from Greens already had this protection; this closes the
+    matching gap on the save side)."""
+    saved = store_page(cur, outlet_id, payload)
+    conn.commit()
+    return saved
+
+
+def safe_recover_connection(conn, outlet_id):
+    """After a save fails, try to leave the database connection clean and
+    usable again. A plain rollback is normally enough. If even that hangs
+    or fails, that's a strong sign the connection itself has quietly died
+    -- in that case we stop trying to save it and just open a fresh one,
+    rather than risk getting stuck again."""
+    try:
+        run_with_timeout(conn.rollback, DB_RECOVERY_TIMEOUT_SECONDS)
+        return conn
+    except Exception as exc:
+        print(f"  {outlet_id}: couldn't cleanly recover the database connection "
+              f"({type(exc).__name__}: {exc}) -- opening a fresh one instead")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return get_connection()
+
+
 # ----------------------------------------------------------------------------
 # Crawl one outlet
 # ----------------------------------------------------------------------------
@@ -502,6 +561,10 @@ def crawl_outlet(conn, outlet_id, source_code):
     error_message = None
 
     try:
+        if ONLY_CATEGORIES_RAW:
+            print(f"  RESTRICTED RUN: only crawling categories matching "
+                  f"{ONLY_CATEGORIES_RAW!r} ({len(ACTIVE_CATEGORIES)} of {len(CATEGORIES)} "
+                  f"category/subcategory pairs) -- not a full crawl.")
         print(f"  Opening a real browser to fetch a valid access token for {outlet_id}...")
         session = {}
         try:
@@ -516,7 +579,7 @@ def crawl_outlet(conn, outlet_id, source_code):
 
         # ---- First pass: walk every category once. Anything that fails is
         # noted down and skipped immediately -- never blocks the rest. ----
-        for cat, typ in CATEGORIES:
+        for cat, typ in ACTIVE_CATEGORIES:
             page = 1
             while True:
                 try:
@@ -527,8 +590,17 @@ def crawl_outlet(conn, outlet_id, source_code):
                     pending_retries.append({"cat": cat, "typ": typ, "page": page})
                     break  # don't guess whether this category continues; the retry pass will find out
 
-                item_count += store_page(cur, outlet_id, payload)
-                conn.commit()
+                try:
+                    saved = run_with_timeout(save_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, outlet_id, payload)
+                except Exception as exc:
+                    print(f"  {outlet_id} / {cat}/{typ} page {page}: FAILED saving to the database "
+                          f"({type(exc).__name__}: {exc}) -- will retry after the full scan")
+                    pending_retries.append({"cat": cat, "typ": typ, "page": page})
+                    conn = safe_recover_connection(conn, outlet_id)
+                    cur = conn.cursor()
+                    break
+
+                item_count += saved
                 print(f"  {outlet_id} / {cat}/{typ} page {page}: "
                       f"{len(payload.get('ProductList', []))} products")
 
@@ -568,8 +640,19 @@ def crawl_outlet(conn, outlet_id, source_code):
                 # category has more pages after the one that failed.
                 current_page = page
                 while True:
-                    item_count += store_page(cur, outlet_id, payload)
-                    conn.commit()
+                    try:
+                        saved = run_with_timeout(
+                            save_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, outlet_id, payload
+                        )
+                    except Exception as exc:
+                        print(f"  RETRY FAILED saving to the database: {outlet_id} / {cat}/{typ} "
+                              f"page {current_page} ({type(exc).__name__}: {exc})")
+                        still_failed.append({"cat": cat, "typ": typ, "page": current_page})
+                        conn = safe_recover_connection(conn, outlet_id)
+                        cur = conn.cursor()
+                        break
+
+                    item_count += saved
                     print(f"  {outlet_id} / {cat}/{typ} page {current_page}: "
                           f"{len(payload.get('ProductList', []))} products (recovered on retry)")
 
@@ -601,12 +684,33 @@ def crawl_outlet(conn, outlet_id, source_code):
         error_message = f"{type(exc).__name__}: {exc}"
         print(f"  ERROR crawling {outlet_id}: {error_message}", file=sys.stderr)
 
-    cur.execute(
-        "UPDATE crawl_run SET finished_at = %s, status = %s, item_count = %s, error_message = %s WHERE id = %s",
-        (datetime.now(timezone.utc), status, item_count, error_message, run_id),
-    )
-    conn.commit()
-    cur.close()
+    if ONLY_CATEGORIES_RAW:
+        # Stamped onto crawl_run even on success, so anyone looking at crawl
+        # history later (e.g. a much lower item_count than usual) isn't left
+        # wondering whether something broke -- this explains it was
+        # deliberately a partial, targeted run.
+        note = f"[RESTRICTED RUN -- only categories: {ONLY_CATEGORIES_RAW}]"
+        error_message = f"{note} {error_message}" if error_message else note
+
+    def finish_crawl_run():
+        cur.execute(
+            "UPDATE crawl_run SET finished_at = %s, status = %s, item_count = %s, error_message = %s WHERE id = %s",
+            (datetime.now(timezone.utc), status, item_count, error_message, run_id),
+        )
+        conn.commit()
+
+    try:
+        run_with_timeout(finish_crawl_run, DB_WRITE_HARD_TIMEOUT_SECONDS)
+    except Exception as exc:
+        # Even this last write is guarded -- if the connection has somehow
+        # gone bad right at the end, don't let this hang the whole run.
+        print(f"  {outlet_id}: couldn't record the final crawl_run status "
+              f"({type(exc).__name__}: {exc})", file=sys.stderr)
+
+    try:
+        cur.close()
+    except Exception:
+        pass
 
     print(f"Finished {outlet_id}: status={status}, item_count={item_count}")
     return status == "success"
@@ -615,13 +719,24 @@ def crawl_outlet(conn, outlet_id, source_code):
 # ----------------------------------------------------------------------------
 
 def main():
-    conn = get_connection()
     all_ok = True
     for outlet in OUTLETS:
         print(f"\n=== Crawling {outlet['outlet_id']} ===")
-        ok = crawl_outlet(conn, outlet["outlet_id"], outlet["source_code"])
+        # A fresh connection per outlet, rather than one shared across the
+        # whole multi-hour run -- an outlet's crawl can take a long time,
+        # and starting each one clean reduces the chance of ever hitting a
+        # connection that's gone stale from sitting open too long. (If
+        # crawl_outlet has to reconnect partway through anyway, that's
+        # handled internally and doesn't need anything from here.)
+        conn = get_connection()
+        try:
+            ok = crawl_outlet(conn, outlet["outlet_id"], outlet["source_code"])
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
         all_ok = all_ok and ok
-    conn.close()
 
     if not all_ok:
         # Non-zero exit so GitHub Actions marks the run with a red cross --
