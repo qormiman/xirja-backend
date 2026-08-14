@@ -299,15 +299,25 @@ def parse_products(payload):
 
 def get_connection():
     database_url = os.environ["DATABASE_URL"]
-    return psycopg2.connect(
+    conn = psycopg2.connect(
         database_url,
         connect_timeout=30,
         keepalives=1,
         keepalives_idle=30,
         keepalives_interval=10,
         keepalives_count=5,
-        options="-c statement_timeout=30000",
     )
+    # This USED to be passed as a connection startup option (options="-c
+    # statement_timeout=...") but that failed against Neon's pooled
+    # connection endpoint with "unsupported startup parameter in options"
+    # -- confirmed live, not a guess (this is exactly the error you hit).
+    # Setting it as a normal SQL command right after connecting achieves
+    # the same protection (Postgres cancels any single statement running
+    # over 30s) and works fine through the pooler.
+    with conn.cursor() as cur:
+        cur.execute("SET statement_timeout = 30000")
+    conn.commit()
+    return conn
 
 
 def upsert_listing(cur, outlet_id, product):

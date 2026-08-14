@@ -447,7 +447,7 @@ def get_connection():
     if not database_url:
         print("ERROR: DATABASE_URL environment variable is not set.", file=sys.stderr)
         sys.exit(1)
-    return psycopg2.connect(
+    conn = psycopg2.connect(
         database_url,
         # A crawl can hold this one connection open for well over an hour.
         # Without these, a connection that's quietly gone stale (a dropped
@@ -463,13 +463,19 @@ def get_connection():
         keepalives_idle=30,
         keepalives_interval=10,
         keepalives_count=5,
-        # Tell Postgres itself to cancel any single statement that runs
-        # longer than 30 seconds, rather than let a stuck query sit there
-        # indefinitely. Every write this crawler does should normally take
-        # a small fraction of a second, so this is a generous ceiling that
-        # only ever fires on something genuinely wrong.
-        options="-c statement_timeout=30000",
     )
+    # Tell Postgres itself to cancel any single statement that runs longer
+    # than 30 seconds, rather than let a stuck query sit there indefinitely.
+    # This USED to be passed as a connection startup option (options="-c
+    # statement_timeout=...") but that failed against Neon's pooled
+    # connection endpoint with "unsupported startup parameter in options"
+    # -- confirmed live, not a guess. Setting it as a normal SQL command
+    # right after connecting achieves the same protection and works fine
+    # through the pooler.
+    with conn.cursor() as cur:
+        cur.execute("SET statement_timeout = 30000")
+    conn.commit()
+    return conn
 
 
 def upsert_listing(cur, outlet_id, product):
