@@ -74,10 +74,24 @@ CREATE TABLE listing (
                                           -- (Greens: PART_NUMBER. PAVI PAMA: id.)
     chain_product_name  TEXT NOT NULL,  -- exactly as the chain names it, unedited
     chain_category      TEXT,           -- the chain's own category label, for reference
+    shopping_category   TEXT,           -- OUR shared category, the same across all
+                                          -- three chains (e.g. 'Milk', 'Beef',
+                                          -- 'Shampoos') -- set by
+                                          -- categorize_listings.py, NULL until that's
+                                          -- been run at least once. This is what
+                                          -- lets the app search "milk" across every
+                                          -- chain without needing to know two
+                                          -- listings are the exact same product --
+                                          -- see category_taxonomy.py and SETUP.md's
+                                          -- "Category normalization" section.
     barcode             TEXT,           -- as reported by this chain, if any
     url                 TEXT,
     UNIQUE (outlet_id, chain_product_code)
 );
+
+-- Powers "find every listing in this shopping category" -- the core lookup
+-- the shopping-list feature needs.
+CREATE INDEX idx_listing_shopping_category ON listing (shopping_category);
 
 -- ----------------------------------------------------------------------------
 CREATE TABLE price_observation (

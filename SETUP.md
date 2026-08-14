@@ -269,6 +269,17 @@ browser step, one shared price list instead of per-branch ones.
 
 ## Matching products across chains
 
+**Note (added after this section was first written):** this step is no
+longer required for the shopping-list feature as it's actually planned --
+see "Category normalization" below, which is the simpler thing that feature
+actually needs. This matching step is still here, still works, and is still
+worth running if you want it, because it answers a genuinely different
+question ("are these two listings literally the same physical product?")
+that a future feature — e.g. tracking one specific product's price history
+across stores — would need. But if your only goal right now is "let someone
+search 'milk' and see the cheapest across all three shops," skip straight to
+Category normalization; you don't need this section at all for that.
+
 Once all three crawlers have real data in them, this step connects the same
 product across chains (and across a chain's own branches) so the app can
 eventually show "this costs X at Greens, Y at PAVI PAMA, Z at Welbee's" for
@@ -379,6 +390,127 @@ and removes the incorrect product row:
 UPDATE listing SET product_id = NULL WHERE product_id = '<product id from above>';
 DELETE FROM product WHERE id = '<product id from above>';
 ```
+
+## Category normalization
+
+This is what actually powers the shopping-list feature as planned: someone
+searches "milk" (or "almond milk", or "shampoo") and the app finds every
+matching listing across all three chains, without needing to know that two
+listings are the exact same physical product (that's the harder, separate
+question "Matching products across chains" above answers instead).
+
+Each chain describes its own products in its own words. Greens might file
+something under `Chilled And Dairy / Milk And Eggs`, PAVI PAMA under `MILK`,
+and Welbee's doesn't have a useful category for it at all -- just one broad
+`Groceries` bucket covering hundreds of unrelated things. This step gives
+every listing OUR OWN shared category (`Milk`, `Beef`, `Shampoos`, and so
+on -- about 200 in total) so "find all the milk" becomes one simple database
+query instead of something that has to understand three different chains'
+filing systems.
+
+**How it decides a listing's category**, in order:
+
+1. **PAVI PAMA**: its own category is already close to the right
+   granularity, so it's basically just relabelled (e.g. `MILK` → `Milk`).
+2. **Greens**: its own categories have a two-level structure (e.g.
+   `Butcher / Beef`) and that pair is looked up directly.
+3. **Everything else**: classified by looking for keywords in the product's
+   own name instead (e.g. a name containing "shampoo" → `Shampoos`). This
+   covers all of Welbee's (its own categories are too broad to use
+   directly), plus a couple of Greens' own categories that mix too many
+   different kinds of product together to assign one category to
+   (`Personal Care / Personal Hygiene And Care` and `Household / Household
+   Care And Essentials`, each several thousand very different products
+   filed under one heading).
+
+**Worth knowing before trusting it blindly:** this is a first-draft
+taxonomy, built from your real category data but not yet checked against
+real classified output at scale. All the mapping rules and their reasoning
+live in `category_taxonomy.py`, with the imperfect-fit approximations
+called out inline (e.g. Greens doesn't split wine by colour at the level
+this maps from, so all of it currently lands on `Wine - Red`). The keyword
+matching step only knows what to look for, tested against about two dozen
+realistic examples (see `test_category_taxonomy.py` in this same
+conversation) but not against your actual thousands of real listings yet --
+`categorize_listings.py` prints a tally of the most common
+(store, category) combinations it couldn't classify at the end of every
+run, specifically so gaps like this stay visible instead of silently
+guessed at. Treat the first real run's tally as the starting point for
+tuning `KEYWORD_RULES`, the same way the crawlers' own per-unit fallback
+logging worked earlier in this project.
+
+### One-time setup
+
+Before the first run, add the new column this needs. Run this once in
+Neon's SQL editor against your existing database (it's also included
+permanently in `schema.sql` now, for anyone setting up a brand new database
+from scratch from now on):
+
+```sql
+ALTER TABLE listing ADD COLUMN shopping_category TEXT;
+CREATE INDEX idx_listing_shopping_category ON listing (shopping_category);
+```
+
+### Running it
+
+1. Upload two new files, same as before:
+   - `category_taxonomy.py` and `categorize_listings.py` (top level, next to
+     `product_matcher.py`)
+   - `.github/workflows/categorize-listings.yml` (inside
+     `.github/workflows/`)
+2. Go to **Actions** → **Categorize listings** → **Run workflow** → **Run
+   workflow** again to confirm. No inputs to fill in.
+3. It should finish quickly for the same reason `product_matcher.py` does --
+   it only talks to your database.
+4. Check what it did:
+   ```sql
+   SELECT shopping_category, count(*) FROM listing GROUP BY shopping_category ORDER BY count(*) DESC;
+   ```
+   A `NULL` row in that result is everything still unclassified -- cross-
+   reference it against the run's own log output (the tally described
+   above) to see exactly which (store, chain category) combinations make up
+   that number.
+
+Safe to run as often as you like -- unlike the crawlers and the matcher, it
+doesn't even need new data to be useful: improving `KEYWORD_RULES` in
+`category_taxonomy.py` and running this again re-checks every listing
+against the improved rules, not just new ones, though it only ever writes
+the rows whose category actually changed.
+
+### Spot-checking and improving it
+
+Once you've run it once, the most useful thing to do is look at a sample of
+real results and see if they look right:
+
+```sql
+SELECT store.brand, listing.chain_product_name, listing.chain_category, listing.shopping_category
+FROM listing
+JOIN outlet ON outlet.id = listing.outlet_id
+JOIN store ON store.id = outlet.store_id
+ORDER BY random()
+LIMIT 50;
+```
+
+If you spot a wrong or missing category, the fix always happens in
+`category_taxonomy.py`, never by hand-editing the database: add or adjust an
+entry in `PAVI_CATEGORY_MAP` / `GREENS_CATEGORY_MAP` / `KEYWORD_RULES` as
+appropriate, upload the updated file, and re-run "Categorize listings" --
+it'll pick up the fix for every affected listing automatically, not just
+one.
+
+## Ideas for later (not started -- revisit when designing the app)
+
+- **Substitute products.** Right now, rejecting a proposed match (see
+  "Reviewing medium-confidence matches" above) just makes the two listings
+  fully unrelated -- there's no record that they were ever considered
+  similar. But a rejected medium-confidence match is a natural candidate
+  for a *different* kind of relationship: not "the same product," but "a
+  reasonable substitute if the one you want isn't available at this store"
+  (e.g. two different brands/flavours of the same kind of item, each only
+  sold at one chain). Nothing captures this today -- when the app itself
+  gets designed, it's worth deciding whether/how to track and surface
+  substitutes, possibly reusing the same review data this section already
+  generates.
 
 ## What happens next
 
