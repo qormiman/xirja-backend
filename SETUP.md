@@ -267,13 +267,80 @@ browser step, one shared price list instead of per-branch ones.
    will likely take longer than PAVI PAMA but probably still well under
    Greens' multi-hour run (no login/browser step, and only one outlet).
 
+## Matching products across chains
+
+Once all three crawlers have real data in them, this step connects the same
+product across chains (and across a chain's own branches) so the app can
+eventually show "this costs X at Greens, Y at PAVI PAMA, Z at Welbee's" for
+one product. Unlike the crawlers, this doesn't run on a schedule yet — it's
+meant to be triggered by hand, whenever you want to run it, since it only
+makes sense to run once there's real crawled data to match against.
+
+1. Upload two new files, same as before:
+   - `product_matcher.py` (top level, next to the three crawlers)
+   - `.github/workflows/match-products.yml` (inside `.github/workflows/`)
+2. Go to the **Actions** tab → **Match products across chains** → **Run
+   workflow** → **Run workflow** again to confirm. No inputs to fill in.
+3. It should finish quickly — it only talks to your database, not to any of
+   the three sites, and the amount of data involved (thousands of products,
+   not millions) is well within what a straightforward comparison can chew
+   through in well under a minute.
+4. Check what it did:
+   ```sql
+   SELECT match_confidence, count(*) FROM product GROUP BY match_confidence;
+   ```
+   `high` rows are auto-linked and ready to use. `medium` rows are linked
+   too, but worth a look — see "Reviewing medium-confidence matches" below.
+   Nothing shows up for listings it couldn't confidently match at all —
+   those just stay as they were, and get reconsidered automatically next
+   time you run this (e.g. after another crawl adds more data to compare
+   against).
+
+It's safe to run as often as you like — it only ever looks at products that
+aren't matched yet, so running it again (after another night's crawl, say)
+just adds to what's already there rather than redoing or undoing anything,
+including anything you've manually confirmed.
+
+### Reviewing medium-confidence matches
+
+This shows every "medium" product side by side with the real listing names
+that got linked to it, so you can eyeball whether it's actually right:
+
+```sql
+SELECT product.id, product.canonical_name, product.size_value, product.size_unit,
+       store.brand, listing.chain_product_name
+FROM product
+JOIN listing ON listing.product_id = product.id
+JOIN outlet ON outlet.id = listing.outlet_id
+JOIN store ON store.id = outlet.store_id
+WHERE product.match_confidence = 'medium'
+ORDER BY product.id;
+```
+
+If a match looks right, confirm it so it's never reconsidered or touched again:
+
+```sql
+UPDATE product SET match_confidence = 'manual' WHERE id = '<product id from above>';
+```
+
+If a match looks wrong, undo it -- this unlinks its listings (they'll be
+picked up fresh, and can match differently, next time you run the matcher)
+and removes the incorrect product row:
+
+```sql
+UPDATE listing SET product_id = NULL WHERE product_id = '<product id from above>';
+DELETE FROM product WHERE id = '<product id from above>';
+```
+
 ## What happens next
 
 Once a manual run succeeds, no more action is needed — the schedules in
 `crawl-greens.yml`, `crawl-pavipama.yml`, and `crawl-welbees.yml` run
 automatically every night. You can check on any of them any time via the
 Actions tab, or by re-running the `crawl_run` query above (filtering by
-`store_id` if you only want one chain's results).
+`store_id` if you only want one chain's results). The product matcher
+(above) is the one piece that's still manual-only for now -- run it
+whenever you want fresh matches picked up.
 
 ## If the first run fails
 
