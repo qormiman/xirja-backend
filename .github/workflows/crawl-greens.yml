@@ -17,11 +17,14 @@ name: Crawl Greens prices
 
 on:
   schedule:
-    # Runs at 02:15 UTC every night (around 3:15am or 4:15am Malta time,
-    # depending on the season) -- late enough that the site is quiet.
-    # Cron format is "minute hour day month weekday"; this means
-    # "15 minutes past 2am, every day".
-    - cron: '15 2 * * *'
+    # Runs at 23:00 UTC every night -- 1 AM Malta time right now (summer /
+    # CEST, UTC+2). GitHub's scheduler only understands UTC and has no idea
+    # Malta observes daylight saving, so this drifts to 12 AM Malta time
+    # once clocks fall back in late October, until CEST resumes in spring --
+    # a deliberate, accepted trade-off for keeping this to one simple line
+    # rather than juggling two schedules. Cron format is "minute hour day
+    # month weekday"; this means "0 minutes past 23:00, every day".
+    - cron: '0 23 * * *'
 
   # Adds a "Run workflow" button on the Actions tab, so you can trigger a
   # run by hand at any time -- this is how you'll do the first test run.
@@ -35,6 +38,17 @@ on:
           again -- comma-separated, e.g. "FruitsAndVegetables" or
           "FruitsAndVegetables,Bakery". Must match the category name used
           inside greens_crawler.py's CATEGORIES list.
+        required: false
+        default: ''
+      only_outlets:
+        description: >-
+          Optional. Leave blank for a normal, full run of every outlet/branch
+          (this is what you want almost all the time). Fill this in only to
+          patch one specific branch without waiting through all three --
+          comma-separated, e.g. "mriehel" or "swieqi,gozo". Accepts either
+          the short branch name or the full outlet id ("greens_mriehel").
+          Combines with only_categories above if you fill in both (e.g. only
+          Mriehel's Bakery category).
         required: false
         default: ''
 
@@ -73,9 +87,10 @@ jobs:
           # up immediately as it happens, so the log is trustworthy to
           # watch live.
           PYTHONUNBUFFERED: "1"
-          # Passes through whatever you typed into the "only_categories" box
-          # when manually running this workflow. Empty for the automatic
-          # nightly run and for a normal manual run -- see greens_crawler.py
-          # for what this does.
+          # Passes through whatever you typed into the "only_categories" and
+          # "only_outlets" boxes when manually running this workflow. Both
+          # empty for the automatic nightly run and for a normal manual run
+          # -- see greens_crawler.py for what these do.
           ONLY_CATEGORIES: ${{ github.event.inputs.only_categories }}
+          ONLY_OUTLETS: ${{ github.event.inputs.only_outlets }}
         run: python greens_crawler.py

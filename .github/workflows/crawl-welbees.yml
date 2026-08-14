@@ -1,15 +1,16 @@
 # ============================================================================
-# Runs the PAVI PAMA crawler on a schedule, using GitHub's own computers --
+# Runs the Welbee's crawler on a schedule, using GitHub's own computers --
 # nothing needs to stay running on your own machine.
 #
-# Simpler than the Greens workflow: PAVI PAMA needs no login and no headless
-# browser step, so this just installs Python packages and runs the script.
+# Simpler than the Greens workflow, same as PAVI PAMA: Welbee's needs no
+# login and no headless browser step, so this just installs Python packages
+# and runs the script.
 #
 # Two ways this runs:
 #   1. Automatically, every night (see the "schedule" below) -- same time as
-#      the Greens crawl. Running both at once is safe: they write to
-#      entirely separate parts of the database, and two open connections is
-#      nowhere near any limit Neon would enforce.
+#      the Greens and PAVI PAMA crawls. Running all three at once is safe:
+#      they write to entirely separate parts of the database, and three open
+#      connections is nowhere near any limit Neon would enforce.
 #   2. Manually, whenever you want, by clicking a button -- see SETUP.md for
 #      exactly where. Use this the first time, to check it actually works.
 #
@@ -18,14 +19,15 @@
 # "Actions" tab for this repository as a green tick or red cross.
 # ============================================================================
 
-name: Crawl PAVI PAMA prices
+name: Crawl Welbee's prices
 
 on:
   schedule:
     # Runs at 23:00 UTC every night -- 1 AM Malta time right now (summer /
-    # CEST, UTC+2), same time as the Greens crawl. Drifts to 12 AM Malta
-    # time once clocks fall back in late October (see crawl-greens.yml for
-    # why this is an accepted trade-off rather than something to fix).
+    # CEST, UTC+2), same time as the Greens and PAVI PAMA crawls. Drifts to
+    # 12 AM Malta time once clocks fall back in late October (see
+    # crawl-greens.yml for why this is an accepted trade-off rather than
+    # something to fix).
     - cron: '0 23 * * *'
 
   # Adds a "Run workflow" button on the Actions tab, so you can trigger a
@@ -37,8 +39,8 @@ on:
           Optional. Leave blank for a normal, full run of every category
           (this is what you want almost all the time). Fill this in only to
           patch specific categories without waiting through a full crawl
-          again -- comma-separated category codes, e.g. "0003" or
-          "0003,0004". Must match a code in pavipama_crawler.py's
+          again -- comma-separated category codes, e.g. "D-5431" or
+          "D-5431,D-5435". Must match a code in welbees_crawler.py's
           CATEGORIES list.
         required: false
         default: ''
@@ -58,12 +60,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run the PAVI PAMA crawler
+      - name: Run the Welbee's crawler
         env:
-          # Same secret the Greens workflow uses -- one database, shared
-          # across every chain's crawler. See SETUP.md if this isn't set
-          # yet.
+          # Same secret the Greens and PAVI PAMA workflows use -- one
+          # database, shared across every chain's crawler. See SETUP.md if
+          # this isn't set yet.
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PYTHONUNBUFFERED: "1"
           ONLY_CATEGORIES: ${{ github.event.inputs.only_categories }}
-        run: python pavipama_crawler.py
+        run: python welbees_crawler.py
