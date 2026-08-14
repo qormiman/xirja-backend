@@ -150,39 +150,48 @@ behaving the same way it did when we last checked it by hand (in DevTools);
 if they change something about how their access token works, this is where
 it would show up.
 
-## Patching a single category, without a full crawl again
+## Patching a single category or branch, without a full crawl again
 
 If everything works except one specific category (for example, because we
-find out its category code was guessed wrong), you don't need to sit through
-another multi-hour full crawl just to fix that one spot. The crawler
-supports a "restricted run" that only touches the category (or categories)
-you name:
+find out its category code was guessed wrong) or one specific branch (for
+example, Mriehel's location code), you don't need to sit through another
+multi-hour full crawl just to fix that one spot. The crawler supports a
+"restricted run" that only touches the category and/or branch you name:
 
 1. Go to the **Actions** tab → **Crawl Greens prices** → **Run workflow**
    (same button as step 6 above).
-2. This time, a text box labelled **"only_categories"** appears. Type the
-   category name(s) to fix, comma-separated if more than one — e.g.
-   `FruitsAndVegetables`. This has to match the internal name used inside
-   `greens_crawler.py`'s `CATEGORIES` list, which I'll tell you exactly when
-   we get to this point.
+2. Two text boxes appear:
+   - **"only_categories"** — the category name(s) to fix, comma-separated if
+     more than one, e.g. `FruitsAndVegetables`. Has to match the internal
+     name used inside `greens_crawler.py`'s `CATEGORIES` list.
+   - **"only_outlets"** — the branch(es) to fix, comma-separated if more
+     than one, e.g. `mriehel` or `swieqi,gozo`. Accepts either the short
+     branch name or the full outlet id (`greens_mriehel`).
+   Fill in either one on its own, or both together (e.g. `only_outlets:
+   mriehel` + `only_categories: FruitsAndVegetables` crawls just Mriehel's
+   Fruit & Veg, skipping everything else entirely). Leave both blank for a
+   normal, full run.
 3. Click **Run workflow** to confirm.
 
-This still crawls that category for all three branches, but skips every
-other category entirely, so it finishes in a few minutes instead of an hour
-or two. It's safe to run any time — it only touches that category's own
-data, and updates/adds to it the same way a normal crawl would (nothing
-about other categories is affected, and nothing is duplicated if you run it
-more than once).
+A category restriction on its own still crawls that category for all three
+branches, just skipping every other category — a branch restriction on its
+own still crawls every category, just skipping the other branches. Either
+way it finishes in a few minutes instead of an hour or two. It's safe to run
+any time — it only touches that category's and/or branch's own data, and
+updates/adds to it the same way a normal crawl would (nothing about the rest
+is affected, and nothing is duplicated if you run it more than once).
 
-One thing to expect: the `crawl_run` row from a restricted run will show a
-much lower `item_count` than a full run (since it only covers one category)
-— that's normal, not a sign something's wrong. The `error_message` column
-will say `[RESTRICTED RUN -- only categories: ...]` so it's always clear,
-looking back later, that a particular run was a deliberate patch and not a
-broken full crawl.
+One thing to expect: the `crawl_run` rows from a restricted run will show a
+much lower `item_count` than a full run (since it covers less ground) — and
+if you restricted by outlet, you'll simply see fewer `crawl_run` rows appear
+for that run (one per outlet actually crawled) rather than the usual three.
+That's normal, not a sign something's wrong. A category restriction is also
+spelled out directly in the `error_message` column as `[RESTRICTED RUN --
+only categories: ...]`, so it's always clear, looking back later, that a
+particular run was a deliberate patch and not a broken full crawl.
 
-Leaving the box blank (or just clicking the button on the Actions page
-directly without opening the input first) runs a normal, full crawl, same
+Leaving both boxes blank (or just clicking the button on the Actions page
+directly without opening the inputs first) runs a normal, full crawl, same
 as before — and the automatic nightly run always runs in full regardless.
 
 ## Adding the PAVI PAMA crawler
@@ -220,13 +229,51 @@ price list instead of per-branch ones.
    SELECT * FROM crawl_run WHERE store_id = 'pavipama' ORDER BY started_at DESC LIMIT 5;
    ```
 
+## Adding the Welbee's crawler
+
+This is a third, separate crawler for a third chain — it runs on its own
+schedule, independently of Greens and PAVI PAMA, and adds to the same
+database. Like PAVI PAMA, it's simpler than Greens: no login, no headless
+browser step, one shared price list instead of per-branch ones.
+
+1. Upload two new files to the same GitHub repository, keeping them in the
+   same folder structure as before:
+   - `welbees_crawler.py` (goes at the top level, next to
+     `greens_crawler.py` and `pavipama_crawler.py`)
+   - `.github/workflows/crawl-welbees.yml` (goes inside the existing
+     `.github/workflows/` folder, alongside the other two)
+2. In Neon's SQL editor, run just this (not the whole `seed.sql` file again
+   — that would fail on the Greens and PAVI PAMA rows already being there):
+   ```sql
+   INSERT INTO store (id, name, brand, short_code, color) VALUES
+       ('welbees', 'Welbee''s Supermarket', 'Welbee''s', 'WB', 'oklch(0.52 0.10 300)');
+
+   INSERT INTO outlet (id, store_id, name, locality, source_code) VALUES
+       ('welbees', 'welbees', 'Welbee''s', NULL, 'WB');
+   ```
+   (This is already in the updated `seed.sql` file too, for the record —
+   this step is just so you don't have to re-upload and re-run the whole
+   file.)
+3. Go to the **Actions** tab → **Crawl Welbee's prices** → **Run workflow**
+   → **Run workflow** again to confirm, same as the first Greens and PAVI
+   PAMA test runs. No `only_categories` box needed this time — leave it
+   blank for a normal full run.
+4. Check `crawl_run` the same way as before:
+   ```sql
+   SELECT * FROM crawl_run WHERE store_id = 'welbees' ORDER BY started_at DESC LIMIT 5;
+   ```
+   One thing worth knowing going in: Welbee's biggest category confirmed so
+   far (Drinks) has 31 pages, and there are 17 categories in total, so this
+   will likely take longer than PAVI PAMA but probably still well under
+   Greens' multi-hour run (no login/browser step, and only one outlet).
+
 ## What happens next
 
 Once a manual run succeeds, no more action is needed — the schedules in
-`crawl-greens.yml` and `crawl-pavipama.yml` run automatically every night.
-You can check on either any time via the Actions tab, or by re-running the
-`crawl_run` query above (filtering by `store_id` if you only want one
-chain's results).
+`crawl-greens.yml`, `crawl-pavipama.yml`, and `crawl-welbees.yml` run
+automatically every night. You can check on any of them any time via the
+Actions tab, or by re-running the `crawl_run` query above (filtering by
+`store_id` if you only want one chain's results).
 
 ## If the first run fails
 

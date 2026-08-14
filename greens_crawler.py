@@ -53,11 +53,12 @@ How this evolved (worth knowing if something breaks later):
       the crawl_run row as a "partial" result (a new status, alongside
       "success" and "failed"), listing exactly which category/page didn't
       make it -- never silently treated as a complete success.
-    - There's also a generous per-category safety cap (50 pages, i.e. over
-      2,000 products) that exists purely as a backstop against a genuine
-      bug (like a pagination loop that never realises it's done) -- no real
-      Greens category should ever come close to it. If it's ever hit, it's
-      logged loudly and marked "partial", not hidden.
+    - There's also a generous per-category safety cap (300 pages, i.e. over
+      14,000 products) that exists purely as a backstop against a genuine
+      bug (like a pagination loop that never realises it's done), sized with
+      real headroom above the biggest real category we've actually seen
+      (Groceries at Swieqi, 5,000+ products). If it's ever hit, it's logged
+      loudly and marked "partial", not hidden.
 
   Version 3 also turned up a second, unrelated gap once tested: the
   browser-launch step that fetches the access token had NO ceiling of its
@@ -89,6 +90,27 @@ How this evolved (worth knowing if something breaks later):
   removing the entire class of "guessed a subcategory spelling wrong, lost
   those products silently" bugs. The same captured request also fixed the
   Referer header to match the real one exactly.
+
+  Version 6 fixed a real instance of exactly that same "guessed and lost
+  data silently" problem, just for a branch instead of a category: Mriehel's
+  location code was guessed as "MR" (following the same first-two-letters
+  pattern as Swieqi's "SM" and Gozo's "GZ"), and a real run against it came
+  back with a valid access token but a clean zero products in every single
+  category -- Greens' site doesn't error on an unrecognised location, it
+  just quietly returns nothing, so this had been silently producing zero
+  data for Mriehel. Confirmed via a live DevTools capture (Network tab,
+  "Loc" query parameter) with the site's own store switcher actually set to
+  Mriehel: the real code is "MH". Swieqi and Gozo's codes are both
+  independently confirmed correct by real product data already having come
+  back for both. Two other changes came out of specifically auditing for
+  more of this same failure mode: the per-kg/per-litre price calculation
+  now logs a note whenever it sees a SIZE_UOM value it doesn't recognise,
+  instead of silently skipping it (a real, partial version of the same bug
+  was found this way -- about 40% of Greens' weighted fruit & veg items
+  were missing a per-unit price with nothing in the log to show it); and an
+  optional "only run these outlets" filter was added (see ONLY_OUTLETS
+  below), so a single wrong/missing branch code can be patched by itself,
+  the same way ONLY_CATEGORIES already let you patch a single category.
 
 Before you rely on this:
   This version has still not been tested end-to-end from inside the
@@ -149,16 +171,60 @@ REQUEST_DELAY_SECONDS = 5
 # only ever fires on a genuinely stuck request.
 REQUEST_HARD_TIMEOUT_SECONDS = 45
 
-# Purely a backstop against a pagination bug -- no real category should
-# come anywhere near this many pages (2,400+ products in one subcategory).
-MAX_PAGES_PER_CATEGORY = 50
+# Purely a backstop against a pagination bug, not a guess at how big a real
+# category can get -- this was originally set to 50 (2,400 products) assuming
+# no single category would come close. That assumption turned out to be
+# wrong: a real run confirmed "Groceries" at Swieqi alone has 5,000+ products,
+# which needs 105+ pages at 48 per page. Raised generously above that with
+# real headroom to grow, while still catching a genuine pagination bug (which
+# would loop essentially forever, not just run a bit long).
+MAX_PAGES_PER_CATEGORY = 300
 
 # Each outlet's id here MUST match the outlet.id rows inserted by seed.sql.
+#
+# Mriehel's code was originally guessed as "MR" (matching the initial-letter
+# pattern of Swieqi's "SM" and Gozo's "GZ") and that guess turned out to be
+# wrong -- a real run against it came back with a valid token but a clean
+# zero products in every single category, which is what a real site does
+# with an unrecognised location rather than an error. Confirmed via a real
+# DevTools capture (Network tab, "Loc" query parameter) with the store
+# switcher actually set to Mriehel on the live site: the real code is "MH".
+# Swieqi and Gozo's codes are both independently confirmed correct (real
+# products came back for both), so this was a Mriehel-only mistake, not a
+# sign the others need rechecking too.
 OUTLETS = [
     {"outlet_id": "greens_swieqi", "source_code": "SM"},
-    {"outlet_id": "greens_mriehel", "source_code": "MR"},
+    {"outlet_id": "greens_mriehel", "source_code": "MH"},
     {"outlet_id": "greens_gozo", "source_code": "GZ"},
 ]
+
+# Optional: restrict a run to just one or a few outlets/branches, instead of
+# all three -- e.g. to re-crawl just Mriehel after fixing its location code,
+# without sitting through a multi-hour Swieqi + Gozo crawl that doesn't need
+# repeating. Set via the "only_outlets" box when manually running the GitHub
+# Actions workflow (see .github/workflows/crawl-greens.yml) -- comma-
+# separated, case-insensitive. Accepts either the full outlet id
+# ("greens_mriehel") or just the short form after the "greens_" ("mriehel"),
+# whichever's easier to type. Leave it blank (the normal case, and always
+# the case for the automatic nightly run) and every outlet above runs, same
+# as before this existed.
+ONLY_OUTLETS_RAW = os.environ.get("ONLY_OUTLETS", "").strip()
+if ONLY_OUTLETS_RAW:
+    _wanted_outlets = {o.strip().lower() for o in ONLY_OUTLETS_RAW.split(",") if o.strip()}
+
+    def _outlet_matches(outlet):
+        full_id = outlet["outlet_id"].lower()
+        short_id = full_id.split("_", 1)[1] if "_" in full_id else full_id
+        return full_id in _wanted_outlets or short_id in _wanted_outlets
+
+    ACTIVE_OUTLETS = [o for o in OUTLETS if _outlet_matches(o)]
+    if not ACTIVE_OUTLETS:
+        print(f"WARNING: ONLY_OUTLETS={ONLY_OUTLETS_RAW!r} didn't match any outlet above -- "
+              f"check spelling (e.g. \"greens_mriehel\" or just \"mriehel\"). Running EVERY "
+              f"outlet instead, same as a normal full run.", file=sys.stderr)
+        ACTIVE_OUTLETS = OUTLETS
+else:
+    ACTIVE_OUTLETS = OUTLETS
 
 # Confirmed via testing: the site's product-list address needs *a* Cart
 # value to be present to be recognised as a valid request at all, but it
@@ -210,7 +276,13 @@ CATEGORIES = [
 
 PAGE_SIZE = 48  # matches the value confirmed working in the spike capture
 
-# Sizes that make a per-kg / per-litre price meaningful to compute.
+# Sizes that make a per-kg / per-litre price meaningful to compute. These two
+# exact strings ("Kilogram", "Litre") are what the real, working Swieqi and
+# Gozo crawls have actually been matching against -- but unlike PAVI PAMA and
+# Welbee's, nothing here used to log when SIZE_UOM held something else, so a
+# silently wrong or incomplete guess here could hide the same way Mriehel's
+# wrong location code did (no error, just quietly fewer per-unit prices than
+# there should be). See the logging added below for unrecognised values.
 WEIGHT_UNITS = {"Kilogram": "kg", "Litre": "l"}
 
 # Optional: restrict a run to just one or a few top-level categories, instead
@@ -420,6 +492,13 @@ def parse_products(payload):
                     price_per_unit_measure = WEIGHT_UNITS[size_uom]
             except (TypeError, ValueError, ZeroDivisionError):
                 pass
+        elif size_uom and size_uom not in WEIGHT_UNITS:
+            # Previously this just silently skipped -- added after finding
+            # the Mriehel location-code bug, specifically so a wrong/missing
+            # unit spelling here shows up in the log instead of quietly
+            # producing fewer per-unit prices than there should be.
+            print(f"    (note: unrecognised size unit {size_uom!r} on {name!r} "
+                  f"-- storing the product, just without a per-unit price)")
 
         category = " / ".join(
             filter(None, [d.get("GROUP_1"), d.get("GROUP_2"), d.get("GROUP_3")])
@@ -725,8 +804,12 @@ def crawl_outlet(conn, outlet_id, source_code):
 # ----------------------------------------------------------------------------
 
 def main():
+    if ONLY_OUTLETS_RAW:
+        print(f"RESTRICTED RUN: only crawling outlets matching {ONLY_OUTLETS_RAW!r} "
+              f"({len(ACTIVE_OUTLETS)} of {len(OUTLETS)} outlets) -- not a full crawl.")
+
     all_ok = True
-    for outlet in OUTLETS:
+    for outlet in ACTIVE_OUTLETS:
         print(f"\n=== Crawling {outlet['outlet_id']} ===")
         # A fresh connection per outlet, rather than one shared across the
         # whole multi-hour run -- an outlet's crawl can take a long time,
