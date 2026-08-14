@@ -371,43 +371,131 @@ def sizes_match(a, b):
     return True, abs(a["value"] - b["value"]) <= SIZE_TOLERANCE
 
 
-def find_best_pairs(candidates, product_targets, existing_product_stores):
-    """Scores every viable (candidate, target) pair -- against existing
-    products AND against other candidates -- and returns them sorted best
-    first, ready for greedy assignment. "Viable" means: different store than
-    the target already has (for existing products), or a different store
-    than the other candidate (for candidate-vs-candidate), and a
-    classify_match() result that isn't None.
+def _size_block_key(item):
+    """Blocks on size AND the leading word of the name together, not size
+    alone. Size alone isn't fine-grained enough for real grocery data --
+    common sizes like "500ml", "1kg", or "2L" are shared by huge numbers of
+    otherwise-unrelated products (every soft drink, not just one brand), so
+    a size-only bucket can still hold thousands of items that were never
+    going to match by name anyway. Combining with the first word (which is
+    almost always the brand) cuts each bucket down to roughly "how many
+    same-sized products does this one brand have", which in practice is a
+    handful, not thousands -- confirmed by testing against a synthetic
+    60,000-product stress case before this was ever run for real; blocking
+    on size alone was still far too slow at that scale, and this fixed it.
 
-    This does a full pairwise scan rather than a smarter blocking index --
-    simpler to read and verify, and at the scale of a few outlets' worth of
-    groceries (tens of thousands of candidates at most) this comfortably
-    finishes well within a GitHub Actions job, even though it's doing more
-    comparisons than strictly necessary."""
+    The 2-decimal rounding (vs. the 4 decimals sizes are stored at) is
+    purely a performance grouping, not the actual match decision --
+    sizes_match() still does the precise, tolerance-based comparison for
+    anything that ends up being compared."""
+    if item["family"] is None:
+        return None
+    return (item["family"], round(item["value"], 2), _first_word(item["core"]))
+
+
+def _first_word(core):
+    return core.split(" ", 1)[0] if core else ""
+
+
+def _score(a, b):
+    size_known, size_ok = sizes_match(a, b)
+    sim = name_similarity(a["core"], b["core"])
+    tier = classify_match(sim, size_known, size_ok)
+    return sim, tier
+
+
+def find_best_pairs(candidates, product_targets, existing_product_stores):
+    """Scores viable (candidate, target) pairs -- against existing products
+    AND against other candidates -- and returns them sorted best first,
+    ready for greedy assignment.
+
+    A first version of this compared every candidate against every other
+    candidate and every product -- simple, but it doesn't scale: run for
+    real against ~60,000 real candidates (Greens + PAVI PAMA alone), it
+    meant on the order of a BILLION comparisons and the job never finished
+    in any reasonable time. Since a match requires matching sizes anyway
+    (see sizes_match/classify_match), there's no need to compare two things
+    with different sizes in the first place -- so this only ever compares
+    within groups that could plausibly match:
+
+      Pass A: candidates/products with a KNOWN size are only compared
+      against others sharing that same (rounded) size -- this is where
+      almost all real matches live, and turns "everything times everything"
+      into "everything times the handful of other things the same size."
+
+      Pass B: anything where at least one side's size couldn't be read is
+      compared within groups sharing the first word of the (size-stripped)
+      name instead, since it can't be blocked by size. Pairs where BOTH
+      sides have a known size are skipped here -- Pass A already covers
+      those, and skipping avoids scoring the same pair twice."""
     pairs = []
 
-    for ci, cand in enumerate(candidates):
-        # Against existing products.
-        for target in product_targets:
+    def add_pair(ci, right):
+        cand = candidates[ci]
+        if right[0] == "product":
+            target = product_targets[right[2]]
             if cand["store_id"] in existing_product_stores.get(target["id"], set()):
-                continue
-            size_known, size_ok = sizes_match(cand, target)
-            sim = name_similarity(cand["core"], target["core"])
-            tier = classify_match(sim, size_known, size_ok)
+                return
+            sim, tier = _score(cand, target)
             if tier:
                 pairs.append((sim, tier, ("candidate", ci), ("product", target["id"])))
-
-        # Against other candidates (only pair each unordered combination
-        # once -- cj > ci).
-        for cj in range(ci + 1, len(candidates)):
-            other = candidates[cj]
-            if other["store_id"] == cand["store_id"]:
-                continue  # two different codes from the same chain aren't the same product
-            size_known, size_ok = sizes_match(cand, other)
-            sim = name_similarity(cand["core"], other["core"])
-            tier = classify_match(sim, size_known, size_ok)
+        else:
+            cj = right[2]
+            if cj <= ci or candidates[cj]["store_id"] == cand["store_id"]:
+                return  # unordered pair counted once; never merge two codes from one chain
+            sim, tier = _score(cand, candidates[cj])
             if tier:
                 pairs.append((sim, tier, ("candidate", ci), ("candidate", cj)))
+
+    # ---- Pass A: blocked by known size. ----
+    cand_size_buckets = {}
+    for ci, cand in enumerate(candidates):
+        key = _size_block_key(cand)
+        if key is not None:
+            cand_size_buckets.setdefault(key, []).append(ci)
+
+    product_size_buckets = {}
+    for pi, target in enumerate(product_targets):
+        key = _size_block_key(target)
+        if key is not None:
+            product_size_buckets.setdefault(key, []).append(pi)
+
+    largest_bucket = 0
+    for key, cand_idxs in cand_size_buckets.items():
+        largest_bucket = max(largest_bucket, len(cand_idxs))
+        for pi in product_size_buckets.get(key, []):
+            for ci in cand_idxs:
+                add_pair(ci, ("product", None, pi))
+        for a in range(len(cand_idxs)):
+            for b in range(a + 1, len(cand_idxs)):
+                add_pair(cand_idxs[a], ("candidate", None, cand_idxs[b]))
+    if largest_bucket:
+        print(f"    (largest same-size group while matching: {largest_bucket} candidates)")
+
+    # ---- Pass B: blocked by first word, only pairs with at least one
+    # unknown size (known-vs-known already handled by Pass A above). ----
+    word_buckets = {}
+    for ci, cand in enumerate(candidates):
+        word_buckets.setdefault(_first_word(cand["core"]), ([], []))[0].append(ci)
+    for pi, target in enumerate(product_targets):
+        word_buckets.setdefault(_first_word(target["core"]), ([], []))[1].append(pi)
+
+    for word, (cand_idxs, product_idxs) in word_buckets.items():
+        for ci in cand_idxs:
+            cand = candidates[ci]
+            for pi in product_idxs:
+                target = product_targets[pi]
+                if cand["family"] is not None and target["family"] is not None:
+                    continue  # both known -- Pass A already covered this
+                add_pair(ci, ("product", None, pi))
+        for a in range(len(cand_idxs)):
+            ci = cand_idxs[a]
+            cand = candidates[ci]
+            for b in range(a + 1, len(cand_idxs)):
+                cj = cand_idxs[b]
+                if cand["family"] is not None and candidates[cj]["family"] is not None:
+                    continue  # both known -- Pass A already covered this
+                add_pair(ci, ("candidate", None, cj))
 
     pairs.sort(key=lambda p: p[0], reverse=True)
     return pairs
