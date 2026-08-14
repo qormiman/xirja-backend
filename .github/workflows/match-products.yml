@@ -1,0 +1,42 @@
+# ============================================================================
+# Runs the cross-chain product matcher, using GitHub's own computers.
+#
+# Unlike the three crawlers, this doesn't have a nightly schedule yet -- it's
+# meant to be run by hand (Actions tab -> "Match products across chains" ->
+# Run workflow) after the crawlers have had a chance to gather real data,
+# since matching only works with something to match against. Once you're
+# happy with how it's performing, a nightly schedule (running some hours
+# after the crawlers, so they've finished first) can be added the same way
+# the crawlers have one -- just ask.
+#
+# It's always safe to run -- it only ever looks at products that aren't
+# matched yet, so running it again after another crawl (with new listings)
+# just picks up where it left off, and never undoes or revisits a match
+# from a previous run.
+# ============================================================================
+
+name: Match products across chains
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run the product matcher
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PYTHONUNBUFFERED: "1"
+        run: python product_matcher.py
