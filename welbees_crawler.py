@@ -195,6 +195,15 @@ CATEGORIES = [
 # as "piece" -- see parse_products, where this is used.
 PHYSICAL_UNITS = {"kg": "kg", "l": "l", "g": "g", "ml": "ml", "m": "l"}
 
+# How many times each non-physical per-unit suffix has been seen this run,
+# e.g. {"p": 143, "ea": 6}. Used to log each suffix only ONCE (the first
+# time it's seen) instead of once per product -- on a real run, "p" alone
+# shows up on the vast majority of the Baby category, and logging every
+# single occurrence buried anything actually worth noticing under hundreds
+# of identical lines. A one-line tally is printed at the end of the run
+# instead (see crawl_welbees).
+fallback_unit_counts = {}
+
 # Optional: restrict a run to just one or a few categories -- see
 # greens_crawler.py's ONLY_CATEGORIES for the full explanation. Matched
 # against the category CODE (e.g. "D-5435"), case-insensitive.
@@ -341,11 +350,17 @@ def parse_products(html, category_label):
             else:
                 # Not one of the four physical units -- some other way of
                 # saying "priced per item" (see the PHYSICAL_UNITS comment
-                # above). Logged so you can still see new ones as they show
-                # up, but no longer needs a code change to handle.
+                # above). Logged the first time this exact suffix shows up
+                # in this run, so you can still see new ones as they appear,
+                # without hundreds of repeat lines for an already-understood
+                # one like "p".
                 price_per_unit_measure = "piece"
-                print(f"    (note: per-unit suffix {unit_raw!r} on product {code!r} isn't one "
-                      f"of the physical units -- treating it as \"per piece\" pricing)")
+                fallback_unit_counts[unit_raw] = fallback_unit_counts.get(unit_raw, 0) + 1
+                if fallback_unit_counts[unit_raw] == 1:
+                    print(f"    (note: per-unit suffix {unit_raw!r} (first seen on product "
+                          f"{code!r}) isn't one of the physical units -- treating it, and any "
+                          f"further products with this same suffix, as \"per piece\" pricing. "
+                          f"A tally of how many is printed at the end of the run.)")
 
         name_m = NAME_RE.search(rest)
         href = name_m.group(1).strip() if name_m else None
@@ -480,6 +495,8 @@ def safe_recover_connection(conn, outlet_id):
 # ----------------------------------------------------------------------------
 
 def crawl_welbees(conn):
+    fallback_unit_counts.clear()  # fresh tally for this run, not left over from any previous call
+
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO crawl_run (store_id, outlet_id, status) VALUES (%s, %s, 'running') RETURNING id",
@@ -664,6 +681,13 @@ def crawl_welbees(conn):
         cur.close()
     except Exception:
         pass
+
+    if fallback_unit_counts:
+        tally = ", ".join(
+            f"{suffix!r}: {count} product(s)"
+            for suffix, count in sorted(fallback_unit_counts.items())
+        )
+        print(f"  Per-unit suffixes treated as \"per piece\" pricing this run: {tally}")
 
     print(f"Finished Welbee's: status={status}, item_count={item_count}")
     return status == "success"
