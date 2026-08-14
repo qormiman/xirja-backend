@@ -419,10 +419,17 @@ def insert_price_observation(cur, listing_id, product):
     # across two real categories, same situation as Greens.
 
 
-def store_page(cur, outlet_id, html, category_label):
-    """Save every product on one already-fetched page. Returns how many
-    priced products were saved."""
-    products = parse_products(html, category_label)
+def product_code_set(products):
+    """The set of chain_product_code values on an already-parsed page --
+    used to detect a page that's a word-for-word repeat of the previous one
+    (see save_parsed_page's caller for why that matters)."""
+    return frozenset(p["chain_product_code"] for p in products)
+
+
+def store_products(cur, outlet_id, products):
+    """Save an already-parsed page's worth of products. Returns (saved,
+    total) -- 'saved' only counts ones with a usable price, same as
+    before."""
     saved = 0
     for product in products:
         if product["price"] is None:
@@ -435,8 +442,8 @@ def store_page(cur, outlet_id, html, category_label):
     return saved, len(products)
 
 
-def save_page(cur, conn, outlet_id, html, category_label):
-    saved, total = store_page(cur, outlet_id, html, category_label)
+def save_parsed_page(cur, conn, outlet_id, products):
+    saved, total = store_products(cur, outlet_id, products)
     conn.commit()
     return saved, total
 
@@ -483,8 +490,20 @@ def crawl_welbees(conn):
         # ---- First pass: walk every category once, page by page, until a
         # page comes back with zero products. Anything that fails is noted
         # down and skipped immediately -- never blocks the rest. ----
+        #
+        # A page that comes back IDENTICAL to the one before it also ends
+        # the category, same as an empty one -- found for real on a live
+        # run: welbees.mt silently ignored the ?page=N part of the URL for
+        # at least one category, so every "page" after the first kept
+        # serving the same products, and the crawler had no way to notice
+        # short of grinding all the way to the MAX_PAGES_PER_CATEGORY safety
+        # cap (2+ hours on a single category). Comparing each page's set of
+        # product codes to the previous page's catches this immediately
+        # (typically by page 2) without needing to know exactly why the
+        # site repeated itself.
         for category_code, slug, label in ACTIVE_CATEGORIES:
             page = 1
+            previous_codes = None
             while True:
                 try:
                     html = fetch_page_bounded(category_code, slug, page)
@@ -495,9 +514,19 @@ def crawl_welbees(conn):
                                              "label": label, "page": page})
                     break
 
+                products = parse_products(html, label)
+                current_codes = product_code_set(products)
+                if products and current_codes == previous_codes:
+                    print(f"  {category_code} ({label}) page {page}: identical product list to "
+                          f"the previous page -- the site isn't giving us anything new here (it "
+                          f"may be ignoring the page number in the URL). Treating this category "
+                          f"as finished rather than continuing toward the "
+                          f"{MAX_PAGES_PER_CATEGORY}-page safety cap.")
+                    break
+
                 try:
                     saved, total = run_with_timeout(
-                        save_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, html, label
+                        save_parsed_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, products
                     )
                 except Exception as exc:
                     print(f"  {category_code} ({label}) page {page}: FAILED saving to the database "
@@ -520,6 +549,7 @@ def crawl_welbees(conn):
                     pending_retries.append({"category_code": category_code, "slug": slug,
                                              "label": label, "page": page + 1})
                     break
+                previous_codes = current_codes
                 page += 1
                 time.sleep(REQUEST_DELAY_SECONDS)
 
@@ -536,9 +566,10 @@ def crawl_welbees(conn):
                 still_failed.append(entry)
                 continue
 
+            products = parse_products(html, label)
             try:
                 saved, total = run_with_timeout(
-                    save_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, html, label
+                    save_parsed_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, products
                 )
             except Exception as exc:
                 print(f"  {category_code} ({label}) page {page}: still failed saving on retry "
@@ -552,7 +583,10 @@ def crawl_welbees(conn):
             print(f"  {category_code} ({label}) page {page}: RECOVERED on retry, {total} products")
 
             # If the retry succeeded and there's more to this category, keep
-            # going from here -- same as the first pass would have.
+            # going from here -- same as the first pass would have, including
+            # the same repeated-page detection (see the first pass above for
+            # why that matters).
+            previous_codes = product_code_set(products)
             next_page = page + 1
             while total > 0:
                 if next_page > page + MAX_PAGES_PER_CATEGORY:
@@ -564,8 +598,14 @@ def crawl_welbees(conn):
                 time.sleep(REQUEST_DELAY_SECONDS)
                 try:
                     html = fetch_page_bounded(category_code, slug, next_page)
+                    next_products = parse_products(html, label)
+                    current_codes = product_code_set(next_products)
+                    if next_products and current_codes == previous_codes:
+                        print(f"  {category_code} ({label}) page {next_page}: identical product "
+                              f"list to the previous page -- treating this category as finished.")
+                        break
                     saved, total = run_with_timeout(
-                        save_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, html, label
+                        save_parsed_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, next_products
                     )
                 except Exception as exc:
                     print(f"  {category_code} ({label}) page {next_page}: failed continuing after "
@@ -577,6 +617,7 @@ def crawl_welbees(conn):
                 print(f"  {category_code} ({label}) page {next_page}: {total} products")
                 if total == 0:
                     break
+                previous_codes = current_codes
                 next_page += 1
 
         if still_failed:
