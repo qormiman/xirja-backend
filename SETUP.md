@@ -301,8 +301,56 @@ aren't matched yet, so running it again (after another night's crawl, say)
 just adds to what's already there rather than redoing or undoing anything,
 including anything you've manually confirmed.
 
-### Reviewing medium-confidence matches
+### Reviewing medium-confidence matches in bulk
 
+If you only have a handful of medium matches to check, the one-off SQL
+method at the bottom of this section is quickest. If you have a lot (a
+few hundred or more), use the spreadsheet workflow instead -- it lets you
+review all of them in Excel or Google Sheets, and applies your decisions
+back to the database in one go.
+
+1. Upload three new files, same as before:
+   - `export_medium_matches.py` and `apply_reviewed_matches.py` (top level,
+     next to `product_matcher.py`)
+   - `.github/workflows/export-review.yml` and
+     `.github/workflows/apply-review.yml` (inside `.github/workflows/`)
+2. Go to **Actions** → **Export medium matches for review** → **Run
+   workflow** → **Run workflow** again to confirm. It only reads from the
+   database, so it's always safe to run.
+3. When it finishes, open that run's page and scroll to the bottom to
+   **Artifacts**. Click **review-spreadsheet** to download a zip file;
+   unzip it to get `review_medium_matches.xlsx`.
+4. Open the file. The **Instructions** tab explains what to do; the
+   **Review** tab has one row per medium-confidence product, with the
+   chains' listing names side by side and a **decision** column with a
+   dropdown. For each row, type or pick:
+   - `keep` if it's genuinely the same product across chains
+   - `reject` if it isn't
+   - leave it blank if you're unsure or don't get to it -- nothing happens
+     to a blank row, and you can review it another time
+5. Save the file. Go back to your GitHub repo, **Add file** → **Upload
+   files**, and upload it with the *exact same filename*
+   (`review_medium_matches.xlsx`) to the repo root, replacing the copy
+   that's there (there isn't one yet the first time -- just upload it).
+6. Go to **Actions** → **Apply reviewed matches** → **Run workflow** → **Run
+   workflow** again to confirm. It reads the file you just uploaded and:
+   - `keep` rows become `match_confidence = 'manual'` (confirmed, never
+     touched again by the matcher)
+   - `reject` rows get unlinked and deleted, so those listings go back to
+     unmatched and get reconsidered next time you run `product_matcher.py`
+   - blank rows are left exactly as they were
+7. Check the run's log for a one-line summary of how many were confirmed
+   and how many were rejected.
+
+You don't have to review everything in one sitting -- leave the rows you
+haven't gotten to blank, run "Apply reviewed matches" whenever you like,
+and run "Export medium matches for review" again later to get a fresh
+spreadsheet (it'll no longer include anything you've already confirmed or
+rejected, since those are no longer `medium`).
+
+### Reviewing a handful of matches directly in SQL
+
+For just a few matches, this is quicker than the spreadsheet round-trip.
 This shows every "medium" product side by side with the real listing names
 that got linked to it, so you can eyeball whether it's actually right:
 
