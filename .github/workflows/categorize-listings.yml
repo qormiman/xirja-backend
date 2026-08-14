@@ -1,0 +1,39 @@
+# ============================================================================
+# Fills in listing.shopping_category for every listing, using the rules in
+# category_taxonomy.py -- this is what lets the app later search "milk" (or
+# "shampoo", or "beef") across all three chains at once, without needing to
+# know that two listings are the exact same physical product. See SETUP.md's
+# "Category normalization" section for the full explanation.
+#
+# Safe to run any time, as often as you like -- it only ever reads and
+# writes your own database, never touches any of the three sites, and only
+# writes rows whose category actually changed.
+#
+# Run by hand (Actions tab -> "Categorize listings" -> Run workflow).
+# ============================================================================
+
+name: Categorize listings
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  categorize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Categorize listings
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PYTHONUNBUFFERED: "1"
+        run: python categorize_listings.py
