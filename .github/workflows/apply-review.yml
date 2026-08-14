@@ -1,0 +1,41 @@
+# ============================================================================
+# Applies the decisions you made in review_medium_matches.xlsx (from the
+# "Export medium matches for review" workflow) back to the database --
+# confirming the ones you marked "keep" and undoing the ones you marked
+# "reject". See SETUP.md's "Reviewing medium-confidence matches in bulk"
+# section for the full walkthrough.
+#
+# Before running this: upload your edited review_medium_matches.xlsx into
+# the repo root (Add file -> Upload files, same filename, replacing the
+# previous copy) so this workflow's checkout picks it up.
+#
+# Run by hand (Actions tab -> "Apply reviewed matches" -> Run workflow).
+# Rows left blank in the spreadsheet are simply skipped, so it's safe to
+# review only some rows now and run this again later after reviewing more.
+# ============================================================================
+
+name: Apply reviewed matches
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Apply reviewed matches
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PYTHONUNBUFFERED: "1"
+        run: python apply_reviewed_matches.py

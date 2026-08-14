@@ -1,0 +1,47 @@
+# ============================================================================
+# Exports every medium-confidence product match to a spreadsheet you can
+# review in Excel or Google Sheets, instead of one row at a time in the SQL
+# editor -- see SETUP.md's "Reviewing medium-confidence matches in bulk"
+# section for the full walkthrough.
+#
+# Run by hand (Actions tab -> "Export medium matches for review" -> Run
+# workflow). When it finishes, scroll to the bottom of the run page to the
+# "Artifacts" section and download "review-spreadsheet" -- that's a zip
+# containing review_medium_matches.xlsx.
+#
+# It's always safe to run -- this workflow only ever reads from the
+# database, it never writes anything.
+# ============================================================================
+
+name: Export medium matches for review
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Export medium-confidence matches
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PYTHONUNBUFFERED: "1"
+        run: python export_medium_matches.py
+
+      - name: Upload spreadsheet
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-spreadsheet
+          path: review_medium_matches.xlsx
+          retention-days: 30
