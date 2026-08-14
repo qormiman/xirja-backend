@@ -177,12 +177,14 @@ CATEGORIES = [
     ("D-5446", "tobacco", "Tobacco"),
 ]
 
-# Recognised per-kg / per-litre suffixes on Welbee's own ready-made per-unit
-# price (e.g. "EUR1.99/l") -- only "l" and "kg" have actually been seen in
-# real page pastes so far, but "g" and "ml" are included too since they're
-# the same style of unit and just as trustworthy if they ever show up.
-# Anything else is logged and left out rather than guessed.
-KNOWN_UNITS = {"kg": "kg", "l": "l", "g": "g", "ml": "ml"}
+# Recognised suffixes on Welbee's own ready-made per-unit price (e.g.
+# "EUR1.99/l"). "l" and "kg" were seen in the real page pastes checked
+# before writing this; "g" and "ml" were added defensively as the same
+# style of unit, and "p" (confirmed for real by an actual crawl run -- shows
+# up constantly on Baby items, e.g. nappies sold "per piece" rather than by
+# weight/volume) maps to "piece" rather than a physical unit. Anything else
+# is logged and left out rather than guessed.
+KNOWN_UNITS = {"kg": "kg", "l": "l", "g": "g", "ml": "ml", "p": "piece"}
 
 # Optional: restrict a run to just one or a few categories -- see
 # greens_crawler.py's ONLY_CATEGORIES for the full explanation. Matched
