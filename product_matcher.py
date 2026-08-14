@@ -629,7 +629,13 @@ def apply_results(cur, candidates, trivial_reattach, assigned, new_products, exi
             (product["canonical_name"], product["size_value"], size_unit,
              product["category"], product["confidence"]),
         )
-        temp_to_real_id[temp_id] = cur.fetchone()[0]
+        # cur is a RealDictCursor (used throughout this script so the SELECT
+        # queries can be read by column name) -- fetchone() here returns a
+        # dict-like row keyed by "id", not a plain positional tuple, so it
+        # has to be ["id"], not [0]. Missing that was the actual bug on the
+        # last real run (KeyError: 0) -- everything before this line had
+        # already run correctly against your real data.
+        temp_to_real_id[temp_id] = cur.fetchone()["id"]
 
     new_product_count = len(temp_to_real_id)
 
