@@ -81,12 +81,15 @@ How to run it:
 import os
 import re
 import sys
+import time
+import random
 import difflib
 import threading
 from datetime import datetime, timezone
 
 import psycopg2
 import psycopg2.extras
+import psycopg2.errors
 
 # ----------------------------------------------------------------------------
 # Configuration
@@ -106,6 +109,28 @@ NAME_MEDIUM_THRESHOLD = 0.75
 SIZE_TOLERANCE = 0.01
 
 DB_WRITE_HARD_TIMEOUT_SECONDS = 600
+
+# Writes happen in chunks of this many rows per statement/transaction,
+# rather than one giant transaction for the whole run. Two reasons: it's
+# far fewer network round-trips than one row at a time (this is what fixed
+# the "run took hours" version), and -- just as important -- each individual
+# transaction only holds its locks for a short window, which matters a lot
+# now that this can genuinely run at the same time as a crawler is still
+# writing to the same `listing` table (see DEADLOCK_MAX_ATTEMPTS below).
+WRITE_BATCH_SIZE = 500
+
+# A real run hit "deadlock detected" here -- confirmed (by deliberately
+# reproducing the exact same error against a real local Postgres before
+# writing this fix) to be two transactions genuinely racing to update
+# overlapping listing rows in a different order: this matcher, and a
+# crawler that was still running at the same time. That's not a sign of a
+# bug in either script -- it's PostgreSQL's own, well-documented way of
+# handling this exact situation: when two transactions would otherwise wait
+# on each other forever, it picks one to fail immediately so the other can
+# proceed. The standard, expected response is to roll back and retry the
+# LOSING side -- which is what this does, a few times, with a short random
+# delay so two retries don't just collide again immediately.
+DEADLOCK_MAX_ATTEMPTS = 5
 
 CONFIDENCE_RANK = {"unmatched": 0, "low": 1, "medium": 2, "high": 3, "manual": 4}
 
@@ -608,49 +633,120 @@ def assign_matches(candidates, product_targets, existing_product_stores, pairs):
 # Writing results
 # ----------------------------------------------------------------------------
 
-def apply_results(cur, candidates, trivial_reattach, assigned, new_products, existing_confidence_updates):
-    reattached = 0
-    for listing_id, product_id in trivial_reattach:
-        cur.execute("UPDATE listing SET product_id = %s WHERE id = %s", (product_id, listing_id))
-        reattached += 1
+def _chunks(items, size):
+    for i in range(0, len(items), size):
+        yield items[i:i + size]
 
-    # Create the new products first, so we know their real ids.
-    temp_to_real_id = {}
+
+def _run_batch(conn, action, description, max_attempts=DEADLOCK_MAX_ATTEMPTS):
+    """Runs one batch's worth of writes (action) and commits, retrying from
+    a clean rollback if -- and only if -- Postgres reports a deadlock. Any
+    other error is left to propagate immediately, same as before."""
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result = action()
+            conn.commit()
+            return result
+        except psycopg2.errors.DeadlockDetected:
+            conn.rollback()
+            if attempt == max_attempts:
+                raise
+            wait = min(30, 2 ** attempt) * random.uniform(0.5, 1.5)
+            print(f"    (deadlock with another process writing to the database while "
+                  f"{description} -- retrying in {wait:.1f}s, attempt {attempt}/{max_attempts})")
+            time.sleep(wait)
+
+
+def _bulk_update_listing_products(cur, pairs):
+    """pairs: [(listing_id, product_id), ...]. One statement updates every
+    row in the batch at once via a VALUES list, instead of one round-trip
+    per row."""
+    psycopg2.extras.execute_values(
+        cur,
+        """
+        UPDATE listing AS l SET product_id = v.product_id::uuid
+        FROM (VALUES %s) AS v(listing_id, product_id)
+        WHERE l.id = v.listing_id::uuid
+        """,
+        pairs,
+    )
+
+
+def apply_results(conn, cur, candidates, trivial_reattach, assigned, new_products, existing_confidence_updates):
+    reattached = 0
+    for chunk in _chunks(trivial_reattach, WRITE_BATCH_SIZE):
+        _run_batch(conn, lambda chunk=chunk: _bulk_update_listing_products(cur, chunk),
+                   "reattaching already-known products")
+        reattached += len(chunk)
+
+    # Work out which new products actually ended up with something assigned
+    # to them (should always be all of them, but this mirrors the original,
+    # more defensive check), and build the rows to insert.
+    to_insert = []  # [(temp_id, row_tuple), ...]
     for temp_id, product in enumerate(new_products):
         if not any(assigned.get(idx) == ("new", temp_id) for idx in product["listing_candidate_idxs"]):
-            continue  # nothing ended up assigned to this temp product after all (shouldn't normally happen)
+            continue
         size_unit = {"volume": "l", "weight": "kg"}.get(product["size_family"])
-        cur.execute(
-            """
-            INSERT INTO product (canonical_name, size_value, size_unit, category, match_confidence)
-            VALUES (%s, %s, %s, %s, %s)
-            RETURNING id
-            """,
-            (product["canonical_name"], product["size_value"], size_unit,
-             product["category"], product["confidence"]),
-        )
-        # cur is a RealDictCursor (used throughout this script so the SELECT
-        # queries can be read by column name) -- fetchone() here returns a
-        # dict-like row keyed by "id", not a plain positional tuple, so it
-        # has to be ["id"], not [0]. Missing that was the actual bug on the
-        # last real run (KeyError: 0) -- everything before this line had
-        # already run correctly against your real data.
-        temp_to_real_id[temp_id] = cur.fetchone()["id"]
+        to_insert.append((temp_id, (
+            product["canonical_name"], product["size_value"], size_unit,
+            product["category"], product["confidence"],
+        )))
+
+    temp_to_real_id = {}
+    for chunk in _chunks(to_insert, WRITE_BATCH_SIZE):
+        def do_insert(chunk=chunk):
+            # cur is a RealDictCursor (used throughout this script so the
+            # SELECT queries can be read by column name), so each returned
+            # row is keyed by "id", not a positional tuple -- fetching by
+            # ["id"] here is what fixed the earlier KeyError: 0 bug.
+            # execute_values with fetch=True returns one result row per
+            # input row, in the same order, which is what makes it safe to
+            # zip back against `chunk` below.
+            rows = psycopg2.extras.execute_values(
+                cur,
+                """
+                INSERT INTO product (canonical_name, size_value, size_unit, category, match_confidence)
+                VALUES %s
+                RETURNING id
+                """,
+                [row for _, row in chunk],
+                fetch=True,
+            )
+            for (temp_id, _), result_row in zip(chunk, rows):
+                temp_to_real_id[temp_id] = result_row["id"]
+
+        _run_batch(conn, do_insert, "creating new matched products")
 
     new_product_count = len(temp_to_real_id)
 
-    linked = 0
+    link_pairs = []
     for ci, ref in assigned.items():
         kind, key = ref
         product_id = key if kind == "existing" else temp_to_real_id.get(key)
         if product_id is None:
             continue
         for listing_id in candidates[ci]["listing_ids"]:
-            cur.execute("UPDATE listing SET product_id = %s WHERE id = %s", (product_id, listing_id))
-            linked += 1
+            link_pairs.append((listing_id, product_id))
 
-    for product_id, new_confidence in existing_confidence_updates.items():
-        cur.execute("UPDATE product SET match_confidence = %s WHERE id = %s", (new_confidence, product_id))
+    linked = 0
+    for chunk in _chunks(link_pairs, WRITE_BATCH_SIZE):
+        _run_batch(conn, lambda chunk=chunk: _bulk_update_listing_products(cur, chunk),
+                   "linking matched listings")
+        linked += len(chunk)
+
+    confidence_pairs = list(existing_confidence_updates.items())
+    for chunk in _chunks(confidence_pairs, WRITE_BATCH_SIZE):
+        def do_confidence(chunk=chunk):
+            psycopg2.extras.execute_values(
+                cur,
+                """
+                UPDATE product AS p SET match_confidence = v.match_confidence
+                FROM (VALUES %s) AS v(product_id, match_confidence)
+                WHERE p.id = v.product_id::uuid
+                """,
+                chunk,
+            )
+        _run_batch(conn, do_confidence, "updating existing product confidence")
 
     return reattached, new_product_count, linked
 
@@ -696,12 +792,14 @@ def run_matcher(conn):
         if new_conf != original_confidence.get(pid)
     }
 
-    def write_and_commit():
-        result = apply_results(cur, candidates, trivial_reattach, assigned, new_products, existing_confidence_updates)
-        conn.commit()
-        return result
-
-    reattached, new_product_count, linked = run_with_timeout(write_and_commit, DB_WRITE_HARD_TIMEOUT_SECONDS)
+    # apply_results commits progressively, one batch at a time (see
+    # WRITE_BATCH_SIZE) -- this outer timeout is just an overall ceiling in
+    # case something gets stuck in a way the per-batch deadlock retry
+    # doesn't cover, not the primary safety mechanism anymore.
+    reattached, new_product_count, linked = run_with_timeout(
+        lambda: apply_results(conn, cur, candidates, trivial_reattach, assigned, new_products, existing_confidence_updates),
+        DB_WRITE_HARD_TIMEOUT_SECONDS,
+    )
 
     still_unmatched = len(candidates) - len({ci for ci in assigned})
     print(f"  Done: {reattached} trivially reattached, {new_product_count} new product(s) created, "
