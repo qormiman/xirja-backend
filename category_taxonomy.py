@@ -185,6 +185,9 @@ GREENS_CATEGORY_MAP = {
     ("Confectionery", "Chocolates And Sweets"): "Chocolates",
     ("Confectionery", "Crisps Popcorn And Other Snacks"): "Snacks",
     ("Confectionery", "Pastries And Prepacked Cakes"): "Cakes",
+    # Same category, real capitalization variant found in the live data --
+    # confirmed via analyze_real_run.py.
+    ("Confectionery", "Pastries and Prepacked Cakes"): "Cakes",
     ("Confectionery", "Biscuits And Crackers"): "Biscuits",
     ("Confectionery", "Confectionery"): "Chocolates",
     ("Confectionery", "Bread"): "Bread",
@@ -239,6 +242,9 @@ GREENS_CATEGORY_MAP = {
     ("Groceries", "Sauces And Condiments"): "Sauces & Condiments",
     ("Groceries", "Coffee Tea And Hot Chocolate"): "Coffee",
     ("Groceries", "Dried Fruit Legumees And Nuts"): "Legumes & Nuts",
+    # Same category, real spelling variant found in the live data (missed
+    # when this map was first hand-built) -- confirmed via analyze_real_run.py.
+    ("Groceries", "Dried Fruit Legumee And Nuts"): "Legumes & Nuts",
     ("Groceries", "Pasta Rice And Couscous"): "Pasta & Couscous",
     ("Groceries", "Jams Honey And Peanut Butter"): "Honey",
     ("Groceries", "Oil And Vinegar"): "Oils",
@@ -280,6 +286,9 @@ GREENS_CATEGORY_MAP = {
     ("Home Garden", "Furniture Care"): "Furniture Polishes",
 
     ("Household", "Household Care And Essentials"): KEYWORD_FALLBACK,  # the big catch-all -- see module docstring
+    # Same bucket, real capitalization variant found in the live data --
+    # confirmed via analyze_real_run.py.
+    ("Household", "Household Care and Essentials"): KEYWORD_FALLBACK,
     ("Household", "Laundry Products"): KEYWORD_FALLBACK,  # mixes liquids/powders/tablets/softener -- split by name
     ("Household", "Seasonal Items"): "Seasonal Items",
     ("Household", "Stationery Goods"): "Stationery",
@@ -304,6 +313,9 @@ GREENS_CATEGORY_MAP = {
 
     ("Personal Care", "Personal Hygiene And Care"): KEYWORD_FALLBACK,  # the other big catch-all
     ("Personal Care", "Womens Section"): "Women Care",
+    # Same category, real spelling variant (apostrophe) found in the live
+    # data -- confirmed via analyze_real_run.py.
+    ("Personal Care", "Women's Section"): "Women Care",
     ("Personal Care", "Mens Section"): "Men Care",
     ("Personal Care", "Bathroom Care And Essentials"): KEYWORD_FALLBACK,
     ("Personal Care", "Gift Sets"): "Gift Vouchers",
@@ -323,6 +335,49 @@ GREENS_CATEGORY_MAP = {
 
 
 # ----------------------------------------------------------------------------
+# 2b. Greens -- a THIRD level, used only for the (top, sub) pairs marked
+# KEYWORD_FALLBACK above. Greens' own chain_category is actually three
+# levels deep (e.g. "Household / Household Care And Essentials / Cleaning
+# Materials"), not two -- GREENS_CATEGORY_MAP only ever looked at the first
+# two. For the "everything mixed together" buckets, that third level turns
+# out to be specific enough to map directly and reliably -- e.g. "Cleaning
+# Materials" or "Dental Care" -- which is a much better source of truth than
+# guessing from the product name, especially since a lot of these products
+# are named in Italian or Maltese and would never match an English keyword
+# list. Confirmed real, via a real sample query -- not guessed.
+#
+# Checked ONLY when the (top, sub) pair is KEYWORD_FALLBACK. A pair not
+# listed here still falls through to keyword classification, same as
+# before -- this doesn't replace that, it just catches more cases first.
+# Some third-level buckets are deliberately left OUT of this map, because
+# they mix genuinely different product types themselves (e.g. "Hair Shampoo
+# And Conditioners" contains both shampoo and conditioner) -- for those, the
+# keyword classifier's own "shampoo" vs "conditioner" split does a better
+# job than forcing one category on the whole bucket would.
+# ----------------------------------------------------------------------------
+
+GREENS_SUBCATEGORY_MAP = {
+    ("Household", "Household Care And Essentials", "Cleaning Materials"): "Household Goods",
+    ("Household", "Household Care And Essentials", "Kitchen Essentials"): "Household Goods",
+    ("Household", "Household Care And Essentials", "Bottles And Lunch Boxes"): "Household Goods",
+    ("Household", "Household Care And Essentials", "All Purpose Cleaners"): "All-purpose Cleaners",
+    ("Household", "Household Care And Essentials", "Candles Perfumed"): "Candles",
+    ("Household", "Household Care And Essentials", "Air Freshners"): "Air Fresheners",
+
+    ("Personal Care", "Personal Hygiene And Care", "Body And Facial Care"): "Skin Care",
+    ("Personal Care", "Personal Hygiene And Care", "Bath And Shower Gels"): "Shower Gels",
+    ("Personal Care", "Personal Hygiene And Care", "Sanitory Towels"): "Sanitary Towels",  # "Sanitory" is Greens' own spelling
+    ("Personal Care", "Personal Hygiene And Care", "Dental Care"): "Dental Care",
+    ("Personal Care", "Personal Hygiene And Care", "Gift Sets"): "Gift Sets",
+    # "Hair Products" mixes shampoo, conditioner, oil, AND appliances (e.g. a
+    # beard trimmer) -- imperfect fit, but closer to Hair Treatment than
+    # anything else on balance; the keyword classifier would catch the
+    # trimmer as a false Hair Treatment too, so this isn't a regression.
+    ("Personal Care", "Personal Hygiene And Care", "Hair Products"): "Hair Treatment",
+}
+
+
+# ----------------------------------------------------------------------------
 # 3. Keyword-based fallback classifier -- used for Welbee's (all of it, since
 # its own categories are too broad to use directly), the Greens buckets
 # marked KEYWORD_FALLBACK above, and anything else that falls through the
@@ -337,19 +392,26 @@ KEYWORD_RULES = [
     ("Eggs", ["egg"]),
     ("Milk", ["milk", "kefir"]),
     ("Yoghurt", ["yoghurt", "yogurt"]),
-    ("Cheese", ["cheese", "mozzarella", "cheddar", "feta", "halloumi"]),
+    # "parmigiano"/"formaggio" -- Italian for parmesan/cheese, found via real
+    # data on Italian-brand products sold through Welbee's ("Carrefour
+    # Grated Parmigiano Reggiano", "Teddi Formaggio Fresco + Frutta").
+    ("Cheese", ["cheese", "mozzarella", "cheddar", "feta", "halloumi", "parmigiano", "parmesan", "formaggio"]),
     ("Butter", ["butter", "margarine", "spread"]),
     ("Cooking Creams", ["cream", "panna"]),
 
     # Bakery & carbs
-    ("Bread", ["bread", "baguette", "ftira", "hobz"]),
-    ("Biscuits", ["biscuit", "cookie"]),
+    ("Bread", ["bread", "baguette", "ftira", "hobz", "panini"]),  # "panini" found via real data: an Italian bread roll, not the toasted sandwich in this context
+    ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data
     ("Cakes", ["cake"]),
     ("Cereals", ["cereal", "cornflakes", "muesli", "granola"]),
     ("Cereal & Cereal Bars", ["cereal bar"]),
+    ("Crackers, Crispbread & Breadsticks", ["crispbread", "oatcake"]),
     ("Pasta & Couscous", ["pasta", "spaghetti", "penne", "macaroni", "couscous", "lasagne"]),
-    ("Rice", ["rice"]),
+    ("Rice", ["rice", "risotto"]),
     ("Flour", ["flour"]),
+    ("Cake Preparations", ["yeast"]),  # baking ingredient, found via real data ("Doves Farm Yeast Quick Gluten Free")
+    ("Fresh Pastry", ["mqaret"]),  # a traditional Maltese date pastry -- worth a dedicated entry for a Maltese app
+    ("Sweet Snacks", ["sweets", "helwa"]),  # "helwa" -- a traditional Maltese sweet (as in "Helwa Tat-Tork")
 
     # Meat & fish
     ("Beef", ["beef", "steak", "mince"]),
@@ -360,7 +422,7 @@ KEYWORD_RULES = [
     ("Sausages", ["sausage"]),
     ("Ham", ["ham", "salami", "prosciutto"]),
     ("Cold Cuts", ["mortadella", "luncheon", "cold cut"]),
-    ("Frozen Fish", ["frozen fish"]),
+    ("Frozen Fish", ["frozen fish", "haddock"]),
     ("Chilled Fish", ["fish", "salmon", "tuna", "cod", "prawn", "shrimp"]),
     ("Canned Seafood", ["tinned tuna", "canned tuna", "sardine", "anchov"]),
 
@@ -369,7 +431,8 @@ KEYWORD_RULES = [
     ("Fruits", ["fruit", "apple", "banana", "orange", "grape", "melon"]),
     ("Dried Fruit", ["dried fruit", "raisin", "sultana", "prune"]),
     ("Frozen Vegetables", ["frozen vegetable", "frozen peas", "frozen corn"]),
-    ("Herbs & Spices", ["spice", "herb", "pepper corn", "cinnamon", "paprika", "oregano", "basil"]),
+    ("Herbs & Spices", ["spice", "herb", "pepper corn", "cinnamon", "paprika", "oregano", "basil", "salt"]),
+    ("Legumes", ["lentil"]),  # distinct from the broader "Legumes & Nuts" bucket below -- found via real data ("Pensa Bio Lentils")
 
     # Drinks
     ("Water", ["water"]),
@@ -377,16 +440,18 @@ KEYWORD_RULES = [
     ("Carbonated Drinks", ["cola", "soda", "fizzy", "carbonated"]),
     ("Beers", ["beer", "lager", "ale"]),
     ("Ciders", ["cider"]),
-    ("Wine - Red", ["red wine"]),
-    ("Wine - White", ["white wine"]),
+    ("Wine - Red", ["red wine", "red blend"]),
+    ("Wine - White", ["white wine", "white blend"]),
     ("Wine - Rose", ["rose wine", "rosé wine"]),
     ("Wine - Sparkling", ["sparkling wine", "prosecco", "champagne", "cava"]),
     ("Spirits - Whisky", ["whisky", "whiskey"]),
     ("Spirits - Vodka", ["vodka"]),
     ("Spirits - Liquers", ["liqueur", "liquer"]),
-    ("Coffee", ["coffee", "espresso", "cappuccino", "latte"]),
+    ("Coffee", ["coffee", "espresso", "cappuccino", "cappucino", "latte"]),  # "cappucino" -- common one-c typo, found via real data
     ("Tea", ["tea bag", "tea"]),
     ("Energy Drinks", ["energy drink"]),
+    ("Dilutables", ["squash", "syrup", "cordial"]),
+    ("Sugar", ["erythritol", "eritritol", "sweetener", "sweet n low"]),  # "eritritol" is the real spelling seen ("Natur Green Eritritol"); "erythritol" is the standard English spelling, kept too
 
     # Snacks & confectionery
     # "milk chocolate" is listed explicitly (and checked in the multi-word
@@ -399,6 +464,7 @@ KEYWORD_RULES = [
     ("Nuts", ["peanut", "almond", "cashew", "walnut", "pistachio"]),
     ("Honey", ["honey"]),
     ("Jelly", ["jelly", "jello"]),
+    ("Olives", ["olive"]),  # found via real data: "Fragata Sliced Olives" was falling through unclassified
 
     # Household cleaning (targets the "Household Care And Essentials" catch-all)
     ("Laundry Washing Liquids", ["laundry liquid", "washing liquid"]),
@@ -413,31 +479,49 @@ KEYWORD_RULES = [
     ("Stain Removers", ["stain remover"]),
     ("Insect Killer", ["insect killer", "insecticide", "fly spray"]),
     ("Drain Unblockers", ["drain unblock"]),
-    ("Candles", ["candle"]),
+    ("Candles", ["candle", "incense"]),  # "incense" found via real data: incense sticks are filed as Candles Perfumed at Greens
     ("Cloths & Sponges", ["sponge", "cloth", "scourer"]),
-    ("Disposables", ["bin bag", "cling film", "foil", "kitchen roll", "paper towel"]),
+    ("Disposables", ["bin bag", "cling film", "foil", "kitchen roll", "paper towel", "paper plate", "napkin", "plastic cup"]),
+    # Generic catch-all last, after the specific liquid/powder/tablet/softener
+    # keywords above -- found via real data: "Surf Liquid Coconut 24 Washes"
+    # and "General Laundry Wash Universal" don't contain the exact phrase
+    # "laundry liquid", just the word "laundry" or "wash(es)" on its own.
+    ("Laundry Washing Liquids", ["wash booster", "laundry wash"]),
+    ("Household Goods", ["storage container", "lunch box", "thermos", "flask", "wooden spoon"]),
+    ("Stationery", ["scissors", "stationery"]),
+    ("Electrical", ["light bulb", "led bulb", "gu10"]),  # "gu10" -- a specific, unambiguous lightbulb fitting type, found via real data
+    ("Hand Tools", ["sandpaper", "sand paper"]),
+    ("Air Fresheners", ["air freshener", "air freshner"]),  # both spellings -- "freshner" is a real typo seen in this project's own category data
 
     # Personal care (targets the "Personal Hygiene And Care" catch-all)
-    ("Shampoos", ["shampoo"]),
+    # "head and shoulders"/"head & shoulders" -- a specific, globally-known
+    # shampoo-only brand, found via real data (its product names don't
+    # contain the word "shampoo" at all, e.g. "Head & Shoulders Men Ultra
+    # Total Care").
+    ("Shampoos", ["shampoo", "head and shoulders", "head & shoulders"]),
     ("Conditioners", ["conditioner"]),
-    ("Shower Gels", ["shower gel", "body wash"]),
+    ("Shower Gels", ["shower gel", "body wash", "bath foam", "bubble bath"]),
+    ("Hair & Nail Accessories", ["comb"]),
     ("Toothpaste", ["toothpaste"]),
     ("Toothbrushes", ["toothbrush"]),
     ("Mouthwash", ["mouthwash"]),
-    ("Deodorants", ["deodorant", "antiperspirant"]),
-    ("Body Lotions", ["body lotion", "moisturiser", "moisturizer"]),
+    ("Deodorants", ["deodorant", "antiperspirant", "deo spray", "deo roll on", "deo stick"]),
+    ("Body Lotions", ["body lotion", "hand lotion", "moisturiser", "moisturizer"]),
     ("Face Creams", ["face cream", "facial cream"]),
+    ("Skin Care", ["face wash", "facial wash", "cleansing gel", "facial cleanser", "facial oil", "dry oil"]),
     ("Hand Wash Liquids", ["hand wash", "hand soap"]),
     ("Shaving Creams", ["shaving cream", "shaving foam", "razor"]),
     ("Hair Colouring", ["hair colour", "hair dye", "hair color"]),
     ("Hair Styling", ["hair gel", "hair spray", "hair wax"]),
     ("Hair Treatment", ["hair treatment", "hair mask", "hair oil"]),
-    ("Sanitary Towels", ["sanitary towel", "sanitary pad"]),
+    ("Sanitary Towels", ["sanitary towel", "sanitary pad", "daily liner", "panty liner"]),
     ("Intimate Care", ["tampon", "intimate wash"]),
     ("Cotton Buds", ["cotton bud", "cotton wool"]),
     ("First Aid", ["plaster", "bandage", "antiseptic", "first aid"]),
+    ("Dental Care", ["dental", "denture", "corega"]),  # broader than Toothpaste/Toothbrushes above -- floss, dental sticks, tablets
     ("Make Up", ["lipstick", "mascara", "foundation", "eyeshadow", "nail polish", "make up", "makeup"]),
     ("Perfume", ["perfume", "eau de", "fragrance", "cologne"]),
+    ("Gift Sets", ["gift set", "gift bag"]),
 
     # Baby
     ("Nappies", ["nappy", "nappies", "diaper"]),
@@ -446,20 +530,51 @@ KEYWORD_RULES = [
     ("Baby Essentials", ["baby wipe", "baby lotion", "baby shampoo"]),
 
     # Pets
-    ("Cat", ["cat food", "cat litter", "cat treat"]),
-    ("Dog", ["dog food", "dog treat", "dog chew"]),
+    # "felix" -- a specific, globally-known cat food brand whose products
+    # don't say "cat" anywhere in the name, found via real data ("Purina
+    # Gourmet Felix As Good As It Looks Mixed Selection").
+    ("Cat", ["cat food", "cat litter", "cat treat", "kitten", "felix"]),
+    ("Dog", ["dog food", "dog treat", "dog chew", "puppy"]),
+    # bare "dog"/"cat" last -- found via real data: "Royal Canin Adult Shih
+    # Tzu Dog Dry Food" doesn't contain any of the specific phrases above,
+    # just the word "Dog" on its own.
+    ("Dog", ["dog"]),
+    ("Cat", ["cat"]),
+
+    # Clothes
+    ("Clothes", ["pyjama", "pajama", "sports bra"]),
 
     # Frozen
     ("Frozen", ["frozen", "ice cream"]),
     ("Pizza", ["pizza"]),
+    # "dough" placed AFTER "pizza" (both single words, checked in list
+    # order) so a "Pizza Dough" product still lands on Pizza, not Pastry --
+    # found via real data ("Buitoni Rectangular Dough").
+    ("Pastry", ["dough"]),
 
     # Tobacco / misc
     ("Tobacco & Tobacco Accessories", ["cigarette", "tobacco", "rolling paper"]),
+
+    # Sports nutrition/supplements -- no dedicated canonical category exists
+    # yet (PAVI's own data only has a generic "SPORTS" bucket, no
+    # supplements-specific one), so this is an imperfect catch-all, same
+    # kind of approximation as a few Greens mappings above. Revisit if this
+    # turns out to be a large enough group to deserve its own category.
+    ("Sports", ["whey", "protein powder", "creatine", "bcaa", "pre workout"]),
 ]
 
 
 def clean_for_matching(name):
-    return re.sub(r"[^a-z0-9 ]", " ", (name or "").lower())
+    cleaned = re.sub(r"[^a-z0-9 ]", " ", (name or "").lower())
+    # Collapse anything that just became a run of spaces (punctuation,
+    # accented letters like the 'e' in "rosé", "&", apostrophes, etc.) down
+    # to one space -- otherwise "Head & Shoulders" and "Tresemme'" leave
+    # behind multiple consecutive spaces. Found via real testing: a keyword
+    # like "head & shoulders" would silently never match anything, because
+    # the keyword itself still had its punctuation while the cleaned
+    # product text didn't -- see _keyword_matches, which now cleans the
+    # keyword the same way for exactly this reason.
+    return re.sub(r"\s+", " ", cleaned).strip()
 
 
 def _keyword_matches(keyword, cleaned_text):
@@ -476,8 +591,15 @@ def _keyword_matches(keyword, cleaned_text):
     The trailing 's?' handles the common case (egg/eggs, fruit/fruits,
     vegetable/vegetables). It won't catch irregular plurals like
     nappy/nappies -- those are listed as their own explicit keyword instead
-    (see the Nappies entry above)."""
-    pattern = r"\b" + re.escape(keyword.strip()) + r"s?\b"
+    (see the Nappies entry above).
+
+    The keyword itself is run through clean_for_matching too, not just the
+    product name -- otherwise a keyword containing punctuation or an
+    accented letter (e.g. 'head & shoulders', 'rosé wine') could never
+    match, since the product text has already had that same punctuation
+    stripped out."""
+    cleaned_keyword = clean_for_matching(keyword)
+    pattern = r"\b" + re.escape(cleaned_keyword) + r"s?\b"
     return re.search(pattern, cleaned_text) is not None
 
 
@@ -529,9 +651,14 @@ def classify_listing(store_id, chain_category, chain_product_name):
         parts = chain_category.split(" / ")
         top = parts[0].strip() if len(parts) > 0 else None
         sub = parts[1].strip() if len(parts) > 1 else None
+        subsub = parts[2].strip() if len(parts) > 2 else None
         mapped = GREENS_CATEGORY_MAP.get((top, sub))
         if mapped and mapped != KEYWORD_FALLBACK:
             return mapped
+        if mapped == KEYWORD_FALLBACK and subsub:
+            sub_mapped = GREENS_SUBCATEGORY_MAP.get((top, sub, subsub))
+            if sub_mapped:
+                return sub_mapped
 
     # Welbee's always lands here (its categories are too broad to map
     # directly), as does anything above that fell through or was flagged

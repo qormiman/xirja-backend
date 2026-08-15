@@ -493,8 +493,10 @@ LIMIT 50;
 
 If you spot a wrong or missing category, the fix always happens in
 `category_taxonomy.py`, never by hand-editing the database: add or adjust an
-entry in `PAVI_CATEGORY_MAP` / `GREENS_CATEGORY_MAP` / `KEYWORD_RULES` as
-appropriate, upload the updated file, and re-run "Categorize listings" --
+entry in `PAVI_CATEGORY_MAP` / `GREENS_CATEGORY_MAP` / `GREENS_SUBCATEGORY_MAP`
+/ `KEYWORD_RULES` as appropriate (`GREENS_SUBCATEGORY_MAP` is for Greens'
+"everything mixed together" buckets specifically -- see the comment above it
+in the file), upload the updated file, and re-run "Categorize listings" --
 it'll pick up the fix for every affected listing automatically, not just
 one.
 
