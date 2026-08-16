@@ -150,6 +150,51 @@ behaving the same way it did when we last checked it by hand (in DevTools);
 if they change something about how their access token works, this is where
 it would show up.
 
+## Greens crawl timing out (fixed) and what it means for GitHub Actions minutes
+
+A real run once got killed by GitHub's hard 6-hour-per-job ceiling before
+finishing (Actions shows this as "The job has exceeded the maximum execution
+time of 6h0m0s"). That wasn't a bug -- Greens' catalogue is genuinely big
+(Swieqi's "Groceries" category alone has 5,000+ products), the crawler
+respects a 5-second-per-page delay because that's what greens.com.mt's own
+robots.txt asks for, and all of that added up to more real time than fits in
+one 6-hour job when all three branches run one after another.
+
+The fix: `crawl-greens.yml` now runs each branch (Swieqi, Mriehel, Gozo) as
+its own separate job, all three starting at the same time instead of one
+after another. Each branch comfortably finishes on its own well within 6
+hours, so nothing gets cut off, and the Actions tab now shows one green
+tick/red cross per branch instead of one for the whole crawl -- so a problem
+with just one branch doesn't hide inside an otherwise-fine run anymore. This
+applies automatically, both to the nightly schedule and to a normal manual
+"Run workflow" click with both boxes left blank.
+
+**Important: this does NOT reduce the total GitHub Actions minutes used.**
+Three roughly-2-hour jobs running at once still add up to roughly the same
+combined ~6 hours of billed time as one long sequential job did -- it just
+means that time is spent finishing the crawl instead of being spent on a
+run that gets killed partway through. If a crawl at this scale, every
+night, is using up your free monthly Actions minutes (private repositories
+get 2,000 free minutes/month; public repositories get unlimited free
+minutes), that's a separate decision from this timeout fix, with a few
+honest options:
+
+- **Crawl less often than nightly** -- edit the `cron:` line near the top of
+  `crawl-greens.yml` (e.g. every 2-3 days, or weekly). Supermarket prices
+  don't usually change several times a day, so nightly freshness may be more
+  than you actually need, and this cuts total minutes used proportionally.
+- **Make the repository public** -- GitHub Actions becomes completely free
+  and unlimited. Your database connection stays secret either way (it's
+  stored as an encrypted GitHub secret, never in the code), but your
+  crawler code and project structure become visible to anyone.
+- **Add a payment method** in GitHub's Billing settings and pay for the
+  minutes beyond the free quota -- a real recurring cost (roughly $0.006 per
+  minute for a standard runner at the time this was written -- check
+  GitHub's own current pricing before relying on that number).
+
+This isn't something to decide inside this file -- it's worth deciding
+deliberately, based on how you actually want to run this project long-term.
+
 ## Patching a single category or branch, without a full crawl again
 
 If everything works except one specific category (for example, because we
@@ -191,8 +236,11 @@ only categories: ...]`, so it's always clear, looking back later, that a
 particular run was a deliberate patch and not a broken full crawl.
 
 Leaving both boxes blank (or just clicking the button on the Actions page
-directly without opening the inputs first) runs a normal, full crawl, same
-as before — and the automatic nightly run always runs in full regardless.
+directly without opening the inputs first) runs a normal, full crawl covering
+every branch and category — as three separate jobs running at the same time
+(see "Greens crawl timing out" above), not one combined job, but the result
+is the same full coverage either way. The automatic nightly run always does
+this full run too.
 
 ## Adding the PAVI PAMA crawler
 
