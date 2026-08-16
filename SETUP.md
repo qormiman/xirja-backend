@@ -548,6 +548,101 @@ in the file), upload the updated file, and re-run "Categorize listings" --
 it'll pick up the fix for every affected listing automatically, not just
 one.
 
+## Running the API server
+
+This is the new piece the app itself talks to -- a small web server that
+sits between the phone app and your database (the app is never allowed to
+hold your database password directly, since anyone could read it back out
+of the installed app). It has one real endpoint so far:
+`/categories/<name>/prices`, which returns the cheapest current price for
+that shared category at each store.
+
+Upload two new files, same as before:
+- `api/main.py` and `api/requirements.txt` -- these go in a **new folder**
+  called `api`, so the structure looks like:
+  ```
+  xirja-backend/
+  ├── api/
+  │   ├── main.py
+  │   └── requirements.txt
+  ├── .github/
+  ├── greens_crawler.py
+  ├── ...
+  ```
+
+Unlike the crawlers, this isn't something GitHub Actions runs on a
+schedule -- an API needs to be running *all the time*, ready to answer
+whenever the app asks, not just once a night. That means it needs an
+always-on home, which GitHub Actions isn't built for. There are two ways
+to run it:
+
+### Running the API locally, for quick testing
+
+This is the fastest way to see it working, before bothering with a real
+deployment. It runs on your own computer, and your phone (running the app
+via Expo Go) can reach it as long as they're both on the same WiFi.
+
+1. Install Node.js if you haven't already (see `xirja-app/SETUP.md`) --
+   not needed for the API itself, just mentioned here in case you're doing
+   this step before that one.
+2. Open a terminal in the `api` folder and run:
+   ```
+   pip install -r requirements.txt
+   ```
+3. Set your database connection (same value as the `DATABASE_URL` secret
+   in GitHub -- your Neon connection string from step 1 way above):
+   - Mac/Linux: `export DATABASE_URL="postgresql://...your Neon string..."`
+   - Windows (PowerShell): `$env:DATABASE_URL="postgresql://...your Neon string..."`
+4. Start the server:
+   ```
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   ```
+5. Open `http://127.0.0.1:8000/docs` in a browser on your computer --
+   FastAPI builds this page automatically. Try the
+   `/categories/{category}/prices` endpoint right there (click it, "Try it
+   out", type `Milk`, "Execute") before ever involving the app -- if you
+   get real prices back here, the database side is definitely working.
+6. Leave this running, and point the app at your computer's network
+   address (see `xirja-app/SETUP.md` step 4) to test the real screen.
+
+### Running the API online (Render)
+
+This gives the API a permanent web address that works from anywhere, not
+just your own WiFi -- needed once you're not sitting next to the computer
+running it, and definitely needed before anyone else ever uses the app.
+
+1. Go to [render.com](https://render.com) and sign up (a free tier is
+   enough for now).
+2. Click **New** → **Web Service**.
+3. Connect your GitHub account if asked, then pick the `xirja-backend`
+   repository.
+4. Fill in:
+   - **Root Directory**: `api` (this tells Render your project lives in
+     the `api` subfolder, not the repo root -- important, since the repo
+     root has the crawlers' own `requirements.txt`, a different set of
+     packages entirely).
+   - **Runtime**: Python 3.
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - **Instance Type**: the free tier is fine to start.
+5. Under **Environment Variables**, add one:
+   - Key: `DATABASE_URL`
+   - Value: your Neon connection string (same one as the GitHub secret).
+6. Click **Create Web Service**. Render builds and starts it -- takes a
+   couple of minutes the first time.
+7. Once it says "Live", Render shows you the app's address, something like
+   `https://xirja-api.onrender.com`. Test it by opening
+   `https://xirja-api.onrender.com/health` in a browser -- you should see
+   `{"status":"ok"}`. Then try
+   `https://xirja-api.onrender.com/categories/Milk/prices` for real data.
+
+**One honest thing to know about Render's free tier**: a free web service
+"spins down" after 15 minutes of no traffic, and the next request after
+that takes 30-60 seconds to wake it back up (everything after that is
+fast again). That's fine for testing, but worth knowing about so a slow
+first load doesn't look like a bug. Paid tiers remove this if it ever
+matters for real use.
+
 ## Ideas for later (not started -- revisit when designing the app)
 
 - **Substitute products.** Right now, rejecting a proposed match (see
