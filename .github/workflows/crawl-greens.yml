@@ -8,9 +8,29 @@
 #      exactly where. Use this the first time, to check it actually works,
 #      before waiting for the nightly run.
 #
+# One crawl per branch, running at the same time (not one after another):
+#   A real run against the full catalog (Swieqi alone has 5,000+ products in
+#   its "Groceries" category) got killed by GitHub's hard 6-hour-per-job
+#   ceiling before finishing -- not a bug, just genuinely more real work
+#   (spread across all 3 branches, each fetched one page at a time with the
+#   5-second-per-page delay greens.com.mt's own robots.txt asks for) than
+#   fits in one job. Splitting into one job per branch, run at the same
+#   time, fixes that: each branch finishes on its own well within 6 hours.
+#
+#   This does NOT reduce the total GitHub Actions minutes used overall (three
+#   ~2-hour jobs still add up to roughly the same combined time as one long
+#   one did) -- what it fixes is jobs getting cut off before finishing, and
+#   branches silently going a night without fresh prices because of it. See
+#   SETUP.md's "Greens crawl timing out" section if you're also looking to
+#   reduce total minutes used (e.g. because of a GitHub Actions billing/quota
+#   limit) -- that's a separate decision (how often to crawl at all, or
+#   whether to make this repository public) from the fix here.
+#
 # Every run's outcome (worked / failed, how many products found) is recorded
 # in the crawl_run table in the database, and also visible in GitHub's own
-# "Actions" tab for this repository as a green tick or red cross.
+# "Actions" tab for this repository as a green tick or red cross -- now one
+# per branch instead of one for the whole crawl, so a problem with just one
+# branch (e.g. Mriehel) doesn't hide inside an otherwise-fine run anymore.
 # ============================================================================
 
 name: Crawl Greens prices
@@ -37,24 +57,70 @@ on:
           patch specific categories without waiting through a full crawl
           again -- comma-separated, e.g. "FruitsAndVegetables" or
           "FruitsAndVegetables,Bakery". Must match the category name used
-          inside greens_crawler.py's CATEGORIES list.
+          inside greens_crawler.py's CATEGORIES list. Applies to whichever
+          branch(es) end up running below.
         required: false
         default: ''
       only_outlets:
         description: >-
-          Optional. Leave blank for a normal, full run of every outlet/branch
-          (this is what you want almost all the time). Fill this in only to
-          patch one specific branch without waiting through all three --
-          comma-separated, e.g. "mriehel" or "swieqi,gozo". Accepts either
-          the short branch name or the full outlet id ("greens_mriehel").
-          Combines with only_categories above if you fill in both (e.g. only
-          Mriehel's Bakery category).
+          Optional. Leave blank for a normal, full run of every branch (this
+          is what you want almost all the time) -- all three still run at
+          the same time as separate jobs, just like the automatic nightly
+          run. Fill this in only to patch one specific branch without
+          re-running the other two -- comma-separated, e.g. "mriehel" or
+          "swieqi,gozo". Accepts either the short branch name or the full
+          outlet id ("greens_mriehel").
         required: false
         default: ''
 
 jobs:
-  crawl:
+  # Works out which branch(es) to run as separate, simultaneous jobs below --
+  # every branch for the automatic nightly run and for a normal manual run,
+  # or just the branch(es) typed into "only_outlets" for a manual patch run.
+  plan:
     runs-on: ubuntu-latest
+    outputs:
+      outlets: ${{ steps.compute.outputs.outlets }}
+    steps:
+      - name: Work out which branch(es) to crawl
+        id: compute
+        env:
+          ONLY_OUTLETS: ${{ github.event.inputs.only_outlets }}
+        run: |
+          ALL='["swieqi","mriehel","gozo"]'
+          if [ -z "$ONLY_OUTLETS" ]; then
+            echo "outlets=$ALL" >> "$GITHUB_OUTPUT"
+            echo "No only_outlets given -- running all three branches at the same time."
+            exit 0
+          fi
+          # Comma-separated -> lowercase, trimmed, "greens_" prefix dropped if present, JSON array.
+          RESULT=$(python3 -c "
+          import json, os
+          raw = os.environ['ONLY_OUTLETS']
+          known = {'swieqi', 'mriehel', 'gozo'}
+          wanted = []
+          for part in raw.split(','):
+              name = part.strip().lower()
+              if name.startswith('greens_'):
+                  name = name[len('greens_'):]
+              if name in known and name not in wanted:
+                  wanted.append(name)
+          print(json.dumps(wanted if wanted else sorted(known)))
+          ")
+          echo "outlets=$RESULT" >> "$GITHUB_OUTPUT"
+          echo "Branches this run will cover: $RESULT"
+
+  crawl:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      # fail-fast: false -- so if e.g. Mriehel's job fails, Swieqi and Gozo's
+      # jobs still run to completion instead of being cancelled along with
+      # it. Each branch's crawl is independent; one failing shouldn't cost
+      # the other two their nightly update.
+      fail-fast: false
+      matrix:
+        outlet: ${{ fromJson(needs.plan.outputs.outlets) }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -73,7 +139,7 @@ jobs:
         # only on this one job, nothing to do on your end.
         run: playwright install --with-deps chromium
 
-      - name: Run the Greens crawler
+      - name: Run the Greens crawler (${{ matrix.outlet }})
         env:
           # This value comes from a GitHub "repo secret" named DATABASE_URL,
           # not from anything stored in this file -- see SETUP.md for how
@@ -87,10 +153,6 @@ jobs:
           # up immediately as it happens, so the log is trustworthy to
           # watch live.
           PYTHONUNBUFFERED: "1"
-          # Passes through whatever you typed into the "only_categories" and
-          # "only_outlets" boxes when manually running this workflow. Both
-          # empty for the automatic nightly run and for a normal manual run
-          # -- see greens_crawler.py for what these do.
           ONLY_CATEGORIES: ${{ github.event.inputs.only_categories }}
-          ONLY_OUTLETS: ${{ github.event.inputs.only_outlets }}
+          ONLY_OUTLETS: ${{ matrix.outlet }}
         run: python greens_crawler.py
