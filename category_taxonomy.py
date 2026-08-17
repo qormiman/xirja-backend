@@ -531,8 +531,31 @@ KEYWORD_RULES = [
     # "cheese snacks"), which stay here as ordinary keywords so they don't
     # risk jumping ahead of a more specific category like Chicken or
     # Cheese.
-    ("Snacks", ["popcorn", "snack", "rice up rolls", "rice cake"]),
-    ("Chips", ["chips"]),
+    # "potato straws" and "salt and vinegar"/"salt & vinegar" -- real data
+    # (17 Aug 2026 collision report) showed a cluster of savoury snacks
+    # ("Potato Straws Cheese & Sour Cream", "Pomsticks Salt And Vinegar",
+    # "Potato Crisps Salt & Vinegar") losing to whatever flavour word they
+    # also contained (bare "cheese", "cream", "salt", "vinegar" all belong
+    # to other categories). Both phrases are specific enough that nothing
+    # else is plausibly called either one, so they're safe to add as
+    # ordinary multi-word phrases here (checked before any single word,
+    # not elevated all the way to Pass 0 the way "crisps"/"pretzel" were,
+    # since they don't need to jump ahead of MULTI_KEYWORD_RULES too).
+    # Both "salt and vinegar" and "salt & vinegar" are listed because
+    # clean_for_matching turns "&" into a space, not into the word "and",
+    # so the two real spellings clean down to two different strings.
+    ("Snacks", ["popcorn", "snack", "rice up rolls", "rice cake", "potato straws",
+                "salt and vinegar", "salt vinegar"]),
+    # "potato chips" and "tortilla chips" -- same real-data cluster as
+    # above: "Potato Chips With Cheddar Cheese", "Ok Sanck Tortilla Chips
+    # Sour Cream & Onion", "Potato Chips Greek Kebab Flavour" were losing
+    # to a flavour word (bare "cheese", "cream", or -- for the Kebab one --
+    # nothing else matched, so it was fine already). Bare "chips" alone
+    # stays a single word (see the "Chocolate Chips" reasoning elsewhere in
+    # this file for why it isn't elevated further), but these two full
+    # phrases are unambiguous enough to check before any competing single
+    # word.
+    ("Chips", ["chips", "potato chips", "tortilla chips"]),
     ("Nuts", ["peanut", "almond", "cashew", "walnut", "pistachio"]),
     ("Honey", ["honey"]),
     ("Jelly", ["jelly", "jello"]),
@@ -682,6 +705,17 @@ MULTI_KEYWORD_RULES = [
     # Broadened from just "olive oil" to plain "oil" so this also catches
     # tuna canned in sunflower oil, vegetable oil, etc, not only olive.
     ("Canned Seafood", ["tuna", "oil"]),
+    # "Laurence Toffiq Chocolate Bar With Caramel, Peanut Butter & Biscuit"
+    # -- found via real data (17 Aug 2026 collision report): a chocolate
+    # bar that merely contains a peanut-butter FILLING was at risk of being
+    # swept into the plain "Peanut Butter" rule below, since it contains
+    # both "peanut" and "butter" too. Listed BEFORE the plain Peanut Butter
+    # rule (MULTI_KEYWORD_RULES checks list order, first full match wins),
+    # so anything that says "chocolate" as well as "peanut" and "butter"
+    # is recognised as a chocolate bar first, and only a product with
+    # "peanut" and "butter" but NO "chocolate" falls through to the plain
+    # rule below it.
+    ("Chocolates", ["chocolate", "peanut", "butter"]),
     # "Whole Earth Smooth Peanut Butter 227g" and similar were matching
     # both bare "peanut" (Nuts) and bare "butter" (Butter) at the same
     # single-word tier, with Butter winning today purely because it's
@@ -692,17 +726,21 @@ MULTI_KEYWORD_RULES = [
     ("Peanut Butter", ["peanut", "butter"]),
     # "Lamb Brand" is a real Maltese seasoning/spice brand (it also sells
     # nuts) whose name contains the word "Lamb" -- e.g. "Lamb Brand Roasted
-    # Almonds" and "Lamb Brand Table Salt" were matching bare "lamb" (the
-    # meat category) before anything else got a chance. Requiring the full
-    # "lamb brand" phrase alongside a word specific to what the product
-    # actually is keeps this narrow: it doesn't touch real lamb meat
-    # (those product names never contain the word "brand"). Known,
+    # Almonds", "Lamb Brand Table Salt", "Lamb Brand Hot Paprika" and
+    # "Lamb Brand Spices Coriander Seeds" were all matching bare "lamb"
+    # (the meat category) before anything else got a chance. The nuts
+    # carve-out is listed FIRST and stays narrow (requires "almond"
+    # specifically); everything else sold under this brand, from real data
+    # so far, is a spice or seasoning, so a plain "lamb brand" catch-all
+    # underneath it -- requiring nothing more than the brand name itself --
+    # covers every future spice variety too, not just the two words
+    # ("salt", "herbs") originally listed here, without touching real lamb
+    # meat (those product names never contain the word "brand"). Known,
     # accepted gap: one real example, "LAMB SALTS TABLE FINE X 2", doesn't
     # contain the word "Brand" at all, so it slips through this rule --
     # not worth a broader, less safe rule just to catch it.
     ("Nuts", ["lamb brand", "almond"]),
-    ("Herbs & Spices", ["lamb brand", "salt"]),
-    ("Herbs & Spices", ["lamb brand", "herbs"]),
+    ("Herbs & Spices", ["lamb brand"]),
     # Pet food whose name also mentions a flavour (chicken, salmon, etc)
     # was losing to that flavour's own meat/fish category, purely because
     # Chicken/Chilled Fish are listed earlier in KEYWORD_RULES than
