@@ -90,18 +90,24 @@ def _bulk_update_categories(cur, pairs):
 
 def find_category_collisions(listings):
     """Scans every listing's product name for words belonging to more than
-    one KEYWORD_RULES category AT THE SAME MATCH STRENGTH (e.g. a name
-    containing both bare "chocolate" and bare "milk", or both a "tuna"
-    word and a competing multi-word phrase) -- exactly the shape every
-    real miscategorization bug found through the app so far has had.
-    Purely a report: doesn't read shopping_category, doesn't change
-    anything, doesn't affect what gets written to the database.
+    one KEYWORD_RULES category, where the ambiguity is real -- i.e. two or
+    more categories are tied at the STRONGEST tier that matched at all --
+    exactly the shape every real miscategorization bug found through the
+    app so far has had. Purely a report: doesn't read shopping_category,
+    doesn't change anything, doesn't affect what gets written to the
+    database.
 
-    Deliberately only pairs categories matched at the SAME tier (see
-    matching_categories_by_name's docstring) -- a weaker match already
-    correctly loses to a stronger one by design (e.g. bare "oil"/"olive"
-    losing to the specific "olive oil" phrase), so pairing those would
-    just be permanent noise, not a real risk area.
+    Only pairs categories tied at the listing's OWN strongest (lowest
+    numbered) tier, not just any shared tier -- a weaker match already
+    correctly loses to a stronger one by design (e.g. "Extra Virgin Olive
+    Oil 1L" also matches bare "oil" and bare "olive" at tier 2, but the
+    specific "olive oil" phrase at tier 1 already wins, every time, so
+    that's not a real ambiguity). An earlier version of this function got
+    this wrong -- it paired categories sharing ANY tier, even when a
+    stronger tier already settled the listing -- which made it the single
+    biggest source of false positives in the report (649 "Oils / Olives"
+    pairs in one real run, all of them already correctly classified as
+    Olive Oil). Found and fixed from real data, not guessed.
 
     Returns (pair_counts, pair_examples): pair_counts maps a sorted
     (category_a, category_b) tuple to how many listings triggered it;
@@ -119,18 +125,16 @@ def find_category_collisions(listings):
         if len(tiers) < 2:
             continue
 
-        by_tier = {}
-        for category, tier in tiers.items():
-            by_tier.setdefault(tier, []).append(category)
+        strongest_tier = min(tiers.values())
+        tied_categories = sorted(category for category, tier in tiers.items() if tier == strongest_tier)
+        if len(tied_categories) < 2:
+            continue
 
-        for categories_at_this_tier in by_tier.values():
-            if len(categories_at_this_tier) < 2:
-                continue
-            for pair in itertools.combinations(sorted(categories_at_this_tier), 2):
-                pair_counts[pair] += 1
-                examples = pair_examples.setdefault(pair, [])
-                if len(examples) < 3 and name not in examples:
-                    examples.append(name)
+        for pair in itertools.combinations(tied_categories, 2):
+            pair_counts[pair] += 1
+            examples = pair_examples.setdefault(pair, [])
+            if len(examples) < 3 and name not in examples:
+                examples.append(name)
 
     return pair_counts, pair_examples
 
