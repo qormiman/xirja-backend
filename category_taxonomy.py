@@ -648,6 +648,25 @@ KEYWORD_RULES = [
 # here to override.
 MULTI_KEYWORD_RULES = [
     ("Chocolates", ["easter", "egg"]),
+    # "Carrefour Filini Egg (250grms)" showed up as the cheapest "Eggs"
+    # result -- "Filini" is a specific pasta shape (thin short noodles,
+    # commonly sold as "Filini all'uovo"/egg filini, an egg pasta used in
+    # soups), not real eggs. The 250g pack size is also a pantry-goods
+    # size, not how eggs are sold (by count). A single-word entry here (one
+    # required word is fine -- "all" of a one-item list) so it's checked
+    # before the bare "egg" rule gets a chance, the same way the
+    # Easter-egg rule above is.
+    ("Pasta & Couscous", ["filini"]),
+    # "Simpl Tuna Olive Oil (145grms)" showed up as the cheapest "Olive
+    # Oil" result -- this is canned tuna packed in olive oil (145g is a
+    # canned-tuna tin size, and "Simpl" is a budget private-label brand),
+    # not a bottle of olive oil. The multi-word "olive oil" phrase (Olive
+    # Oil category) would otherwise win over the single-word "tuna" rule
+    # (Chilled Fish), since ALL multi-word phrases are checked before ANY
+    # single word. Requiring both "tuna" and "olive oil" together targets
+    # exactly this real pattern (tuna canned in olive oil) without
+    # touching the standalone "tuna" or "olive oil" rules.
+    ("Canned Seafood", ["tuna", "olive oil"]),
 ]
 
 
