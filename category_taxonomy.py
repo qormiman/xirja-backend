@@ -31,6 +31,7 @@ Nothing here is guessed silently: categorize_listings.py logs a tally of
 anything it couldn't classify by any of the three routes, the same pattern
 used throughout this project's crawlers for unrecognised units.
 """
+import html
 import re
 
 
@@ -574,7 +575,18 @@ KEYWORD_RULES = [
 
 
 def clean_for_matching(name):
-    cleaned = re.sub(r"[^a-z0-9 ]", " ", (name or "").lower())
+    # html.unescape() first -- belt-and-suspenders against a real bug found
+    # in welbees_crawler.py, where a product name was extracted straight
+    # from raw HTML text without decoding entities, so a real "&" in a name
+    # came through as the literal text "&amp;" (the letters a-m-p survive
+    # the punctuation-stripping below, becoming a stray word "amp" in the
+    # cleaned text, which is worse than useless for matching). The crawler
+    # fix means freshly-crawled data won't have this problem going forward,
+    # but unescaping here too means matching stays correct even against
+    # already-stored data from before that fix, or any other future source
+    # of entity-laden text.
+    unescaped = html.unescape(name or "")
+    cleaned = re.sub(r"[^a-z0-9 ]", " ", unescaped.lower())
     # Collapse anything that just became a run of spaces (punctuation,
     # accented letters like the 'e' in "rosé", "&", apostrophes, etc.) down
     # to one space -- otherwise "Head & Shoulders" and "Tresemme'" leave
