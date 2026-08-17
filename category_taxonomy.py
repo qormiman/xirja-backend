@@ -34,6 +34,14 @@ used throughout this project's crawlers for unrecognised units.
 import html
 import re
 
+# A marker value (not a real category name) used in the category maps below
+# to flag a bucket that mixes too many different kinds of product to assign
+# one category to directly -- those fall through to name-based keyword
+# classification instead (see classify_by_name / classify_listing further
+# down). Defined here, before any of the maps that use it, since a Python
+# dict literal needs the name to already exist.
+KEYWORD_FALLBACK = "__KEYWORD_FALLBACK__"
+
 
 # ----------------------------------------------------------------------------
 # 1. PAVI PAMA -- its own chain_category values, title-cased. Two same-chain
@@ -68,7 +76,13 @@ PAVI_CATEGORY_MAP = {
     "SWEET PASTRY": "Sweet Pastry", "CAKE SNACKS": "Cake Snacks", "FROZEN": "Frozen",
     "CONDITIONERS": "Conditioners", "BEERS": "Beers", "NAPPIES": "Nappies",
     "CHEESES & DAIRY": "Cheeses & Dairy", "PIZZA": "Pizza", "CEREAL BARS": "Cereal Bars",
-    "OILS": "Oils", "WAFERS": "Wafers", "RICE": "Rice", "WOMEN CARE": "Women Care",
+    # Was a direct "Oils" mapping -- switched to split-by-name so a real
+    # "olive oil" product gets its own Olive Oil category instead of the
+    # generic "Oils" bucket (PAVI's own OILS category mixes olive, sunflower,
+    # corn oil etc. together). See the PAVI branch of classify_listing()
+    # below, updated to understand KEYWORD_FALLBACK the same way the Greens
+    # branch already did.
+    "OILS": KEYWORD_FALLBACK, "WAFERS": "Wafers", "RICE": "Rice", "WOMEN CARE": "Women Care",
     "BUTTER": "Butter", "LAUNDRY WASHING POWDERS": "Laundry Washing Powders",
     "HAIR STYLING": "Hair Styling", "ENERGY DRINKS": "Energy Drinks",
     "DISH WASHING LIQUID": "Dish Washing Liquid", "WINE - ROSE": "Wine - Rose", "SUMMER": "Summer",
@@ -124,12 +138,11 @@ PAVI_CATEGORY_MAP = {
 # Greens has real detail PAVI's data didn't show separately (e.g. baby
 # food), a new canonical category is added rather than forcing a bad fit.
 #
-# KEYWORD_FALLBACK marks a bucket that mixes too many different kinds of
-# product to assign one category -- these fall through to name-based
-# classification instead (see classify_by_name below).
+# KEYWORD_FALLBACK (defined near the top of the file, above PAVI_CATEGORY_MAP)
+# marks a bucket that mixes too many different kinds of product to assign
+# one category -- these fall through to name-based classification instead
+# (see classify_by_name below).
 # ----------------------------------------------------------------------------
-
-KEYWORD_FALLBACK = "__KEYWORD_FALLBACK__"
 
 GREENS_CATEGORY_MAP = {
     ("Baby", "Baby Food"): "Baby Food",
@@ -191,7 +204,11 @@ GREENS_CATEGORY_MAP = {
     ("Confectionery", "Pastries and Prepacked Cakes"): "Cakes",
     ("Confectionery", "Biscuits And Crackers"): "Biscuits",
     ("Confectionery", "Confectionery"): "Chocolates",
-    ("Confectionery", "Bread"): "Bread",
+    # Mixed, like "Milk And Eggs" above -- found via real data: "Bocconcini
+    # 30g" (a cheese, small mozzarella balls) was showing up as the cheapest
+    # "Bread" result. Whatever Greens actually files under this bucket isn't
+    # reliably bread, so split by product name instead of trusting the label.
+    ("Confectionery", "Bread"): KEYWORD_FALLBACK,
     ("Confectionery", "Pasta Rice And Couscous"): "Pasta & Couscous",
     ("Confectionery", "Dips"): "Dips",
 
@@ -248,7 +265,10 @@ GREENS_CATEGORY_MAP = {
     ("Groceries", "Dried Fruit Legumee And Nuts"): "Legumes & Nuts",
     ("Groceries", "Pasta Rice And Couscous"): "Pasta & Couscous",
     ("Groceries", "Jams Honey And Peanut Butter"): "Honey",
-    ("Groceries", "Oil And Vinegar"): "Oils",
+    # Was a direct "Oils" mapping -- switched to split-by-name (like the
+    # PAVI "OILS" bucket above) so a real "olive oil" product gets its own
+    # Olive Oil category instead of the generic "Oils" bucket.
+    ("Groceries", "Oil And Vinegar"): KEYWORD_FALLBACK,
     ("Groceries", "Cake Mix"): "Cake Preparations",
     ("Groceries", "Flour"): "Flour",
     ("Groceries", "Herbs Spices And Cubes"): "Herbs & Spices",
@@ -396,7 +416,11 @@ KEYWORD_RULES = [
     # "parmigiano"/"formaggio" -- Italian for parmesan/cheese, found via real
     # data on Italian-brand products sold through Welbee's ("Carrefour
     # Grated Parmigiano Reggiano", "Teddi Formaggio Fresco + Frutta").
-    ("Cheese", ["cheese", "mozzarella", "cheddar", "feta", "halloumi", "parmigiano", "parmesan", "formaggio"]),
+    # "bocconcini" -- small fresh mozzarella balls, found via real data
+    # ("Bocconcini 30g") that had been landing under Bread (see the
+    # ("Confectionery", "Bread") fix above) since the name itself doesn't
+    # contain "cheese" or "mozzarella".
+    ("Cheese", ["cheese", "mozzarella", "cheddar", "feta", "halloumi", "parmigiano", "parmesan", "formaggio", "bocconcini"]),
     ("Butter", ["butter", "margarine", "spread"]),
     ("Cooking Creams", ["cream", "panna"]),
 
@@ -468,13 +492,29 @@ KEYWORD_RULES = [
     # land on Chocolates, not Milk -- found via real testing, see
     # test_category_taxonomy.py. "milk choclate" (one c) is the same fix
     # for a real misspelling seen live ("Rice Up Milk Choclate Rice Bar").
-    ("Chocolates", ["chocolate", "choco", "milk chocolate", "milk choclate"]),
+    # "easter egg"/"easter eggs" -- checked in the multi-word pass, so it
+    # wins before the bare "egg" rule below. Found via real data: "Nestle
+    # Easter Milkybar Mini Easter Eggs" (a chocolate candy) was showing up
+    # as the cheapest real "Eggs" result.
+    ("Chocolates", ["chocolate", "choco", "milk chocolate", "milk choclate", "easter egg"]),
     ("Snacks", ["crisps", "popcorn", "pretzel", "snack"]),
     ("Chips", ["chips"]),
     ("Nuts", ["peanut", "almond", "cashew", "walnut", "pistachio"]),
     ("Honey", ["honey"]),
     ("Jelly", ["jelly", "jello"]),
+    # "olive oil" is checked in the multi-word pass, so it wins over the
+    # bare "olive" rule right below it for any product whose name says both
+    # -- e.g. "Extra Virgin Olive Oil 1L" lands on Olive Oil, not Olives.
+    ("Olive Oil", ["olive oil"]),
     ("Olives", ["olive"]),  # found via real data: "Fragata Sliced Olives" was falling through unclassified
+    # Bare "oil"/"vinegar" -- needed now that both PAVI's "OILS" bucket and
+    # Greens' "Oil And Vinegar" bucket split by name instead of mapping
+    # directly (see the "Olive Oil" fix). Checked in the single-word pass,
+    # AFTER "olive oil" above (so a real olive oil still lands on Olive Oil)
+    # and after the existing "hair oil"/"facial oil"/"dry oil" phrases
+    # elsewhere in this list (those are multi-word, always checked first).
+    ("Oils", ["oil"]),
+    ("Vinegars", ["vinegar"]),
 
     # Household cleaning (targets the "Household Care And Essentials" catch-all)
     ("Laundry Washing Liquids", ["laundry liquid", "washing liquid"]),
@@ -665,7 +705,11 @@ def classify_listing(store_id, chain_category, chain_product_name):
     it (logged by the caller, not guessed)."""
     if store_id == "pavipama" and chain_category:
         mapped = PAVI_CATEGORY_MAP.get(chain_category.strip())
-        if mapped:
+        # mapped != KEYWORD_FALLBACK -- a PAVI bucket can now also be flagged
+        # as mixed (see "OILS" above) and fall through to name-based
+        # classification below, the same way a flagged Greens bucket already
+        # does.
+        if mapped and mapped != KEYWORD_FALLBACK:
             return mapped
 
     if store_id == "greens" and chain_category:
