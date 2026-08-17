@@ -667,6 +667,22 @@ MULTI_KEYWORD_RULES = [
     # exactly this real pattern (tuna canned in olive oil) without
     # touching the standalone "tuna" or "olive oil" rules.
     ("Canned Seafood", ["tuna", "olive oil"]),
+    # "Carrefour Egg Bengasini No 210 (250grms)" showed up as the cheapest
+    # "Eggs" result -- same real pattern as "Filini" above: "Bengasini" is
+    # almost certainly another shape in Carrefour's own egg-pasta line
+    # ("No 210" is a standard Italian pasta-shape numbering convention),
+    # same brand, same 250g pantry-goods pack size, not real eggs. Worth
+    # watching for further shape names in this same product line.
+    ("Pasta & Couscous", ["bengasini"]),
+    # "Rialto Croutons Round Olive Oil & Salt 100g" showed up as the
+    # cheapest "Olive Oil" result -- croutons flavoured with olive oil, not
+    # a bottle of it. This is the third real product (after "Rice Up
+    # Rolls..." and "Simpl Tuna...") where "olive oil" describes an
+    # ingredient rather than being the product -- "croutons" itself is
+    # unambiguous (no legitimate product other than actual croutons is
+    # called that), so it's listed here alone rather than needing
+    # co-occurrence with "olive oil" like the tuna case above.
+    ("Snacks", ["croutons"]),
 ]
 
 
