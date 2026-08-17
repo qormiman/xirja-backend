@@ -777,6 +777,53 @@ def classify_by_name(product_name):
     return None
 
 
+def matching_categories_by_name(product_name):
+    """Returns {category: tier} for every category whose KEYWORD_RULES
+    entry matches this name -- not just the one classify_by_name would
+    pick. "tier" is the STRONGEST way it matched: 0 = MULTI_KEYWORD_RULES
+    co-occurrence, 1 = a multi-word phrase, 2 = a single word.
+
+    Used by categorize_listings.py's "possible category collisions"
+    report, not by classification itself. The tier matters because
+    classify_by_name already resolves multi-tier collisions correctly BY
+    DESIGN -- e.g. "Extra Virgin Olive Oil 1L" matches the specific
+    "olive oil" phrase (tier 1, Olive Oil) as well as the bare words "oil"
+    and "olive" (tier 2, Oils and Olives), but the phrase already wins,
+    correctly, every time. That's not a bug and never will be, so it's not
+    what this report is for.
+
+    What IS worth flagging: two categories matching at the SAME tier,
+    where nothing but KEYWORD_RULES list order decides which one
+    classify_by_name actually returns -- exactly the pattern behind every
+    real miscategorization bug found through the app so far (a chocolate
+    bar's bare "chocolate" vs. a co-occurring bare "milk", a tuna tin's
+    bare "tuna" vs. a co-occurring "olive oil" phrase competing with
+    another phrase, etc). The caller groups by tier and only reports
+    same-tier pairs -- see find_category_collisions in
+    categorize_listings.py.
+
+    Deliberately doesn't consider MULTI_KEYWORD_RULES pairs as colliding
+    with each other -- those are already deliberate, checked-in overrides
+    for known collisions, not things left to find."""
+    cleaned = clean_for_matching(product_name)
+    best_tier = {}
+
+    def note(category, tier):
+        if category not in best_tier or tier < best_tier[category]:
+            best_tier[category] = tier
+
+    for category, required_words in MULTI_KEYWORD_RULES:
+        if all(_keyword_matches(w, cleaned) for w in required_words):
+            note(category, 0)
+
+    for category, keywords in KEYWORD_RULES:
+        for kw in keywords:
+            if _keyword_matches(kw, cleaned):
+                note(category, 1 if " " in kw.strip() else 2)
+
+    return best_tier
+
+
 def classify_listing(store_id, chain_category, chain_product_name):
     """The single entry point categorize_listings.py calls per listing.
     Returns a canonical category name, or None if nothing could classify
