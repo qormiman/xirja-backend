@@ -476,7 +476,10 @@ KEYWORD_RULES = [
 
     # Drinks
     ("Water", ["water"]),
-    ("Juices", ["juice", "smoothie"]),
+    # Bare "juice"/"smoothie" moved to MULTI_KEYWORD_RULES (Pass 0, below)
+    # -- see the comment there for why (a juice's name often also contains
+    # a fruit word, e.g. "Del Monte Orange Juice", and Fruits used to win
+    # by list order).
     ("Carbonated Drinks", ["cola", "soda", "fizzy", "carbonated"]),
     ("Beers", ["beer", "lager", "ale"]),
     ("Ciders", ["cider"]),
@@ -515,7 +518,20 @@ KEYWORD_RULES = [
     # the cheapest "Olive Oil" result, because the product's name lists
     # olive oil as an ingredient. Checked in the multi-word pass, and this
     # category is listed before "Olive Oil" below, so it wins first.
-    ("Snacks", ["crisps", "popcorn", "pretzel", "snack", "rice up rolls"]),
+    # "rice cake" -- e.g. "Kallo Rice Cakes Lightly Salted" was matching
+    # bare "rice" (Rice) and bare "cake" (Cakes) at the same tier, with
+    # Cakes winning by list order even though a rice cake is neither a
+    # bowl of rice nor a dessert cake -- it's genuinely its own kind of
+    # snack. Listed as its own phrase here so it wins over both bare
+    # words, the same way "rice up rolls" already does for a different
+    # real product line.
+    # Bare "crisps"/"pretzel" moved to MULTI_KEYWORD_RULES (Pass 0, below)
+    # -- they don't have any other realistic meaning in a grocery product
+    # name, unlike "popcorn" (e.g. "popcorn chicken") or "snack" (e.g.
+    # "cheese snacks"), which stay here as ordinary keywords so they don't
+    # risk jumping ahead of a more specific category like Chicken or
+    # Cheese.
+    ("Snacks", ["popcorn", "snack", "rice up rolls", "rice cake"]),
     ("Chips", ["chips"]),
     ("Nuts", ["peanut", "almond", "cashew", "walnut", "pistachio"]),
     ("Honey", ["honey"]),
@@ -597,17 +613,14 @@ KEYWORD_RULES = [
     ("Baby Food", ["baby food", "infant formula", "baby cereal", "baby jar"]),
     ("Baby Essentials", ["baby wipe", "baby lotion", "baby shampoo"]),
 
-    # Pets
-    # "felix" -- a specific, globally-known cat food brand whose products
-    # don't say "cat" anywhere in the name, found via real data ("Purina
-    # Gourmet Felix As Good As It Looks Mixed Selection").
-    ("Cat", ["cat food", "cat litter", "cat treat", "kitten", "felix"]),
-    ("Dog", ["dog food", "dog treat", "dog chew", "puppy"]),
-    # bare "dog"/"cat" last -- found via real data: "Royal Canin Adult Shih
-    # Tzu Dog Dry Food" doesn't contain any of the specific phrases above,
-    # just the word "Dog" on its own.
-    ("Dog", ["dog"]),
-    ("Cat", ["cat"]),
+    # Pets -- all moved to MULTI_KEYWORD_RULES (Pass 0, below). They used
+    # to live here as ordinary phrase/single-word rules, but real pet-food
+    # names that also mention a flavour (e.g. "Royal Canin Chicken Flavour
+    # Dog Dry Food", "Purina Gourmet Felix ... Salmon") were losing to the
+    # bare "chicken"/"salmon" meat-or-fish word, purely because Chicken and
+    # Chilled Fish are listed earlier in this file than Cat/Dog. Checking
+    # these first (like the Easter-egg rule) fixes that regardless of list
+    # order.
 
     # Clothes
     ("Clothes", ["pyjama", "pajama", "sports bra"]),
@@ -660,13 +673,69 @@ MULTI_KEYWORD_RULES = [
     # "Simpl Tuna Olive Oil (145grms)" showed up as the cheapest "Olive
     # Oil" result -- this is canned tuna packed in olive oil (145g is a
     # canned-tuna tin size, and "Simpl" is a budget private-label brand),
-    # not a bottle of olive oil. The multi-word "olive oil" phrase (Olive
-    # Oil category) would otherwise win over the single-word "tuna" rule
-    # (Chilled Fish), since ALL multi-word phrases are checked before ANY
-    # single word. Requiring both "tuna" and "olive oil" together targets
-    # exactly this real pattern (tuna canned in olive oil) without
-    # touching the standalone "tuna" or "olive oil" rules.
-    ("Canned Seafood", ["tuna", "olive oil"]),
+    # not a bottle of olive oil. The multi-word "olive oil"/"oil" phrase
+    # (Oils/Olive Oil category) would otherwise win over the single-word
+    # "tuna" rule (Chilled Fish), since ALL multi-word phrases are checked
+    # before ANY single word. Requiring both "tuna" and "oil" together
+    # targets this real pattern (tuna canned in any oil, not just olive)
+    # without touching the standalone "tuna" or "oil"/"olive oil" rules.
+    # Broadened from just "olive oil" to plain "oil" so this also catches
+    # tuna canned in sunflower oil, vegetable oil, etc, not only olive.
+    ("Canned Seafood", ["tuna", "oil"]),
+    # "Whole Earth Smooth Peanut Butter 227g" and similar were matching
+    # both bare "peanut" (Nuts) and bare "butter" (Butter) at the same
+    # single-word tier, with Butter winning today purely because it's
+    # listed earlier in KEYWORD_RULES. Peanut butter is common enough on a
+    # Maltese shopping list to deserve its own category rather than being
+    # folded into either -- both words are required together, so this
+    # doesn't touch a plain jar of nuts or a plain tub of butter/margarine.
+    ("Peanut Butter", ["peanut", "butter"]),
+    # "Lamb Brand" is a real Maltese seasoning/spice brand (it also sells
+    # nuts) whose name contains the word "Lamb" -- e.g. "Lamb Brand Roasted
+    # Almonds" and "Lamb Brand Table Salt" were matching bare "lamb" (the
+    # meat category) before anything else got a chance. Requiring the full
+    # "lamb brand" phrase alongside a word specific to what the product
+    # actually is keeps this narrow: it doesn't touch real lamb meat
+    # (those product names never contain the word "brand"). Known,
+    # accepted gap: one real example, "LAMB SALTS TABLE FINE X 2", doesn't
+    # contain the word "Brand" at all, so it slips through this rule --
+    # not worth a broader, less safe rule just to catch it.
+    ("Nuts", ["lamb brand", "almond"]),
+    ("Herbs & Spices", ["lamb brand", "salt"]),
+    ("Herbs & Spices", ["lamb brand", "herbs"]),
+    # Pet food whose name also mentions a flavour (chicken, salmon, etc)
+    # was losing to that flavour's own meat/fish category, purely because
+    # Chicken/Chilled Fish are listed earlier in KEYWORD_RULES than
+    # Cat/Dog -- e.g. real data showed "Royal Canin Adult Shih Tzu Dog Dry
+    # Food" and chicken-flavoured dog food both at risk of this. These
+    # words are specific enough (unlikely to appear in an unrelated
+    # grocery product) to check first regardless of list order, the same
+    # way the Easter-egg rule above does. Each phrase gets its own entry
+    # since MULTI_KEYWORD_RULES requires ALL listed words together (AND),
+    # not any one of them (OR) -- these used to live as ordinary
+    # KEYWORD_RULES entries under "Pets" further down; moved here instead.
+    ("Cat", ["cat food"]),
+    ("Cat", ["cat litter"]),
+    ("Cat", ["cat treat"]),
+    ("Cat", ["kitten"]),
+    # "felix" -- a specific, globally-known cat food brand whose products
+    # don't say "cat" anywhere in the name, found via real data ("Purina
+    # Gourmet Felix As Good As It Looks Mixed Selection").
+    ("Cat", ["felix"]),
+    ("Cat", ["cat"]),
+    ("Dog", ["dog food"]),
+    ("Dog", ["dog treat"]),
+    ("Dog", ["dog chew"]),
+    ("Dog", ["puppy"]),
+    ("Dog", ["dog"]),
+    # Bare "juice"/"smoothie" -- a juice's name often also contains a
+    # fruit word (e.g. "Del Monte Orange Juice" matching bare "orange" ->
+    # Fruits as well as bare "juice" -> Juices), with Fruits winning today
+    # purely because it's listed earlier. A drink literally called "juice"
+    # or "smoothie" is never ambiguous about which category it belongs in,
+    # so these are safe to check first, the same way Cat/Dog above are.
+    ("Juices", ["juice"]),
+    ("Juices", ["smoothie"]),
     # "Carrefour Egg Bengasini No 210 (250grms)" showed up as the cheapest
     # "Eggs" result -- same real pattern as "Filini" above: "Bengasini" is
     # almost certainly another shape in Carrefour's own egg-pasta line
@@ -683,6 +752,15 @@ MULTI_KEYWORD_RULES = [
     # called that), so it's listed here alone rather than needing
     # co-occurrence with "olive oil" like the tuna case above.
     ("Snacks", ["croutons"]),
+    # "crisps" and "pretzel" -- no realistic other meaning in a grocery
+    # product name (unlike "popcorn" or "snack", deliberately left as
+    # ordinary keywords instead, since real products like "popcorn
+    # chicken" and "cheese snacks" shouldn't get pulled into Snacks).
+    # Elevating just these two catches cases like "Pringles Crisps
+    # Paprika" (bare "crisps" losing to bare "paprika" -> Herbs & Spices
+    # purely by list order) without that risk.
+    ("Snacks", ["crisps"]),
+    ("Snacks", ["pretzel"]),
 ]
 
 
