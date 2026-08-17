@@ -401,12 +401,15 @@ KEYWORD_RULES = [
 
     # Bakery & carbs
     ("Bread", ["bread", "baguette", "ftira", "hobz", "panini"]),  # "panini" found via real data: an Italian bread roll, not the toasted sandwich in this context
-    # "wafer milk"/"milk wafer" -- specific phrasing, checked in the
-    # multi-word pass, so a wafer snack like "Storck Knoppers Wafer Milk"
-    # lands on Biscuits, not Milk -- found via real API testing (the first
-    # live "Milk" query surfaced this as the cheapest result, which it
-    # obviously isn't).
-    ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre", "wafer milk", "milk wafer", "wafer"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data
+    # "wafer milk"/"milk wafer" and "chocolate & milk"/"chocolate and milk"
+    # are specific real phrasings (checked in the multi-word pass) for the
+    # same underlying pattern: a chocolate/biscuit snack that mentions
+    # "milk" as an ingredient, not an actual carton of milk. Found via real
+    # API testing -- first "Storck Knoppers Wafer Milk", then (after that
+    # fix) "Bahlsen Leibniz Pick Up Chocolate & Milk" turned up as the next
+    # wrong result. Worth watching for further variants of this same
+    # pattern as more real data gets tested.
+    ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre", "wafer milk", "milk wafer", "wafer", "chocolate & milk", "chocolate and milk"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data
     ("Cakes", ["cake"]),
     ("Cereals", ["cereal", "cornflakes", "muesli", "granola"]),
     ("Cereal & Cereal Bars", ["cereal bar"]),
