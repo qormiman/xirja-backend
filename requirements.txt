@@ -1,0 +1,15 @@
+# Python packages the crawler needs.
+# GitHub Actions will install these automatically before every run
+# (see .github/workflows/crawl-greens.yml) -- you don't need to install
+# anything yourself.
+
+psycopg2-binary==2.9.9
+
+# Runs a real, invisible (headless) browser for a few seconds per outlet,
+# just to obtain a valid access token the way a normal visitor's browser
+# would -- see the top of greens_crawler.py for why this is needed.
+playwright
+
+# Reads and writes the .xlsx review spreadsheet used by
+# export_medium_matches.py and apply_reviewed_matches.py.
+openpyxl==3.1.5
