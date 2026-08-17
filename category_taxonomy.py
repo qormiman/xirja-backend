@@ -450,7 +450,7 @@ KEYWORD_RULES = [
     # Sugar Cookies & Cream" were landing on Cooking Creams instead of
     # Biscuits, since bare "cookie" and bare "cream" tie and Cooking Creams
     # is listed earlier.
-    ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre", "wafer milk", "milk wafer", "wafer", "cookies and cream", "cookies & cream"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data
+    ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre", "wafer milk", "milk wafer", "wafer", "cookies and cream", "cookies & cream", "cookies n cream", "milk cookie", "milk biscuit", "cookie milk", "biscuit milk"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data. "cookies n cream" -- a third real spelling of the cookies-and-cream flavour ("Hersheys Cookies N Cream"), found the same way "cookies and cream"/"cookies & cream" were. "milk cookie"/"milk biscuit"/"cookie milk"/"biscuit milk" -- same shape as "wafer milk"/"milk wafer" above: "Paw Patrol Mini Milk Cookies", "Peppa Pig Mini Milk Cookies" and "Kinder Duo Biscuit Milk & White" were landing on Milk (listed earlier than Biscuits), even when the name literally says "biscuit"/"cookie" too -- both word orders are listed since real products used both.
     ("Cakes", ["cake"]),
     ("Cereals", ["cereal", "cornflakes", "muesli", "granola"]),
     ("Cereal & Cereal Bars", ["cereal bar"]),
@@ -491,6 +491,14 @@ KEYWORD_RULES = [
     ("Dried Fruit", ["dried fruit", "raisin", "sultana", "prune"]),
     ("Frozen Vegetables", ["frozen vegetable", "frozen peas", "frozen corn"]),
     ("Herbs & Spices", ["spice", "herb", "pepper corn", "cinnamon", "paprika", "oregano", "basil", "salt"]),
+    # "stock cube"/"stock pot"/"bouillon cube" -- found via real data:
+    # "Knorr Zero Salt Vegetable Stock Cubes" was landing on Vegetables,
+    # since there was no keyword for this product type at all in the
+    # name-based fallback (Stock Cubes previously only existed as a direct
+    # PAVI/Greens category-map target). See also the Knorr-specific
+    # MULTI_KEYWORD_RULES rule further down, for the many real Knorr
+    # products that say "[flavour] Cubes" without the word "stock" at all.
+    ("Stock Cubes", ["stock cube", "stock pot", "bouillon cube"]),
     ("Legumes", ["lentil"]),  # distinct from the broader "Legumes & Nuts" bucket below -- found via real data ("Pensa Bio Lentils")
 
     # Drinks
@@ -565,9 +573,20 @@ KEYWORD_RULES = [
     # since they don't need to jump ahead of MULTI_KEYWORD_RULES too).
     # Both "salt and vinegar" and "salt & vinegar" are listed because
     # clean_for_matching turns "&" into a space, not into the word "and",
-    # so the two real spellings clean down to two different strings.
-    ("Snacks", ["popcorn", "snack", "rice up rolls", "rice cake", "potato straws",
-                "salt and vinegar", "salt vinegar"]),
+    # so the two real spellings clean down to two different strings. Same
+    # reasoning, same fix now for "sour cream and onion"/"sour cream
+    # onion" -- found via real data (12 Aug 2026 collision report): "Mega
+    # Pack Sour Cream & Onion Sticks" and "Sunshine Snacks Crispy Bakes
+    # Sour Cream And Onion" were landing on Cooking Creams (bare "cream" is
+    # listed earlier than Snacks), when they're clearly savoury snacks, not
+    # a tub of cooking cream. A plain "Sour Cream 200ml" with no "onion"
+    # is unaffected -- both words are required together.
+    #
+    # Bare "popcorn" moved to MULTI_KEYWORD_RULES (Pass 0, below) -- see
+    # the comment there.
+    ("Snacks", ["snack", "rice up rolls", "rice cake", "potato straws",
+                "salt and vinegar", "salt vinegar",
+                "sour cream and onion", "sour cream onion"]),
     # Bare "chips" moved to MULTI_KEYWORD_RULES (Pass 0, below). It used to
     # need a growing list of specific safe phrases here instead ("potato
     # chips", "tortilla chips", "lentil chips", "nacho chips", plus a
@@ -580,6 +599,14 @@ KEYWORD_RULES = [
     # and any future one, instead of needing a new phrase added every time
     # a new chip brand turns up. See MULTI_KEYWORD_RULES for both halves
     # of that rule.
+    # "almond"/"cashew"/"walnut"/"pistachio" + "butter" moved to
+    # MULTI_KEYWORD_RULES (Pass 0, below), same reasoning as the existing
+    # "Peanut Butter" fix -- a nut butter (e.g. "Biona Cashew Butter") was
+    # landing on dairy Butter instead. Kept as narrow, per-nut carve-outs
+    # rather than a broad "any nut word wins" rule -- Nuts collides with a
+    # lot of other categories throughout this project's data (spice words,
+    # Cheese, Coffee, Milk, Snacks...), and a blanket elevation was
+    # deliberately not chosen this round; see the comment there.
     ("Nuts", ["peanut", "almond", "cashew", "walnut", "pistachio"]),
     ("Honey", ["honey"]),
     ("Jelly", ["jelly", "jello"]),
@@ -708,6 +735,26 @@ KEYWORD_RULES = [
 # below, since it's more specific than the bare "egg" single-word rule it's
 # here to override.
 MULTI_KEYWORD_RULES = [
+    # "conditioner"/"candle" are checked FIRST, ahead of everything else in
+    # this list on purpose -- both are unambiguous, product-defining words
+    # with no food meaning at all, so nothing later in this list should
+    # ever be allowed to out-rank them. Originally placed further down
+    # (after "tea"), which worked fine until later rules got added ABOVE
+    # that spot -- specifically the nut-butter carve-outs below, which
+    # caused a real regression caught by this session's own regression
+    # sweep: "Splend'or Nourishing Conditioner Almond Milk & Shea Butter"
+    # (a hair conditioner, "Almond Milk & Shea Butter" is just marketing
+    # copy) started matching the new "almond"+"butter" -> Nuts rule before
+    # ever reaching "conditioner" further down. Moving these two to the
+    # very top removes the fragility instead of chasing it rule by rule --
+    # any future addition anywhere else in this list is now automatically
+    # safe against this same class of bug. Real data behind the original
+    # fix: "Splend'or Nourishing Conditioner Almond Milk & Shea Butter"
+    # was landing on Milk, and "True Living Candle Jar Apple Cinnamon" was
+    # landing on Fruits. Worth watching for the same pattern elsewhere
+    # (shampoo, lotion, soap etc. could plausibly have the same issue).
+    ("Conditioners", ["conditioner"]),
+    ("Candles", ["candle"]),
     ("Chocolates", ["easter", "egg"]),
     # "Carrefour Filini Egg (250grms)" showed up as the cheapest "Eggs"
     # result -- "Filini" is a specific pasta shape (thin short noodles,
@@ -798,6 +845,36 @@ MULTI_KEYWORD_RULES = [
     # folded into either -- both words are required together, so this
     # doesn't touch a plain jar of nuts or a plain tub of butter/margarine.
     ("Peanut Butter", ["peanut", "butter"]),
+    # Other nut butters -- same shape of bug, found via real data (12 Aug
+    # 2026 collision report): "Munch Abunch Coconut Cashew Butter" and
+    # "Biona Cashew Butter" were landing on dairy Butter, not Nuts, since
+    # Butter is listed earlier than Nuts in KEYWORD_RULES. Unlike peanut
+    # butter, these don't get their own dedicated category (not common
+    # enough yet to deserve one) -- they route to the existing Nuts
+    # category instead. Kept narrow (named nuts only, not a blanket "any
+    # nut word wins" rule) -- see the comment on the plain Nuts entry in
+    # KEYWORD_RULES for why a broader version was deliberately not done
+    # this round.
+    ("Nuts", ["almond", "butter"]),
+    ("Nuts", ["cashew", "butter"]),
+    ("Nuts", ["walnut", "butter"]),
+    ("Nuts", ["pistachio", "butter"]),
+    # Roasted/flavoured peanuts losing to their own flavour word -- found
+    # via real data: "Roast Salt Peanut" and "Mogyi Dry Roasted Smoked
+    # Paprika Flavoured Peanuts" were landing on Herbs & Spices (bare
+    # "salt"/"paprika", listed earlier than Nuts), when they're clearly
+    # nut snacks. Narrow on purpose: requires "roast"/"roasted" alongside
+    # "peanut", so an unrelated spice product isn't affected. "Z Hot
+    # Paprika Flav Corn Snack & Peanut" (no "roast"/"roasted" word) isn't
+    # covered by this -- left as a lower-confidence case, since that one's
+    # arguably a corn snack either way.
+    ("Nuts", ["peanut", "roast"]),
+    ("Nuts", ["peanut", "roasted"]),
+    # A well-known Indian dish name -- found via real data ("Butter
+    # Chicken", "Indian Butter Chicken Sauce"), which was landing on Butter
+    # (listed earlier than Chicken). The dish name is specific and
+    # unambiguous enough to check as its own phrase.
+    ("Chicken", ["butter chicken"]),
     # "Lamb Brand" is a real Maltese seasoning/spice brand (it also sells
     # nuts) whose name contains the word "Lamb" -- e.g. "Lamb Brand Roasted
     # Almonds", "Lamb Brand Table Salt", "Lamb Brand Hot Paprika" and
@@ -836,6 +913,23 @@ MULTI_KEYWORD_RULES = [
     ("Herbs & Spices", ["lamb", "himalayan"]),
     ("Herbs & Spices", ["lamb", "rosemary"]),
     ("Herbs & Spices", ["lamb", "salt", "table"]),
+    # "Lamb Spices" -- the same Lamb Brand spice line again, just under a
+    # different name for the product-line label than "Lamb Brand" itself:
+    # found via real data ("Lamb Spices Cardamom Pods", "Lamb Spices Chilli
+    # Whole Hot", "Lamb Spices Chinese 5 Spice") -- all clearly the same
+    # spice-brand naming pattern as "Lamb Brand X" above, just phrased
+    # "Lamb Spices X" instead in this data source.
+    ("Herbs & Spices", ["lamb spices"]),
+    # "Knorr"+"cube" -- found via real data: "Knorr Zero Salt Chicken
+    # Cubes", "Knorr Chicken Cubes Zero Salt", "Knorr Zero Salt Beef Cubes"
+    # were landing on Chicken/Beef (whichever meat word the name also
+    # contained), since those are listed earlier than Stock Cubes and none
+    # of these product names contain the word "stock" at all -- just
+    # "[flavour] Cubes". Knorr is a real, well-known bouillon-cube brand,
+    # so requiring the brand name alongside "cube" is safe and specific
+    # (see also the plain "stock cube"/"stock pot" KEYWORD_RULES phrases
+    # above, for non-Knorr products that do say "stock").
+    ("Stock Cubes", ["knorr", "cube"]),
     # Pet food whose name also mentions a flavour (chicken, salmon, etc)
     # was losing to that flavour's own meat/fish category, purely because
     # Chicken/Chilled Fish are listed earlier in KEYWORD_RULES than
@@ -872,11 +966,31 @@ MULTI_KEYWORD_RULES = [
     # transparently-reported gap rather than guessed at, the same way PREM
     # itself was left unfixed after inconclusive research earlier.
     ("Cat", ["katsuobushi"]),
+    # Three more real cat-food brands, all confirmed via WebSearch (12 Aug
+    # 2026 collision report), same reasoning as "felix"/"cadbury" above --
+    # a bare brand-name match is safe when the brand's own range is cat
+    # food specifically:
+    # "lechat" -- "LeChat Excellence" is a real cat food brand (confirmed
+    # via petshop.lv, jmvetgroup.com, Amazon.fr), exact match to "Lechat
+    # Excellence Salmon/chicken Flavor 400g".
+    # "miglior gatto" -- a real cat food brand (Morando), confirmed
+    # actually sold in Malta via petshopmalta.com -- exact match to real
+    # data here.
+    # "schesir" -- a real, cat-specific food brand (schesir.com's entire
+    # product line is cat food, including the exact "Tuna...In Jelly"
+    # pouches this data shows), confirmed via WebSearch.
+    ("Cat", ["lechat"]),
+    ("Cat", ["miglior gatto"]),
+    ("Cat", ["schesir"]),
     ("Cat", ["cat"]),
     ("Dog", ["dog food"]),
     ("Dog", ["dog treat"]),
     ("Dog", ["dog chew"]),
     ("Dog", ["puppy"]),
+    # "barf" -- BARF (Bones And Raw Food) is a well-known real raw dog-food
+    # diet term, found via real data ("Prince Barf Chicken & Vegetables"),
+    # which was landing on Chicken/Vegetables instead.
+    ("Dog", ["barf"]),
     # "hot dog" -- found via real data (12 Aug 2026 collision report): "Dak
     # Hot Dog Sausages" (Dak is a real, well-known human processed-meat
     # brand) was matching bare "dog" below and landing on the Dog pet-food
@@ -944,6 +1058,12 @@ MULTI_KEYWORD_RULES = [
     # purely by list order) without that risk.
     ("Snacks", ["crisps"]),
     ("Snacks", ["pretzel"]),
+    # "popcorn" -- same reasoning as "crisps"/"pretzel" just above, moved
+    # here after real data (12 Aug 2026 collision report) showed the same
+    # pattern: "Z Popcorn Salt And Caramel Flavored" was landing on Herbs &
+    # Spices (bare "salt", listed earlier than Snacks). No other realistic
+    # meaning for "popcorn" in a grocery product name.
+    ("Snacks", ["popcorn"]),
     # "choc" -- see the comment on the "chocolate"/"choco" KEYWORD_RULES
     # entry above for why this needs to be here (Pass 0) rather than there:
     # "MILK CHOC WAFER BAR" was matching bare "milk" (Milk) and bare
@@ -989,20 +1109,6 @@ MULTI_KEYWORD_RULES = [
     # unusual plural/compound spelling); harmless either way since Pass 0
     # already wins first.
     ("Tea", ["tea"]),
-    # A hair conditioner or a scented candle naming a food-sounding
-    # ingredient (e.g. "Almond Milk & Shea Butter" as a marketing
-    # description, or "Apple Cinnamon" as a scent) was losing to the food
-    # word and landing in a food category entirely -- found via real data:
-    # "Splend'or Nourishing Conditioner Almond Milk & Shea Butter" landed
-    # on Milk, and "True Living Candle Jar Apple Cinnamon" landed on
-    # Fruits. Both "conditioner" and "candle" are unambiguous,
-    # product-defining words -- there's no food product called either one
-    # -- so they're safe to check first regardless of what ingredient-style
-    # words also appear in the name. Worth watching for the same pattern
-    # elsewhere (shampoo, lotion, soap etc. could plausibly have the same
-    # issue) if it shows up in a future collision report.
-    ("Conditioners", ["conditioner"]),
-    ("Candles", ["candle"]),
     # General "chips" fix, replacing the growing list of one-off phrases
     # this used to need (see the comment on the old KEYWORD_RULES Chips
     # entry above). The recurring real problem: a flavoured chip snack
