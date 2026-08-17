@@ -401,7 +401,12 @@ KEYWORD_RULES = [
 
     # Bakery & carbs
     ("Bread", ["bread", "baguette", "ftira", "hobz", "panini"]),  # "panini" found via real data: an Italian bread roll, not the toasted sandwich in this context
-    ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data
+    # "wafer milk"/"milk wafer" -- specific phrasing, checked in the
+    # multi-word pass, so a wafer snack like "Storck Knoppers Wafer Milk"
+    # lands on Biscuits, not Milk -- found via real API testing (the first
+    # live "Milk" query surfaced this as the cheapest result, which it
+    # obviously isn't).
+    ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre", "wafer milk", "milk wafer", "wafer"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data
     ("Cakes", ["cake"]),
     ("Cereals", ["cereal", "cornflakes", "muesli", "granola"]),
     ("Cereal & Cereal Bars", ["cereal bar"]),
@@ -457,8 +462,9 @@ KEYWORD_RULES = [
     # "milk chocolate" is listed explicitly (and checked in the multi-word
     # pass) so that brand names like "Cadbury Dairy Milk Chocolate Bar"
     # land on Chocolates, not Milk -- found via real testing, see
-    # test_category_taxonomy.py.
-    ("Chocolates", ["chocolate", "choco", "milk chocolate"]),
+    # test_category_taxonomy.py. "milk choclate" (one c) is the same fix
+    # for a real misspelling seen live ("Rice Up Milk Choclate Rice Bar").
+    ("Chocolates", ["chocolate", "choco", "milk chocolate", "milk choclate"]),
     ("Snacks", ["crisps", "popcorn", "pretzel", "snack"]),
     ("Chips", ["chips"]),
     ("Nuts", ["peanut", "almond", "cashew", "walnut", "pistachio"]),
