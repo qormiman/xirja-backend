@@ -477,7 +477,10 @@ KEYWORD_RULES = [
     # (unlike e.g. "steak", which stays as-is here), so it's safe to check
     # first regardless of which base meat it's made from.
     ("Ham", ["ham", "salami", "prosciutto"]),
-    ("Cold Cuts", ["mortadella", "luncheon", "cold cut"]),
+    # Bare "luncheon" moved to MULTI_KEYWORD_RULES (Pass 0, below) -- see
+    # the comment there. "mortadella"/"cold cut" stay here; they don't
+    # collide with an earlier-listed meat category the way "luncheon" did.
+    ("Cold Cuts", ["mortadella", "cold cut"]),
     ("Frozen Fish", ["frozen fish", "haddock"]),
     ("Chilled Fish", ["fish", "salmon", "tuna", "cod", "prawn", "shrimp"]),
     ("Canned Seafood", ["tinned tuna", "canned tuna", "sardine", "anchov"]),
@@ -671,10 +674,11 @@ KEYWORD_RULES = [
 
     # Frozen
     ("Frozen", ["frozen", "ice cream"]),
-    ("Pizza", ["pizza"]),
-    # "dough" placed AFTER "pizza" (both single words, checked in list
-    # order) so a "Pizza Dough" product still lands on Pizza, not Pastry --
-    # found via real data ("Buitoni Rectangular Dough").
+    # Bare "pizza" moved to MULTI_KEYWORD_RULES (Pass 0, below) -- see the
+    # comment there. "dough" stays here; the Pass 0 pizza rule already
+    # resolves "Pizza Dough" to Pizza before this word is ever reached, the
+    # same way the old in-list ordering used to (found via real data,
+    # "Buitoni Rectangular Dough").
     ("Pastry", ["dough"]),
 
     # Tobacco / misc
@@ -762,6 +766,28 @@ MULTI_KEYWORD_RULES = [
     # listed before the general "chips" rule.
     ("Biscuits", ["chocolate milk"]),  # "&" cleans down to a space, not the word "and" -- see clean_for_matching
     ("Biscuits", ["chocolate and milk"]),
+    # "chocolate"+"wafer" -- a second carve-out, broader than the "milk"
+    # one right above, caught by the same regression sweep: "Damhert Cent
+    # Wafer Chocolate Sugar Free" used to correctly land on Biscuits (an
+    # earlier, explicit decision this session -- a chocolate-coated wafer
+    # stays Biscuits, not Chocolates), purely because "wafer" happened to
+    # be listed before "chocolate" in the old KEYWORD_RULES order. The
+    # general bare "chocolate" rule below broke that.
+    #
+    # A same-shaped "chocolate"+"biscuit" carve-out was tried too, but the
+    # regression sweep immediately caught a real counter-example --
+    # "Laurence Toffiq Chocolate Bar With Caramel, Peanut Butter & Biscuit"
+    # is a chocolate bar that merely lists "biscuit" as one of several
+    # mix-in ingredients (alongside caramel and peanut butter), correctly
+    # Chocolates, not a biscuit product itself. Unlike "wafer" (where a
+    # product literally described as a chocolate WAFER is reliably a
+    # biscuit-type product), bare "biscuit" showing up in an ingredients
+    # list doesn't reliably mean the product itself is one -- so that half
+    # of the carve-out was removed. Also deliberately NOT extended to
+    # "cookie"/"oreo" -- "Cadbury Dairy Milk Oreo" is a real,
+    # already-confirmed case where "oreo" names a flavour of an actual
+    # chocolate bar, not a biscuit.
+    ("Biscuits", ["chocolate", "wafer"]),
     ("Chocolates", ["chocolate"]),
     ("Chocolates", ["choco"]),
     # "Whole Earth Smooth Peanut Butter 227g" and similar were matching
@@ -829,12 +855,62 @@ MULTI_KEYWORD_RULES = [
     # don't say "cat" anywhere in the name, found via real data ("Purina
     # Gourmet Felix As Good As It Looks Mixed Selection").
     ("Cat", ["felix"]),
+    # "katsuobushi" -- dried bonito flakes, a Japanese ingredient that shows
+    # up specifically in cat food pouches (confirmed via WebSearch: it's a
+    # standard recipe across multiple real cat-food brands -- Pramy
+    # Carnivore, Kal Kan, Smart Heart, AIXIA all sell a near-identical
+    # "Tuna With Katsuobushi In Jelly" pouch). Found via real data ("PREM
+    # CHICKEN, TUNA, RICE KATSUOBUSHI 170G", part of a wider PREM/"Taste
+    # Toppers"/"glucosamine softcream" cluster of pet products that don't
+    # say "cat"/"dog" -- see the 12 Aug 2026 collision report). This word
+    # has no realistic human-food meaning in a Maltese grocery database, so
+    # it's safe to add alone; the rest of that cluster is NOT fixed here --
+    # "Taste Toppers" (a confirmed real Applaws product line, but sold as
+    # both cat AND dog food, so the species isn't certain from the name
+    # alone) and "glucosamine"/"softcream" (a real pet-supplement/treat
+    # signal, but again not clearly cat vs dog) are left as a known,
+    # transparently-reported gap rather than guessed at, the same way PREM
+    # itself was left unfixed after inconclusive research earlier.
+    ("Cat", ["katsuobushi"]),
     ("Cat", ["cat"]),
     ("Dog", ["dog food"]),
     ("Dog", ["dog treat"]),
     ("Dog", ["dog chew"]),
     ("Dog", ["puppy"]),
+    # "hot dog" -- found via real data (12 Aug 2026 collision report): "Dak
+    # Hot Dog Sausages" (Dak is a real, well-known human processed-meat
+    # brand) was matching bare "dog" below and landing on the Dog pet-food
+    # category, purely because "hot dog" happens to contain the word
+    # "dog". Carved out first, the same way "Chocolate Chips" is carved out
+    # before the general "chips" rule -- a hot dog is human food, not
+    # something you feed a dog. Doesn't affect real dog food/treats named
+    # "Dogero", "Puppy" etc, which still match the rules around this one.
+    ("Sausages", ["hot dog"]),
     ("Dog", ["dog"]),
+    # Baby-food brand names -- found via the same 12 Aug 2026 collision
+    # report: real baby/toddler-food brands (Hipp, Ella's Kitchen, Piccolo,
+    # Plasmon, Organix, Kiddylicious) were losing to whatever ingredient
+    # word their own product name also contained (e.g. "Hipp Vegetables
+    # Rice & Chicken" -> Rice, "Piccolo Blueberry & Banana Natural Yogurt
+    # Pouch" -> Yoghurt, "Organix Banana Bread Biscuits" -> Biscuits),
+    # purely because there's no other way for the classifier to recognise
+    # these as baby food -- none of the phrases already used for Baby Food
+    # below (e.g. "baby food", "infant formula") appear in their names at
+    # all. Each brand confirmed via WebSearch as a real, dedicated
+    # baby/toddler food brand -- same reasoning as "Cadbury"/"felix" above
+    # (a bare brand-name match is safe when the brand's whole range fits
+    # one category). "Piccolo" is deliberately NOT included as a bare
+    # word: it's also an ordinary Italian/wine-industry term meaning
+    # "small" -- "piccolo" is the standard name for a 200ml single-serve
+    # wine bottle (e.g. "San Pellegrino Prosecco Piccolo"), confirmed as a
+    # real collision by testing that exact case here before shipping this
+    # fix. Left as a known, unfixed gap for now rather than guessed at
+    # with a narrower (and more fragile) carve-out.
+    ("Baby Food", ["hipp"]),
+    ("Baby Food", ["ella's kitchen"]),
+    ("Baby Food", ["plasmon"]),
+    ("Baby Food", ["organix"]),
+    ("Baby Food", ["kiddylicious"]),
     # Bare "juice"/"smoothie" -- a juice's name often also contains a
     # fruit word (e.g. "Del Monte Orange Juice" matching bare "orange" ->
     # Fruits as well as bare "juice" -> Juices), with Fruits winning today
@@ -954,6 +1030,58 @@ MULTI_KEYWORD_RULES = [
     # "chips" -- there's no equivalent "Chocolate Sausages"-style case
     # where "sausage" should lose to something else.
     ("Sausages", ["sausage"]),
+    # Everything below here is from the 12 Aug 2026 collision report (6629
+    # listings), the fourth full round of real-data-driven fixes.
+    #
+    # "salt"+"pepper" together -- found via real data: "Carmencita Himalayan
+    # Pink Salt & Black Pepper" (a jar of seasoning) and "Crackey's Galletti
+    # Salt & Pepper" (a savoury cracker) were both landing on Vegetables
+    # (bare "pepper"), since Vegetables is listed earlier than Herbs &
+    # Spices. This does NOT touch the earlier, explicit decision to leave
+    # bare "pepper" alone under Vegetables (a single spice word by itself
+    # is still ambiguous, and that's settled) -- it only fires when "salt"
+    # is ALSO present, which is a much stronger, safer signal that the
+    # product is a seasoning blend rather than a vegetable.
+    ("Herbs & Spices", ["salt", "pepper"]),
+    # Bare "soup" -- found via real data: "Campbells Cream Of Tomato Soup"
+    # was landing on Cooking Creams (bare "cream"), since there was no
+    # "soup" keyword anywhere in KEYWORD_RULES at all (Soups only existed
+    # as a direct PAVI/Greens category-map target, never as a name-based
+    # fallback keyword) -- so any tinned soup whose name also mentioned an
+    # ingredient word from an earlier category always lost. "soup" has no
+    # other realistic meaning in a grocery product name.
+    ("Soups", ["soup"]),
+    # "wafer"+"cream" together -- found via real data: "Loacker Crispy
+    # Wafers Filled With Coconut Cream" and "Dr Gerard Wafer Rolls Peanut
+    # Cream" were landing on Cooking Creams (bare "cream" is listed earlier
+    # than "wafer"/Biscuits), when they're clearly biscuit/wafer products
+    # with a cream filling, not a tub of cooking cream. Both words required
+    # together so a plain wafer (no cream) or a plain cooking cream (no
+    # wafer) are both unaffected.
+    ("Biscuits", ["wafer", "cream"]),
+    # Bare "pizza" -- found via real data: "Alberto Pizza Double Salami"
+    # and "Cameo Ristorante Pizza 4 Cheese" were landing on Ham/Cheese
+    # (whichever topping word the name also contained), since Ham and
+    # Cheese are both listed earlier than Pizza in KEYWORD_RULES. Nothing
+    # else in a grocery product name is realistically called "pizza", so
+    # it's safe to check first regardless of topping, the same as "chips"
+    # above.
+    ("Pizza", ["pizza"]),
+    # Bare "luncheon" -- found via real data: "Dany Chicken Luncheon Meat"
+    # and "Dak Chicken Luncheon Meat" were landing on Chicken instead of
+    # the more specific, more useful Cold Cuts, since Chicken is listed
+    # earlier than Cold Cuts -- the same shape of bug as the "sausage" fix
+    # above (a specific product type losing to whichever base meat/flavour
+    # it's made from).
+    ("Cold Cuts", ["luncheon"]),
+    # "grater" -- found via real data: "Westmark Steel Raw Fruit & Vegetable
+    # Grater" (a kitchen tool) was landing on Vegetables purely because its
+    # own description mentions what it's used to grate. A single
+    # KEYWORD_RULES entry wasn't enough here (Household Goods is listed
+    # very late in that file, long after Vegetables/Fruits), so this needs
+    # the same Pass-0 treatment as "conditioner"/"candle" above -- "grater"
+    # is an unambiguous, product-defining word with no food meaning at all.
+    ("Household Goods", ["grater"]),
 ]
 
 

@@ -109,6 +109,21 @@ def find_category_collisions(listings):
     pairs in one real run, all of them already correctly classified as
     Olive Oil). Found and fixed from real data, not guessed.
 
+    Also skips a listing entirely when its strongest tier is 0 (a
+    MULTI_KEYWORD_RULES match) -- see the 12 Aug 2026 fix further down for
+    why: list order within MULTI_KEYWORD_RULES is itself the deliberate,
+    checked-in resolution mechanism (e.g. the "chocolate"+"chips" carve-out
+    is listed before the general "chips" rule on purpose), so two tier-0
+    matches on the same listing are never a real, unresolved ambiguity --
+    classify_by_name already resolves them correctly, every time, by list
+    order. This used to be flagged anyway (pure noise): real examples were
+    "Lamb Brand Pure Ground Almonds" hitting both the Nuts and Herbs &
+    Spices Pass-0 rules, and "M.Busto Organic Apple Cider Vinegar" hitting
+    both Vinegars and Ciders -- both already correctly classified, just
+    also showing up here as if unresolved. Found by noticing the same
+    shape of "noise" pair recurring report after report for categories
+    that were never actually broken.
+
     Returns (pair_counts, pair_examples): pair_counts maps a sorted
     (category_a, category_b) tuple to how many listings triggered it;
     pair_examples maps the same tuple to up to 3 real product names, so
@@ -126,6 +141,8 @@ def find_category_collisions(listings):
             continue
 
         strongest_tier = min(tiers.values())
+        if strongest_tier == 0:
+            continue
         tied_categories = sorted(category for category, tier in tiers.items() if tier == strongest_tier)
         if len(tied_categories) < 2:
             continue
