@@ -151,7 +151,14 @@ GREENS_CATEGORY_MAP = {
 
     ("Bakery", "Biscuits And Crackers"): "Biscuits",
     ("Bakery", "Cereals And Cereal Bars"): "Cereal & Cereal Bars",
-    ("Bakery", "Bread"): "Bread",
+    # Was a direct mapping, same as ("Confectionery", "Bread") used to be --
+    # switched to split-by-name after confirming (via the live app + the
+    # GitHub Action's "row(s) written" count) that the ("Confectionery",
+    # "Bread") fix alone did NOT change "Bocconcini 30g · Greens
+    # Supermarket", meaning that real listing must be filed under THIS
+    # bucket instead. Whichever one it turns out to be, neither is reliably
+    # bread, so both get the same treatment now.
+    ("Bakery", "Bread"): KEYWORD_FALLBACK,
     ("Bakery", "Confectionery"): "Chocolates",
     ("Bakery", "Pasta Rice And Couscous"): "Pasta & Couscous",
     ("Bakery", "Baked Goods"): "Fresh Pastry",
@@ -496,7 +503,23 @@ KEYWORD_RULES = [
     # wins before the bare "egg" rule below. Found via real data: "Nestle
     # Easter Milkybar Mini Easter Eggs" (a chocolate candy) was showing up
     # as the cheapest real "Eggs" result.
-    ("Chocolates", ["chocolate", "choco", "milk chocolate", "milk choclate", "easter egg"]),
+    # "baci" -- Perugina/Nestle's well-known chocolate praline brand, found
+    # via real data: "Nestle Easter Baci Mini Eggs Milk (150grms)" was still
+    # showing up as the cheapest "Eggs" result even after the "easter egg"
+    # fix above. Two things needed, not one:
+    #   1. "easter baci" as its own multi-word phrase -- "Easter" and "Baci"
+    #      ARE next to each other in this real name ("Easter Baci Mini Eggs
+    #      Milk"), so this wins in the multi-word pass, before the bare
+    #      "egg" rule (Eggs, listed earlier) ever gets checked -- same
+    #      mechanism as "easter egg" above.
+    #   2. Bare "baci" too, for a Baci product that doesn't mention Easter
+    #      or eggs at all -- listed here for completeness, though on its
+    #      own (single-word pass) it wouldn't have been enough to beat the
+    #      earlier-listed "egg" rule for THIS specific name; confirmed via
+    #      direct testing, not assumed.
+    # Likely not the last word-order variant of this pattern -- worth
+    # watching for more as further real data gets tested.
+    ("Chocolates", ["chocolate", "choco", "milk chocolate", "milk choclate", "easter egg", "easter baci", "baci"]),
     ("Snacks", ["crisps", "popcorn", "pretzel", "snack"]),
     ("Chips", ["chips"]),
     ("Nuts", ["peanut", "almond", "cashew", "walnut", "pistachio"]),
