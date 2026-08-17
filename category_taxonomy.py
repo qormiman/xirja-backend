@@ -433,15 +433,24 @@ KEYWORD_RULES = [
 
     # Bakery & carbs
     ("Bread", ["bread", "baguette", "ftira", "hobz", "panini"]),  # "panini" found via real data: an Italian bread roll, not the toasted sandwich in this context
-    # "wafer milk"/"milk wafer" and "chocolate & milk"/"chocolate and milk"
-    # are specific real phrasings (checked in the multi-word pass) for the
-    # same underlying pattern: a chocolate/biscuit snack that mentions
-    # "milk" as an ingredient, not an actual carton of milk. Found via real
-    # API testing -- first "Storck Knoppers Wafer Milk", then (after that
-    # fix) "Bahlsen Leibniz Pick Up Chocolate & Milk" turned up as the next
-    # wrong result. Worth watching for further variants of this same
-    # pattern as more real data gets tested.
-    ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre", "wafer milk", "milk wafer", "wafer", "chocolate & milk", "chocolate and milk"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data
+    # "wafer milk"/"milk wafer" are specific real phrasings (checked in the
+    # multi-word pass) for a chocolate/biscuit snack that mentions "milk"
+    # as an ingredient, not an actual carton of milk. Found via real API
+    # testing ("Storck Knoppers Wafer Milk"). "chocolate & milk"/"chocolate
+    # and milk" used to be listed here too, for the same pattern
+    # ("Bahlsen Leibniz Pick Up Chocolate & Milk") -- moved to
+    # MULTI_KEYWORD_RULES (Pass 0, below) once the general bare "chocolate"
+    # rule was added there, since Pass 0 is checked before this multi-word
+    # pass and would otherwise send this same product straight to
+    # Chocolates before this phrase ever got a chance -- see the comment
+    # there.
+    # "cookies and cream"/"cookies & cream" -- a well-known, unambiguous
+    # flavour name (never means actual cooking cream), found via real data:
+    # "Iron Maxx Lava Bar Cookies And Cream" and "Rice Up Flapjack Zero
+    # Sugar Cookies & Cream" were landing on Cooking Creams instead of
+    # Biscuits, since bare "cookie" and bare "cream" tie and Cooking Creams
+    # is listed earlier.
+    ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre", "wafer milk", "milk wafer", "wafer", "cookies and cream", "cookies & cream"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data
     ("Cakes", ["cake"]),
     ("Cereals", ["cereal", "cornflakes", "muesli", "granola"]),
     ("Cereal & Cereal Bars", ["cereal bar"]),
@@ -459,7 +468,14 @@ KEYWORD_RULES = [
     ("Pork", ["pork"]),
     ("Lamb", ["lamb"]),
     ("Turkey", ["turkey"]),
-    ("Sausages", ["sausage"]),
+    # Bare "sausage" moved to MULTI_KEYWORD_RULES (Pass 0, below) -- a
+    # packet literally called "16 Classic Pork Sausages" or "Pork & Beef
+    # Sausages" was landing on Pork or Beef instead of the more specific,
+    # more useful "Sausages" category, since Pork/Beef are listed earlier
+    # and bare "sausage" only used to compete with them as an ordinary
+    # tier-2 word. Sausages is always a real, unambiguous product type
+    # (unlike e.g. "steak", which stays as-is here), so it's safe to check
+    # first regardless of which base meat it's made from.
     ("Ham", ["ham", "salami", "prosciutto"]),
     ("Cold Cuts", ["mortadella", "luncheon", "cold cut"]),
     ("Frozen Fish", ["frozen fish", "haddock"]),
@@ -497,26 +513,23 @@ KEYWORD_RULES = [
     ("Sugar", ["erythritol", "eritritol", "sweetener", "sweet n low"]),  # "eritritol" is the real spelling seen ("Natur Green Eritritol"); "erythritol" is the standard English spelling, kept too
 
     # Snacks & confectionery
-    # "milk chocolate" is listed explicitly (and checked in the multi-word
-    # pass) so that brand names like "Cadbury Dairy Milk Chocolate Bar"
-    # land on Chocolates, not Milk -- found via real testing, see
-    # test_category_taxonomy.py. "milk choclate" (one c) is the same fix
-    # for a real misspelling seen live ("Rice Up Milk Choclate Rice Bar").
+    # Bare "chocolate" and "choco", plus the "milk chocolate" phrase, all
+    # moved to MULTI_KEYWORD_RULES (Pass 0, below) -- see the comment there
+    # for the real data behind that move (chocolate products with "milk" in
+    # the name losing to bare "milk", which is listed earlier than this
+    # entry). "milk choclate" (one c, a real misspelling seen live in "Rice
+    # Up Milk Choclate Rice Bar") stays here, since it's a different string
+    # to "chocolate"/"choco" and isn't covered by either of those Pass 0
+    # words.
     # The Easter-egg-candy pattern ("Nestle Easter Milkybar...", "...Easter
-    # Baci...", "...Easter Smarties...") is now handled by the "easter" +
+    # Baci...", "...Easter Smarties...") is handled by the "easter" +
     # "egg" co-occurrence rule up in MULTI_KEYWORD_RULES instead of a
     # phrase per brand -- see the comment there for why.
     # "baci" -- Perugina/Nestle's well-known chocolate praline brand, kept
     # here too (bare word) for a Baci product that doesn't mention Easter
     # or eggs at all; confirmed via direct testing that this alone is
     # enough when there's no "egg" rule to compete with.
-    # "choc" -- a common shorthand for "chocolate" distinct from "choco"
-    # above (no trailing "o"), found via real data: "Milk Choc Wafer Bar"
-    # was matching bare "milk" and bare "wafer" (Milk and Biscuits) but
-    # NOT "choco", since it's spelled differently -- moved to
-    # MULTI_KEYWORD_RULES below (Pass 0) since a tier-2 addition here
-    # wouldn't have been enough to beat "milk", which is listed earlier.
-    ("Chocolates", ["chocolate", "choco", "milk chocolate", "milk choclate", "baci"]),
+    ("Chocolates", ["milk choclate", "baci"]),
     # "rice up rolls" -- a specific savory snack-roll product line from the
     # same "Rice Up" brand as the "Rice Up Milk Choclate Rice Bar" above
     # (a different, sweet product line from that brand). Found via real
@@ -713,17 +726,44 @@ MULTI_KEYWORD_RULES = [
     # Broadened from just "olive oil" to plain "oil" so this also catches
     # tuna canned in sunflower oil, vegetable oil, etc, not only olive.
     ("Canned Seafood", ["tuna", "oil"]),
-    # "Laurence Toffiq Chocolate Bar With Caramel, Peanut Butter & Biscuit"
-    # -- found via real data (17 Aug 2026 collision report): a chocolate
-    # bar that merely contains a peanut-butter FILLING was at risk of being
-    # swept into the plain "Peanut Butter" rule below, since it contains
-    # both "peanut" and "butter" too. Listed BEFORE the plain Peanut Butter
-    # rule (MULTI_KEYWORD_RULES checks list order, first full match wins),
-    # so anything that says "chocolate" as well as "peanut" and "butter"
-    # is recognised as a chocolate bar first, and only a product with
-    # "peanut" and "butter" but NO "chocolate" falls through to the plain
-    # rule below it.
-    ("Chocolates", ["chocolate", "peanut", "butter"]),
+    # Bare "chocolate"/"choco" -- the same general-fix pattern already used
+    # for "chips" below, extended to the same underlying issue recurring
+    # under a different category. Found via real data (17 Aug 2026
+    # collision report): "Bahlsen Choco Leibniz Milk 2+1 Free", "Terry's
+    # Chocolate Mint Milk (145grms)", "Gullon Choco Tablet Milk 150g" were
+    # all landing on Milk instead of Chocolates, since bare "milk" is
+    # listed earlier in KEYWORD_RULES than "chocolate"/"choco" used to be.
+    # This single rule also makes several earlier, narrower fixes fully
+    # redundant, since anything containing "chocolate" now resolves here
+    # FIRST, before any of those other rules are ever reached: the
+    # "chocolate"+"peanut"+"butter" carve-out that used to sit right here
+    # (for "Laurence Toffiq Chocolate Bar With Caramel, Peanut Butter &
+    # Biscuit" -- a chocolate bar with a peanut-butter filling, at risk of
+    # being swept into Peanut Butter below), the six "chocolate"+fruit-word
+    # carve-outs further down (orange/banana/apple/grape/melon/fruit), and
+    # the "chocolate"+"chips" carve-out further down still (protecting
+    # "Chocolate Chips" from the general "chips" rule) -- all three removed
+    # now, with a short comment left in each of their places. No real
+    # "chocolate milk drink" product (e.g. a Nesquik-style ready-to-drink)
+    # has turned up in any report so far to justify a carve-out the way
+    # "Chocolate Chips" needed one for the chips fix -- worth watching for
+    # one in a future report.
+    # "chocolate & milk"/"chocolate and milk" -- a carve-out, same shape as
+    # the "chocolate"+"chips" one further down for Chocolate Chips: found
+    # via the regression sweep for THIS fix itself, checking every
+    # previously-fixed real case in this session. "Bahlsen Leibniz Pick Up
+    # Chocolate & Milk" is a chocolate-coated wafer biscuit (correctly
+    # Biscuits, via the "chocolate & milk"/"chocolate and milk" phrases
+    # that used to live in KEYWORD_RULES' Biscuits entry) -- without this
+    # carve-out, the general bare "chocolate" rule right below would have
+    # sent it straight to Chocolates instead, since Pass 0 is checked
+    # before that phrase's multi-word pass ever runs. Listed here, before
+    # the general rule, the same way the Chocolate Chips carve-out is
+    # listed before the general "chips" rule.
+    ("Biscuits", ["chocolate milk"]),  # "&" cleans down to a space, not the word "and" -- see clean_for_matching
+    ("Biscuits", ["chocolate and milk"]),
+    ("Chocolates", ["chocolate"]),
+    ("Chocolates", ["choco"]),
     # "Whole Earth Smooth Peanut Butter 227g" and similar were matching
     # both bare "peanut" (Nuts) and bare "butter" (Butter) at the same
     # single-word tier, with Butter winning today purely because it's
@@ -749,6 +789,27 @@ MULTI_KEYWORD_RULES = [
     # not worth a broader, less safe rule just to catch it.
     ("Nuts", ["lamb brand", "almond"]),
     ("Herbs & Spices", ["lamb brand"]),
+    # Three more real "Lamb [spice-related word]" products found in the
+    # same 17 Aug 2026 collision report, none containing the literal word
+    # "brand" so the catch-all right above doesn't cover them: "LAMB SALTS
+    # TABLE FINE X 2", "Lamb Herbs Rosemary 100g", "Lamb Himalayan Pink
+    # Salt Fine 200g". WebSearch confirmed Lamb Brand is a real Maltese
+    # herbs/spice/salt company (Mgarr Farms sells "LAMB BRAND COOKING SALT"
+    # and "LAMB BRAND FINE TABLE SALT" under its own Herbs & Spices
+    # listing), but didn't turn up the exact "Himalayan Pink Salt" or
+    # "Herbs Rosemary" product names from that brand's own catalogue --
+    # so this is confirmed at the brand-and-naming-pattern level, not at
+    # the exact-product level. Kept deliberately narrow (the specific word
+    # combinations from the three real examples, not a blanket "lamb" +
+    # any spice word rule) so a genuine seasoned-lamb-meat product stays
+    # safe from being swept in by accident -- no such product has turned
+    # up in any report so far, but unlike "chips" (where a broad rule was
+    # chosen only after the SAME collision kept recurring with a new base
+    # word every round), this pattern has only shown up once, so a narrow
+    # rule is the safer choice for now.
+    ("Herbs & Spices", ["lamb", "himalayan"]),
+    ("Herbs & Spices", ["lamb", "rosemary"]),
+    ("Herbs & Spices", ["lamb", "salt", "table"]),
     # Pet food whose name also mentions a flavour (chicken, salmon, etc)
     # was losing to that flavour's own meat/fish category, purely because
     # Chicken/Chilled Fish are listed earlier in KEYWORD_RULES than
@@ -822,22 +883,13 @@ MULTI_KEYWORD_RULES = [
     # that a bare brand-name match is safe here, the same reasoning
     # already used for "felix" (a cat food brand) above.
     ("Chocolates", ["cadbury"]),
-    # A chocolate treat naming a fruit flavour (orange, banana, etc.) was
-    # losing to that fruit word every time, since Fruits is listed earlier
-    # than Chocolates -- found via real data: "Condorelli...Vanilla /
-    # Chocolate / Orange / Lemon", "Mella Goplana Fruit Jelly Orange &
-    # Chocolate", "Mill-kcina...Orange & Chocolate" were all landing on
-    # Fruits. Each fruit word gets its own entry (MULTI_KEYWORD_RULES
-    # requires ALL listed words together) rather than touching the Fruits
-    # rule itself, so an actual piece of fruit that happens to be sold near
-    # chocolate (unlikely, but not this rule's problem either way) is
-    # unaffected.
-    ("Chocolates", ["chocolate", "orange"]),
-    ("Chocolates", ["chocolate", "banana"]),
-    ("Chocolates", ["chocolate", "apple"]),
-    ("Chocolates", ["chocolate", "grape"]),
-    ("Chocolates", ["chocolate", "melon"]),
-    ("Chocolates", ["chocolate", "fruit"]),
+    # The six "chocolate"+fruit-word carve-outs that used to live here
+    # (orange/banana/apple/grape/melon/fruit -- for "Condorelli...Vanilla /
+    # Chocolate / Orange / Lemon" and similar, which were losing to the
+    # fruit word since Fruits is listed earlier than Chocolates) are now
+    # fully redundant and have been removed: the general bare "chocolate"
+    # rule near the top of this list already wins for every one of these
+    # names, since it's checked first. See the comment there.
     # "M.Busto Organic Apple Cider VINEGAR With The Mother" was landing on
     # Fruits (bare "apple"), when it's really a Vinegars product -- and a
     # genuine alcoholic cider drink (e.g. "Inch's Apple Cider") was ALSO
@@ -890,8 +942,18 @@ MULTI_KEYWORD_RULES = [
     # every time one turns up. Chosen deliberately over the safer
     # one-phrase-at-a-time approach after the same collision kept
     # recurring round after round with a new base ingredient each time.
-    ("Chocolates", ["chocolate", "chips"]),
+    # The "chocolate"+"chips" carve-out that used to sit here (protecting
+    # "Chocolate Chips" from the general "chips" rule below) is now fully
+    # redundant too, for the same reason as the fruit-word carve-outs
+    # above -- removed; see the general bare "chocolate" rule near the top
+    # of this list.
     ("Chips", ["chips"]),
+    # "Sausages" -- see the comment on the old KEYWORD_RULES Sausages entry
+    # above for the real data behind this (packets of pork/beef sausages
+    # landing on the base meat instead). No carve-out needed first, unlike
+    # "chips" -- there's no equivalent "Chocolate Sausages"-style case
+    # where "sausage" should lose to something else.
+    ("Sausages", ["sausage"]),
 ]
 
 
