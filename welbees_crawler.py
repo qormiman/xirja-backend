@@ -102,6 +102,7 @@ How to run it:
   install needed for this one (same as PAVI PAMA).
 """
 
+import html
 import os
 import re
 import sys
@@ -319,13 +320,22 @@ def _parse_amount(text):
         return None
 
 
-def parse_products(html, category_label):
+def parse_products(page_html, category_label):
     """Turns one already-fetched category page's raw HTML into our own plain
     dicts, ready to save. Splitting on PRODUCT_MARKER means chunks[0] is
     whatever comes before the first product (header, nav, etc. -- discarded)
     and every chunk after that is exactly one product's own markup, up to
-    (but not including) the next product's marker."""
-    chunks = html.split(PRODUCT_MARKER)
+    (but not including) the next product's marker.
+
+    Parameter deliberately renamed from the original "html" -- this file
+    also `import html` (the standard-library entity-decoding module, used
+    below), and a same-named parameter would have silently shadowed that
+    import for this function's entire body, breaking every `html.unescape()`
+    call below with "AttributeError: 'str' object has no attribute
+    'unescape'" the very first time this ran. Caught before ever running
+    this for real -- callers pass their own page content positionally, so
+    they didn't need any change."""
+    chunks = page_html.split(PRODUCT_MARKER)
     products = []
     for chunk in chunks[1:]:
         code, _, rest = chunk.partition('"')
@@ -364,11 +374,21 @@ def parse_products(html, category_label):
 
         name_m = NAME_RE.search(rest)
         href = name_m.group(1).strip() if name_m else None
-        name = name_m.group(2).strip() if name_m else None
+        # html.unescape() -- this is extracted straight from the page's raw
+        # HTML with a regex (see the module docstring for why: no headless
+        # browser needed for Welbee's), which means an entity like "&amp;"
+        # in a real product name (e.g. "Chocolate & Milk") comes through
+        # completely literally as the 5-character text "&amp;" instead of
+        # a real "&", unlike a proper HTML parser which would decode it
+        # automatically. Found via real testing -- a Bahlsen "Pick Up!"
+        # product was landing in the wrong category because its name still
+        # had the raw "&amp;" in it, so nothing in category_taxonomy.py
+        # matched it as expected.
+        name = html.unescape(name_m.group(2).strip()) if name_m else None
         url = f"{SITE_ROOT}{href}" if href else None
 
         size_m = SIZE_RE.search(rest)
-        size = size_m.group(1).strip() if size_m else None
+        size = html.unescape(size_m.group(1).strip()) if size_m else None
         if name and size:
             display_name = f"{name} ({size})"
         else:
