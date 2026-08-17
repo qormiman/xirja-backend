@@ -510,6 +510,12 @@ KEYWORD_RULES = [
     # here too (bare word) for a Baci product that doesn't mention Easter
     # or eggs at all; confirmed via direct testing that this alone is
     # enough when there's no "egg" rule to compete with.
+    # "choc" -- a common shorthand for "chocolate" distinct from "choco"
+    # above (no trailing "o"), found via real data: "Milk Choc Wafer Bar"
+    # was matching bare "milk" and bare "wafer" (Milk and Biscuits) but
+    # NOT "choco", since it's spelled differently -- moved to
+    # MULTI_KEYWORD_RULES below (Pass 0) since a tier-2 addition here
+    # wouldn't have been enough to beat "milk", which is listed earlier.
     ("Chocolates", ["chocolate", "choco", "milk chocolate", "milk choclate", "baci"]),
     # "rice up rolls" -- a specific savory snack-roll product line from the
     # same "Rice Up" brand as the "Rice Up Milk Choclate Rice Bar" above
@@ -546,16 +552,18 @@ KEYWORD_RULES = [
     # so the two real spellings clean down to two different strings.
     ("Snacks", ["popcorn", "snack", "rice up rolls", "rice cake", "potato straws",
                 "salt and vinegar", "salt vinegar"]),
-    # "potato chips" and "tortilla chips" -- same real-data cluster as
-    # above: "Potato Chips With Cheddar Cheese", "Ok Sanck Tortilla Chips
-    # Sour Cream & Onion", "Potato Chips Greek Kebab Flavour" were losing
-    # to a flavour word (bare "cheese", "cream", or -- for the Kebab one --
-    # nothing else matched, so it was fine already). Bare "chips" alone
-    # stays a single word (see the "Chocolate Chips" reasoning elsewhere in
-    # this file for why it isn't elevated further), but these two full
-    # phrases are unambiguous enough to check before any competing single
-    # word.
-    ("Chips", ["chips", "potato chips", "tortilla chips"]),
+    # Bare "chips" moved to MULTI_KEYWORD_RULES (Pass 0, below). It used to
+    # need a growing list of specific safe phrases here instead ("potato
+    # chips", "tortilla chips", "lentil chips", "nacho chips", plus a
+    # separate "rice"+"chips" co-occurrence rule) because a plain bare
+    # "chips" entry here would have wrongly caught "Chocolate Chips" too --
+    # but after seeing the SAME flavour-word collision keep recurring with
+    # a new base ingredient every round (potato, tortilla, rice, lentil,
+    # nacho...), a single general rule -- "chips" always means Chips,
+    # UNLESS "chocolate" is also present -- covers all of those at once,
+    # and any future one, instead of needing a new phrase added every time
+    # a new chip brand turns up. See MULTI_KEYWORD_RULES for both halves
+    # of that rule.
     ("Nuts", ["peanut", "almond", "cashew", "walnut", "pistachio"]),
     ("Honey", ["honey"]),
     ("Jelly", ["jelly", "jello"]),
@@ -799,6 +807,91 @@ MULTI_KEYWORD_RULES = [
     # purely by list order) without that risk.
     ("Snacks", ["crisps"]),
     ("Snacks", ["pretzel"]),
+    # "choc" -- see the comment on the "chocolate"/"choco" KEYWORD_RULES
+    # entry above for why this needs to be here (Pass 0) rather than there:
+    # "MILK CHOC WAFER BAR" was matching bare "milk" (Milk) and bare
+    # "wafer" (Biscuits), both listed earlier than Chocolates, so adding
+    # "choc" as an ordinary tier-2 word wouldn't have won against them.
+    ("Chocolates", ["choc"]),
+    # "cadbury" -- the single most common chocolate brand on a Maltese
+    # shelf, and its flagship products (e.g. "Cadbury Dairy Milk", "Cadbury
+    # Dairy Milk Fruit & Nut", "Cadbury Dairy Milk Oreo") often don't
+    # contain the word "chocolate"/"choc" at all -- found via real data:
+    # these were landing on Milk (from "Dairy Milk") instead. Cadbury's
+    # product range is chocolate/confectionery enough across the board
+    # that a bare brand-name match is safe here, the same reasoning
+    # already used for "felix" (a cat food brand) above.
+    ("Chocolates", ["cadbury"]),
+    # A chocolate treat naming a fruit flavour (orange, banana, etc.) was
+    # losing to that fruit word every time, since Fruits is listed earlier
+    # than Chocolates -- found via real data: "Condorelli...Vanilla /
+    # Chocolate / Orange / Lemon", "Mella Goplana Fruit Jelly Orange &
+    # Chocolate", "Mill-kcina...Orange & Chocolate" were all landing on
+    # Fruits. Each fruit word gets its own entry (MULTI_KEYWORD_RULES
+    # requires ALL listed words together) rather than touching the Fruits
+    # rule itself, so an actual piece of fruit that happens to be sold near
+    # chocolate (unlikely, but not this rule's problem either way) is
+    # unaffected.
+    ("Chocolates", ["chocolate", "orange"]),
+    ("Chocolates", ["chocolate", "banana"]),
+    ("Chocolates", ["chocolate", "apple"]),
+    ("Chocolates", ["chocolate", "grape"]),
+    ("Chocolates", ["chocolate", "melon"]),
+    ("Chocolates", ["chocolate", "fruit"]),
+    # "M.Busto Organic Apple Cider VINEGAR With The Mother" was landing on
+    # Fruits (bare "apple"), when it's really a Vinegars product -- and a
+    # genuine alcoholic cider drink (e.g. "Inch's Apple Cider") was ALSO
+    # landing on Fruits, when it should be Ciders. Both fixed via the same
+    # two-step pattern already used for "Lamb Brand": the more specific
+    # case (cider VINEGAR) is carved out first, so it isn't swept up when
+    # bare "cider" is elevated for the drink right after it.
+    ("Vinegars", ["cider", "vinegar"]),
+    ("Ciders", ["cider"]),
+    # Bare "tea" -- a bottled or bagged tea drink/product was losing to a
+    # fruit-flavour word in its own name (e.g. "Fuze Tea Strawberry &
+    # Melon" matching bare "melon" -> Fruits, "English Tea Shop...Citrus
+    # Fruits 20 Teabags" matching bare "fruit" -> Fruits), since Fruits is
+    # listed earlier than Tea. "tea" has no other realistic meaning in a
+    # grocery product name, so it's safe to check first, the same as
+    # "juice"/"smoothie" above. This also covers the existing "tea bag"
+    # phrase below (a product containing "tea bag" always also contains
+    # the bare word "tea"), so that entry is now redundant -- left in
+    # place there rather than removed, in case a future product says "tea
+    # bag" without the standalone word "tea" ever appearing (e.g. some
+    # unusual plural/compound spelling); harmless either way since Pass 0
+    # already wins first.
+    ("Tea", ["tea"]),
+    # A hair conditioner or a scented candle naming a food-sounding
+    # ingredient (e.g. "Almond Milk & Shea Butter" as a marketing
+    # description, or "Apple Cinnamon" as a scent) was losing to the food
+    # word and landing in a food category entirely -- found via real data:
+    # "Splend'or Nourishing Conditioner Almond Milk & Shea Butter" landed
+    # on Milk, and "True Living Candle Jar Apple Cinnamon" landed on
+    # Fruits. Both "conditioner" and "candle" are unambiguous,
+    # product-defining words -- there's no food product called either one
+    # -- so they're safe to check first regardless of what ingredient-style
+    # words also appear in the name. Worth watching for the same pattern
+    # elsewhere (shampoo, lotion, soap etc. could plausibly have the same
+    # issue) if it shows up in a future collision report.
+    ("Conditioners", ["conditioner"]),
+    ("Candles", ["candle"]),
+    # General "chips" fix, replacing the growing list of one-off phrases
+    # this used to need (see the comment on the old KEYWORD_RULES Chips
+    # entry above). The recurring real problem: a flavoured chip snack
+    # (potato, tortilla, rice, lentil, nacho...) kept losing to whatever
+    # OTHER word its flavour or base ingredient happened to share with a
+    # different category (bare "rice", "cheese", "cream", "paprika",
+    # "salt" etc, all listed earlier than Chips). The one case that
+    # genuinely needs protecting from a blanket "chips always wins" rule
+    # is "Chocolate Chips" (a baking ingredient, correctly Chocolates, not
+    # Chips) -- so that's carved out FIRST, and only then does plain
+    # "chips" win over everything else, covering every current and future
+    # chip brand/flavour at once instead of needing a new phrase added
+    # every time one turns up. Chosen deliberately over the safer
+    # one-phrase-at-a-time approach after the same collision kept
+    # recurring round after round with a new base ingredient each time.
+    ("Chocolates", ["chocolate", "chips"]),
+    ("Chips", ["chips"]),
 ]
 
 
