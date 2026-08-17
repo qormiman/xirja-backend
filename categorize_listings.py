@@ -45,7 +45,9 @@ How to run it:
   SETUP.md's "Category normalization" section (also included permanently
   in schema.sql for anyone setting up a fresh database from now on).
 """
+import itertools
 import sys
+from collections import Counter
 
 import psycopg2.extras
 
@@ -57,7 +59,7 @@ from product_matcher import (
     get_connection,
     run_with_timeout,
 )
-from category_taxonomy import classify_listing
+from category_taxonomy import classify_listing, matching_categories_by_name
 
 
 def fetch_listings(cur):
@@ -84,6 +86,53 @@ def _bulk_update_categories(cur, pairs):
         pairs,
     )
     return cur.rowcount
+
+
+def find_category_collisions(listings):
+    """Scans every listing's product name for words belonging to more than
+    one KEYWORD_RULES category AT THE SAME MATCH STRENGTH (e.g. a name
+    containing both bare "chocolate" and bare "milk", or both a "tuna"
+    word and a competing multi-word phrase) -- exactly the shape every
+    real miscategorization bug found through the app so far has had.
+    Purely a report: doesn't read shopping_category, doesn't change
+    anything, doesn't affect what gets written to the database.
+
+    Deliberately only pairs categories matched at the SAME tier (see
+    matching_categories_by_name's docstring) -- a weaker match already
+    correctly loses to a stronger one by design (e.g. bare "oil"/"olive"
+    losing to the specific "olive oil" phrase), so pairing those would
+    just be permanent noise, not a real risk area.
+
+    Returns (pair_counts, pair_examples): pair_counts maps a sorted
+    (category_a, category_b) tuple to how many listings triggered it;
+    pair_examples maps the same tuple to up to 3 real product names, so
+    the report below can show *why* a pair is flagged, not just that it
+    was."""
+    pair_counts = Counter()
+    pair_examples = {}
+
+    for row in listings:
+        name = row["chain_product_name"]
+        if not name:
+            continue
+        tiers = matching_categories_by_name(name)
+        if len(tiers) < 2:
+            continue
+
+        by_tier = {}
+        for category, tier in tiers.items():
+            by_tier.setdefault(tier, []).append(category)
+
+        for categories_at_this_tier in by_tier.values():
+            if len(categories_at_this_tier) < 2:
+                continue
+            for pair in itertools.combinations(sorted(categories_at_this_tier), 2):
+                pair_counts[pair] += 1
+                examples = pair_examples.setdefault(pair, [])
+                if len(examples) < 3 and name not in examples:
+                    examples.append(name)
+
+    return pair_counts, pair_examples
 
 
 def categorize_all(conn, cur):
@@ -115,12 +164,19 @@ def categorize_all(conn, cur):
             conn, lambda chunk=chunk: _bulk_update_categories(cur, chunk), "writing shopping categories"
         ) or 0
 
+    # Read-only report, computed from the same listings already fetched
+    # above -- no extra database round trip. See find_category_collisions'
+    # docstring for what this is looking for and why.
+    collision_pairs, collision_examples = find_category_collisions(listings)
+
     return {
         "total": len(listings),
         "updated": updated,
         "unchanged": unchanged_count,
         "newly_classified": classified_count,
         "unclassified_tally": unclassified_tally,
+        "collision_pairs": collision_pairs,
+        "collision_examples": collision_examples,
     }
 
 
@@ -146,6 +202,22 @@ def main():
                 print(f"    {count:>5}  {store_id} / {chain_category!r}")
             if len(ranked) > 25:
                 print(f"    ...and {len(ranked) - 25} more distinct combination(s)")
+
+        collision_pairs = summary["collision_pairs"]
+        total_collisions = sum(collision_pairs.values())
+        if collision_pairs:
+            print(f"\n  {total_collisions} listing(s) whose name matches keywords from MORE THAN ONE "
+                  f"category -- these are the most likely place the next real miscategorization bug is "
+                  f"hiding (this is the exact pattern behind every bug found through the app so far). "
+                  f"Top pairs by how often they occur:")
+            ranked_pairs = sorted(collision_pairs.items(), key=lambda kv: kv[1], reverse=True)
+            for (category_a, category_b), count in ranked_pairs[:30]:
+                examples = summary["collision_examples"][(category_a, category_b)]
+                print(f"    {count:>5}  {category_a} / {category_b}")
+                for example in examples:
+                    print(f"             e.g. {example!r}")
+            if len(ranked_pairs) > 30:
+                print(f"    ...and {len(ranked_pairs) - 30} more distinct pair(s)")
     except Exception as exc:  # noqa: BLE001 -- surface any failure plainly, then exit non-zero
         conn.rollback()
         print(f"ERROR during categorization: {type(exc).__name__}: {exc}", file=sys.stderr)
