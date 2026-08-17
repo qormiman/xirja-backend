@@ -499,28 +499,23 @@ KEYWORD_RULES = [
     # land on Chocolates, not Milk -- found via real testing, see
     # test_category_taxonomy.py. "milk choclate" (one c) is the same fix
     # for a real misspelling seen live ("Rice Up Milk Choclate Rice Bar").
-    # "easter egg"/"easter eggs" -- checked in the multi-word pass, so it
-    # wins before the bare "egg" rule below. Found via real data: "Nestle
-    # Easter Milkybar Mini Easter Eggs" (a chocolate candy) was showing up
-    # as the cheapest real "Eggs" result.
-    # "baci" -- Perugina/Nestle's well-known chocolate praline brand, found
-    # via real data: "Nestle Easter Baci Mini Eggs Milk (150grms)" was still
-    # showing up as the cheapest "Eggs" result even after the "easter egg"
-    # fix above. Two things needed, not one:
-    #   1. "easter baci" as its own multi-word phrase -- "Easter" and "Baci"
-    #      ARE next to each other in this real name ("Easter Baci Mini Eggs
-    #      Milk"), so this wins in the multi-word pass, before the bare
-    #      "egg" rule (Eggs, listed earlier) ever gets checked -- same
-    #      mechanism as "easter egg" above.
-    #   2. Bare "baci" too, for a Baci product that doesn't mention Easter
-    #      or eggs at all -- listed here for completeness, though on its
-    #      own (single-word pass) it wouldn't have been enough to beat the
-    #      earlier-listed "egg" rule for THIS specific name; confirmed via
-    #      direct testing, not assumed.
-    # Likely not the last word-order variant of this pattern -- worth
-    # watching for more as further real data gets tested.
-    ("Chocolates", ["chocolate", "choco", "milk chocolate", "milk choclate", "easter egg", "easter baci", "baci"]),
-    ("Snacks", ["crisps", "popcorn", "pretzel", "snack"]),
+    # The Easter-egg-candy pattern ("Nestle Easter Milkybar...", "...Easter
+    # Baci...", "...Easter Smarties...") is now handled by the "easter" +
+    # "egg" co-occurrence rule up in MULTI_KEYWORD_RULES instead of a
+    # phrase per brand -- see the comment there for why.
+    # "baci" -- Perugina/Nestle's well-known chocolate praline brand, kept
+    # here too (bare word) for a Baci product that doesn't mention Easter
+    # or eggs at all; confirmed via direct testing that this alone is
+    # enough when there's no "egg" rule to compete with.
+    ("Chocolates", ["chocolate", "choco", "milk chocolate", "milk choclate", "baci"]),
+    # "rice up rolls" -- a specific savory snack-roll product line from the
+    # same "Rice Up" brand as the "Rice Up Milk Choclate Rice Bar" above
+    # (a different, sweet product line from that brand). Found via real
+    # data: "Rice Up Rolls Spinach Cheese Olive Oil 50g" was showing up as
+    # the cheapest "Olive Oil" result, because the product's name lists
+    # olive oil as an ingredient. Checked in the multi-word pass, and this
+    # category is listed before "Olive Oil" below, so it wins first.
+    ("Snacks", ["crisps", "popcorn", "pretzel", "snack", "rice up rolls"]),
     ("Chips", ["chips"]),
     ("Nuts", ["peanut", "almond", "cashew", "walnut", "pistachio"]),
     ("Honey", ["honey"]),
@@ -637,6 +632,25 @@ KEYWORD_RULES = [
 ]
 
 
+# Co-occurrence rules: ALL listed words must appear SOMEWHERE in the name
+# (in any order, not necessarily next to each other) for the category to
+# apply. Added after real data showed the same failure pattern three times
+# in a row: a chocolate Easter egg wrongly landing on "Eggs" because the
+# bare word "egg" matched before anything caught it as chocolate --
+# "Nestle Easter Milkybar Mini Easter Eggs", "Nestle Easter Baci Mini Eggs
+# Milk", "Nestle Easter Smarties Under The Sea Giant Egg". Each has a
+# different brand name sitting between "Easter" and "Egg", so a plain
+# contiguous phrase ("easter egg") only ever caught the first one -- this
+# checks for both words anywhere in the name instead, which covers all
+# three real cases (and any future brand doing the same thing) without
+# needing a new phrase per brand. Checked before both KEYWORD_RULES passes
+# below, since it's more specific than the bare "egg" single-word rule it's
+# here to override.
+MULTI_KEYWORD_RULES = [
+    ("Chocolates", ["easter", "egg"]),
+]
+
+
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
     # in welbees_crawler.py, where a product name was extracted straight
@@ -689,14 +703,16 @@ def _keyword_matches(keyword, cleaned_text):
 
 def classify_by_name(product_name):
     """Returns a canonical category name, or None if nothing in
-    KEYWORD_RULES matched.
+    MULTI_KEYWORD_RULES or KEYWORD_RULES matched.
 
-    Checked in two passes rather than one flat pass:
+    Checked in three passes rather than one flat pass:
 
-      1. Multi-word phrases first (e.g. 'ice cream', 'dried fruit', 'adult
+      0. Co-occurrence rules (MULTI_KEYWORD_RULES) -- all listed words
+         present anywhere in the name, regardless of order or adjacency.
+      1. Multi-word phrases (e.g. 'ice cream', 'dried fruit', 'adult
          nappy', 'baby shampoo', 'pepper corn', 'tinned tuna') -- these are
          always more specific than a single word.
-      2. Single words second (e.g. 'cream', 'fruit', 'nappy', 'shampoo',
+      2. Single words last (e.g. 'cream', 'fruit', 'nappy', 'shampoo',
          'pepper', 'tuna').
 
     Without this split, a single-word rule listed earlier in KEYWORD_RULES
@@ -708,6 +724,10 @@ def classify_by_name(product_name):
     avoids having to hand-order every category relative to every other one.
     Found and verified via audit_keyword_rules.py, not guessed."""
     cleaned = clean_for_matching(product_name)
+
+    for category, required_words in MULTI_KEYWORD_RULES:
+        if all(_keyword_matches(w, cleaned) for w in required_words):
+            return category
 
     for category, keywords in KEYWORD_RULES:
         for kw in keywords:
