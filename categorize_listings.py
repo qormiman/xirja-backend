@@ -216,29 +216,34 @@ def main():
               f"{total_unclassified} listing(s) still unclassified.")
 
         if summary["unclassified_tally"]:
-            print("\n  Most common unclassified (store, chain_category) combinations -- add "
-                  "keywords for these to category_taxonomy.py's KEYWORD_RULES to close the gap:")
+            # No cap here -- printed in full, not just the top slice. This
+            # used to stop at the top 25, which meant a new batch of gaps
+            # only became visible after the current visible ones were
+            # fixed, forcing many small rounds instead of one big one.
+            # Found via real feedback (17 Aug 2026): the review cycle was
+            # taking too long precisely because of this cap.
+            print("\n  Unclassified (store, chain_category) combinations, ranked by how often "
+                  "they occur -- add keywords for these to category_taxonomy.py's KEYWORD_RULES "
+                  "to close the gap:")
             ranked = sorted(summary["unclassified_tally"].items(), key=lambda kv: kv[1], reverse=True)
-            for (store_id, chain_category), count in ranked[:25]:
+            for (store_id, chain_category), count in ranked:
                 print(f"    {count:>5}  {store_id} / {chain_category!r}")
-            if len(ranked) > 25:
-                print(f"    ...and {len(ranked) - 25} more distinct combination(s)")
 
         collision_pairs = summary["collision_pairs"]
         total_collisions = sum(collision_pairs.values())
         if collision_pairs:
+            # Same fix, same reason -- every distinct pair now, not just
+            # the top 30.
             print(f"\n  {total_collisions} listing(s) whose name matches keywords from MORE THAN ONE "
                   f"category -- these are the most likely place the next real miscategorization bug is "
                   f"hiding (this is the exact pattern behind every bug found through the app so far). "
-                  f"Top pairs by how often they occur:")
+                  f"All pairs, ranked by how often they occur:")
             ranked_pairs = sorted(collision_pairs.items(), key=lambda kv: kv[1], reverse=True)
-            for (category_a, category_b), count in ranked_pairs[:30]:
+            for (category_a, category_b), count in ranked_pairs:
                 examples = summary["collision_examples"][(category_a, category_b)]
                 print(f"    {count:>5}  {category_a} / {category_b}")
                 for example in examples:
                     print(f"             e.g. {example!r}")
-            if len(ranked_pairs) > 30:
-                print(f"    ...and {len(ranked_pairs) - 30} more distinct pair(s)")
     except Exception as exc:  # noqa: BLE001 -- surface any failure plainly, then exit non-zero
         conn.rollback()
         print(f"ERROR during categorization: {type(exc).__name__}: {exc}", file=sys.stderr)
