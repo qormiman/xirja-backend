@@ -140,8 +140,23 @@ REQUEST_DELAY_SECONDS = 5
 # The hard, independent ceiling on any single request -- see greens_crawler.py
 # for why this matters (a slow-trickling response can dodge a normal timeout
 # indefinitely). Chosen generously above what a normal response should ever
-# take, so it only ever fires on a genuinely stuck request.
-REQUEST_HARD_TIMEOUT_SECONDS = 45
+# take, so it only ever fires on a genuinely stuck request. Raised from an
+# original 45s to 60s after a real run (17 Aug 2026) saw a burst of
+# TimeoutErrors and dropped connections spread across nearly every
+# category -- a sign welbees.mt itself was responding slowly for a stretch,
+# not a sign of a stuck/broken request, so a bit more headroom is a
+# reasonable first response.
+REQUEST_HARD_TIMEOUT_SECONDS = 60
+
+# How long to pause before retrying a page that just failed -- gives a site
+# that's temporarily slow or dropping connections a moment to recover
+# before hitting it again, rather than retrying instantly into the same
+# problem. Added after the same 17 Aug 2026 run above: retries were
+# happening back-to-back with no gap at all. A modest step up from the
+# normal between-page pacing (REQUEST_DELAY_SECONDS), not a guess at
+# exactly what welbees.mt needs -- worth revisiting with real data if
+# partial runs keep happening.
+RETRY_DELAY_SECONDS = 15
 
 # Purely a backstop against a pagination bug, not a guess at how big a real
 # category can get -- see greens_crawler.py for the full story of why this
@@ -608,6 +623,12 @@ def crawl_welbees(conn):
             category_code, slug, label, page = (
                 entry["category_code"], entry["slug"], entry["label"], entry["page"]
             )
+            # Pause before every retry, not just the ones that happen to
+            # fall a while after their original failure -- a page that
+            # fails right at the end of the first pass would otherwise get
+            # retried almost immediately, with no time for a struggling
+            # site to recover. See RETRY_DELAY_SECONDS above.
+            time.sleep(RETRY_DELAY_SECONDS)
             try:
                 html = fetch_page_bounded(category_code, slug, page)
             except Exception as exc:
@@ -648,6 +669,31 @@ def crawl_welbees(conn):
                 time.sleep(REQUEST_DELAY_SECONDS)
                 try:
                     html = fetch_page_bounded(category_code, slug, next_page)
+                except Exception as exc:
+                    # A page hit while continuing on after an earlier
+                    # successful retry used to get NO retry at all here --
+                    # unlike a page that fails during the first pass, which
+                    # gets one after the full scan finishes. Found via a
+                    # real run (17 Aug 2026) where several categories lost
+                    # several pages of real products this exact way (e.g.
+                    # Household got all the way to page 33 before losing
+                    # page 34 with no second attempt). Giving it the same
+                    # one-retry treatment, after a short pause, closes that
+                    # gap.
+                    print(f"  {category_code} ({label}) page {next_page}: failed "
+                          f"({type(exc).__name__}: {exc}) -- waiting {RETRY_DELAY_SECONDS}s "
+                          f"and trying once more")
+                    time.sleep(RETRY_DELAY_SECONDS)
+                    try:
+                        html = fetch_page_bounded(category_code, slug, next_page)
+                    except Exception as exc2:
+                        print(f"  {category_code} ({label}) page {next_page}: still failed on "
+                              f"retry ({type(exc2).__name__}: {exc2}) -- stopping here")
+                        still_failed.append({"category_code": category_code, "slug": slug,
+                                              "label": label, "page": next_page})
+                        break
+
+                try:
                     next_products = parse_products(html, label)
                     current_codes = product_code_set(next_products)
                     if next_products and current_codes == previous_codes:
@@ -658,10 +704,17 @@ def crawl_welbees(conn):
                         save_parsed_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, next_products
                     )
                 except Exception as exc:
-                    print(f"  {category_code} ({label}) page {next_page}: failed continuing after "
-                          f"retry ({type(exc).__name__}: {exc}) -- stopping here")
+                    print(f"  {category_code} ({label}) page {next_page}: failed saving while "
+                          f"continuing after retry ({type(exc).__name__}: {exc}) -- stopping here")
                     still_failed.append({"category_code": category_code, "slug": slug,
                                           "label": label, "page": next_page})
+                    # Same connection-recovery step used after a save
+                    # failure everywhere else in this file -- without it, a
+                    # broken transaction here could cause every following
+                    # retry entry to fail too, even once the site itself is
+                    # fine again.
+                    conn = safe_recover_connection(conn, OUTLET_ID)
+                    cur = conn.cursor()
                     break
                 item_count += saved
                 print(f"  {category_code} ({label}) page {next_page}: {total} products")
