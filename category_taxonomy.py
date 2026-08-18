@@ -31,6 +31,7 @@ Nothing here is guessed silently: categorize_listings.py logs a tally of
 anything it couldn't classify by any of the three routes, the same pattern
 used throughout this project's crawlers for unrecognised units.
 """
+import functools
 import html
 import re
 
@@ -2049,6 +2050,29 @@ def clean_for_matching(name):
     return re.sub(r"\s+", " ", cleaned).strip()
 
 
+@functools.lru_cache(maxsize=None)
+def _compiled_keyword_pattern(keyword):
+    """Real performance bug found on 24 Aug 2026: a full production run
+    (~130,000 listings) was taking 8-12+ minutes -- long enough to hit
+    Neon's free-tier idle-connection sleep mid-run (see the retry fix in
+    categorize_listings.py). The cause traced back to here: _keyword_matches
+    used to re-clean the keyword and rebuild its regex pattern from
+    scratch on every single call -- and with 628 individual keyword
+    strings now spread across MULTI_KEYWORD_RULES and KEYWORD_RULES (up
+    from far fewer when this function was first written), every listing
+    was redoing hundreds of identical string-cleaning and regex-escaping
+    operations that never actually change between listings, since a
+    keyword's cleaned form and pattern are fixed for the whole run.
+
+    Caching one compiled Pattern object per keyword (unbounded cache --
+    628 keywords is nothing to hold in memory) turns that repeated
+    per-listing work into a one-time cost, no matter how many listings get
+    classified. Behaviour is unchanged; this is purely a speed fix, not a
+    matching-logic change."""
+    cleaned_keyword = clean_for_matching(keyword)
+    return re.compile(r"\b" + re.escape(cleaned_keyword) + r"s?\b")
+
+
 def _keyword_matches(keyword, cleaned_text):
     """Whole-word/whole-phrase match, not a raw substring match. Raw
     substring matching was tried first and found to produce real false
@@ -2069,10 +2093,9 @@ def _keyword_matches(keyword, cleaned_text):
     product name -- otherwise a keyword containing punctuation or an
     accented letter (e.g. 'head & shoulders', 'rosé wine') could never
     match, since the product text has already had that same punctuation
-    stripped out."""
-    cleaned_keyword = clean_for_matching(keyword)
-    pattern = r"\b" + re.escape(cleaned_keyword) + r"s?\b"
-    return re.search(pattern, cleaned_text) is not None
+    stripped out. See _compiled_keyword_pattern for why this is now
+    cached rather than rebuilt every call."""
+    return _compiled_keyword_pattern(keyword).search(cleaned_text) is not None
 
 
 def classify_by_name(product_name):
