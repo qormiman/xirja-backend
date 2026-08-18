@@ -893,6 +893,236 @@ KEYWORD_RULES = [
     ("Stationery", ["legami"]),  # WebSearch-confirmed Italian stationery/creative-gifts brand -- their main product line by far is stationery, even though this brand occasionally also sells novelty items like binoculars
 
     ("Toys & Games", ["barbie", "volleyball", "volley ball", "party hat"]),  # Barbie (Mattel, well-known toys-only brand); "volleyball"/"volley ball" and "party hat" are recreational/party items with no better home
+
+    # ========================================================================
+    # 18 Aug 2026 -- BULK SWEEP of the four large catch-all buckets.
+    #
+    # Why this block is so much bigger than the ones above it: every previous
+    # round worked from the 8 example names the run report prints per bucket,
+    # which meant closing 8 names out of 3,000 and waiting three days to see
+    # the next 8. Instead of guessing again, 478 realistic supermarket product
+    # names were written out by hand across every product type these four
+    # buckets plausibly contain, run through classify_by_name(), and the 308
+    # that came back unclassified were used as the worklist. This block is
+    # what closes those 308.
+    #
+    # It covers general product VOCABULARY ("mayonnaise", "notebook",
+    # "screwdriver", "pantyliner") rather than one brand at a time, which is
+    # what makes it scale -- a rule for "shower gel" closes every shower gel
+    # in the database, not just the one that happened to get printed.
+    #
+    # Word-choice rules followed throughout, learned from earlier rounds:
+    #   * No bare word that changes meaning between aisles. "powder" is curry
+    #     powder, washing powder, baking powder and compact powder; "brush" is
+    #     a toothbrush, a hairbrush, a paint brush and a toilet brush. Those
+    #     are always written as a qualified phrase instead.
+    #   * "olive oil" is deliberately NOT a keyword here even though it looks
+    #     like the obvious one -- it would steal "Rio Mare Tuna In Olive Oil"
+    #     away from the fish rules, because a Pass-1 phrase always beats a
+    #     Pass-2 bare word like "tuna". "extra virgin"/"evoo"/"olio" catch the
+    #     actual olive oil bottles without that side effect.
+    #   * Household Goods is listed BEFORE Toys & Games below so that
+    #     "Balloon Whisk" resolves to the kitchen utensil rather than to a
+    #     party balloon; both are bare words in the same pass, so list order
+    #     is what decides.
+    # ========================================================================
+
+    # ---- Food Cupboard: sauces, condiments, oils, vinegars ----
+    # Bare "sauce" is the single highest-value word in this whole block --
+    # "Tartare Sauce", "Brown Sauce", "Horseradish Sauce", "Soy Sauce",
+    # "Pepper Sauce" and dozens more all end in it, and every one of them
+    # genuinely is a condiment. The more specific phrases added earlier (e.g.
+    # "rikotta sauce", "pasta sauce") still win, because they're checked in
+    # the earlier phrase pass.
+    ("Sauces & Condiments", [
+        "sauce", "ketchup", "mayonnaise", "mayo", "mustard", "pesto",
+        "passata", "polpa", "fine pulp", "salad cream", "salad dressing",
+        "teriyaki", "marinade", "relish", "chutney", "gravy", "horseradish",
+        "sriracha", "salsa", "tabasco", "hoisin", "pickle", "gherkin",
+        "piccalilli", "aioli",
+    ]),
+    ("Olive Oil", ["extra virgin", "evoo", "olio", "carapelli", "filippo berio"]),  # "olive oil" itself is deliberately excluded -- see the note at the top of this block
+    # No Oils entry here on purpose: the bare word "oil" is already an Oils
+    # keyword, so "Sunflower Oil 1l" was never the problem. Adding the full
+    # phrases made things worse -- as Pass-1 phrases they beat bare words and
+    # stole "STUFFED OLIVES IN SUNFLOWER OIL" and "WHITE CHEESE IN SUNFLOWER
+    # OIL", which are olives and cheese, not cooking oil.
+    ("Vinegars", ["aceto", "balsamic", "balsamico"]),
+
+    # ---- Food Cupboard: breakfast, hot drinks ----
+    ("Cereals", [
+        "weetabix", "corn flake", "cornflake", "porridge", "all bran",
+        "cheerios", "special k", "coco pops", "rice krispies", "frosties",
+        "shreddies", "crunchy nut", "quaker oat", "rolled oat",
+    ]),
+    ("Coffee", ["decaff", "decaf", "nescafe", "lavazza", "illy", "kenco", "douwe egberts", "coffee pod", "coffee capsule", "dolce gusto", "cappuccino", "americano", "moka"]),
+    ("Tea", ["infusion", "chamomile", "camomile", "earl grey", "twinings", "lipton", "tetley", "yorkshire tea", "tea bag", "teabag", "herbal tea", "green tea"]),
+
+    # ---- Food Cupboard: sweets, snacks, chocolate ----
+    # "gum" covers both chewing gum and wine gums; nothing else in a
+    # supermarket is called a gum.
+    ("Sweet Snacks", [
+        "gum", "orbit", "wrigley", "airwaves", "mentos", "tic tac",
+        "haribo", "skittles", "starburst", "chupa chup", "lollipop", "lolly",
+        "marshmallow", "toffee", "fudge", "nougat", "liquorice", "licorice",
+        "halls", "ricola", "fisherman", "jelly bean", "gummy", "gummies",
+        "candy", "sherbet",
+    ]),
+    ("Chocolates", [
+        "lindt", "toblerone", "ferrero", "rocher", "mars bar", "snickers",
+        "twix", "bounty bar", "galaxy", "aero", "wispa", "dairy milk",
+        "milkybar", "praline", "truffle", "after eight", "maltesers",
+        "kit kat", "kitkat", "smarties",
+    ]),
+    ("Biscuits", ["digestive", "shortbread", "mcvitie", "rich tea", "custard cream", "jaffa", "ginger nut", "cantuccini", "amaretti", "savoiardi", "sponge finger", "biscotti"]),
+    ("Crackers, Crispbread & Breadsticks", ["grissini", "crispbread", "cream cracker", "water biscuit", "rice cake", "galletti", "ryvita"]),
+    ("Chips", ["crisp", "pringle", "dorito", "wotsit", "hula hoop", "monster munch", "quaver", "popcorn", "twiglet", "tortilla chip", "potato chip"]),
+
+    # ---- Food Cupboard: staples ----
+    ("Pasta & Couscous", ["fusilli", "rigatoni", "farfalle", "linguine", "conchiglie", "vermicelli", "ravioli", "tortellini", "gnocchi", "noodle", "orzo", "barilla", "de cecco", "cannelloni", "fettuccine"]),
+    ("Rice", ["basmati", "arborio"]),  # only the words that DON'T contain "rice" -- the bare word "rice" already covers "brown rice"/"long grain" etc., and adding them as phrases stole gluten-free rice-flour PASTA ("Doves Farm Penne Brown Rice") away from Pasta
+    ("Legumes", ["chickpea", "chick pea", "kidney bean", "baked bean", "butter bean", "cannellini", "borlotti", "broad bean", "black bean", "haricot", "split pea"]),
+    ("Canned Seafood", ["anchovy", "anchovie", "mackerel fillet", "tuna chunk", "tuna flake", "rio mare", "john west"]),
+    ("Soups", ["minestrone", "cup a soup", "broth", "bouillon"]),
+    ("Stock Cubes", ["stock cube", "stock pot", "oxo cube"]),  # deliberately NOT "beef cube"/"chicken cube" -- caught in this round's regression sweep stealing "CHEF CHOICE FROZEN BEEF CUBES", which is real diced meat
+    ("Herbs & Spices", [
+        "cumin", "turmeric", "nutmeg", "clove", "curry powder", "chilli powder",
+        "garlic powder", "onion powder", "mixed herb", "bay leaf", "bay leave",
+        "cardamom", "coriander", "peppercorn", "saffron", "vanilla",
+        "allspice", "sage", "tarragon", "marjoram", "fennel seed",
+        "mustard seed", "seasoning", "schwartz",
+    ]),  # deliberately NOT "sea salt"/"table salt" -- as phrases they beat "crispbread" and "rice cracker" on snacks that merely mention sea salt; the bare word "salt" above already catches actual salt
+    ("Sugar", ["icing sugar", "caster", "demerara", "muscovado", "brown sugar", "granulated", "stevia", "canderel", "golden syrup"]),
+    ("Flour", ["cornflour", "corn flour", "cornstarch", "corn starch", "semolina", "self raising", "plain flour", "bread flour", "wholemeal flour"]),
+    ("Cake Preparations", ["baking powder", "bicarbonate", "cake mix", "icing", "fondant", "sprinkle", "marzipan", "gelatine", "gelatin", "food colouring", "food coloring", "dr oetker", "betty crocker", "vanilla essence"]),
+    ("Jelly", ["jam", "marmalade", "conserve", "preserve", "st dalfour"]),
+    ("Nuts", ["pistachio", "pecan", "brazil nut", "pine nut", "macadamia", "mixed nut", "salted nut"]),
+    ("Dried Fruit", ["cranberry", "cranberries", "pitted date", "prune", "dried apricot", "dried fig", "goji", "currant"]),
+    ("Vegetables", ["sweetcorn", "sweet corn", "jalapeno", "artichoke", "garden pea", "mushroom", "asparagus tip"]),  # deliberately NOT "sun dried tomato" -- it beat "couscous" on "Sun Dried Tomato & Garlic Couscous"; the bare word "tomato" already covers sun-dried tomatoes
+    ("Peanut Butter", ["peanut butter", "sun pat"]),
+
+    # ---- Food Cupboard: drinks ----
+    ("Carbonated Drinks", ["pepsi", "sprite", "7up", "seven up", "fanta", "kinnie", "lemonade", "tonic water", "ginger ale", "root beer", "schweppes", "soda water", "cherryade", "cream soda"]),
+    ("Energy Drinks", ["red bull", "monster energy", "lucozade", "energy drink", "isotonic", "rockstar"]),
+    ("Juices", ["nectar", "smoothie", "innocent"]),
+    ("Dilutables", ["squash", "cordial", "robinsons"]),
+
+    # ---- Health & Beauty: deodorant, wash, hair ----
+    ("Deodorants", ["roll on", "rollon", "deospray", "deo spray", "body spray", "anti perspirant", "antiperspirant", "rexona", "borotalco", "right guard", "sure men"]),  # deliberately NOT "sanex" or "malizia": WebSearch shows both brands span deodorant AND shower gel AND (for Malizia) perfume and aftershave, so a brand-only rule would mis-file half their range. The descriptive words above catch their actual deodorants ("Sanex Deospray", "Sanex Roll On", "Malizia Uomo Body Spray") and the Shower Gels rules catch the rest
+    ("Shower Gels", ["shower gel", "body wash", "bath foam", "bagnoschiuma", "bubble bath", "shower cream", "bath salt", "bath soak", "foamburst", "vidal", "radox", "imperial leather", "badedas", "ecoricarica", "ecoricarcia"]),  # "ecoricarcia" is a real spelling in the source data, not a typo on our side
+    ("Shampoos", ["elvive", "tresemme", "gliss", "syoss", "timotei", "herbal essence", "nizoral", "dry shampoo", "anti dandruff"]),
+    ("Hair Styling", ["hairspray", "hair spray", "styling gel", "hair mousse", "hair wax", "pomade", "got2b", "elnett", "hair serum", "heat protect"]),
+    ("Hair Colouring", ["hair colour", "hair color", "hair dye", "nutrisse", "casting creme", "koleston", "live colour", "hair bleach", "root touch"]),
+
+    # ---- Health & Beauty: skin, body, make up ----
+    ("Skin Care", [
+        "face mask", "sheet mask", "peel off", "micellar", "cleanser",
+        "face scrub", "facial scrub", "exfoliat", "eye contour", "eye cream",
+        "eye serum", "face serum", "facial serum", "day cream", "night cream",
+        "face cream", "anti wrinkle", "sun protect", "sunscreen", "sun cream",
+        "sun lotion", "after sun", "aftersun", "aloe vera", "hydro boost",
+        "neutrogena", "face toner", "facial toner",
+    ]),
+    ("Body Lotions", ["body lotion", "body cream", "body butter", "hand cream", "vaseline", "intensive care lotion", "foot cream", "e45"]),
+    ("Make Up", [
+        "concealer", "eyeliner", "eye shadow", "eyeshadow", "blusher",
+        "bronzer", "nail polish", "nail varnish", "lip gloss", "lip liner",
+        "compact powder", "face powder", "loose powder", "setting spray",
+        "brow pencil", "max factor", "maybelline", "rimmel", "labello",
+        "false lash", "make up remover", "makeup remover",
+    ]),
+
+    # ---- Health & Beauty: oral, feminine, shaving, medicine ----
+    ("Dental Care", ["interdental", "refill brush", "denture", "corega", "fixodent", "teeth whitening", "tongue cleaner", "toothpick", "tooth pick"]),
+    ("Toothpaste", ["sensodyne", "parodontax", "aquafresh", "elmex", "meridol", "dentifricio"]),
+    ("Sanitary Towels", ["pantyliner", "panty liner", "pantiliner", "sanitary towel", "sanitary pad", "tampax", "carefree", "nuvenia", "always ultra", "always platinum", "panty shield"]),
+    ("Intimate Care", ["intimate wash", "intimate wipe", "saugella", "lactacyd", "feminine wash", "intimate gel"]),
+    ("Shaving Creams", ["shaving gel", "shaving foam", "shaving cream", "aftershave", "after shave", "gillette", "wilkinson", "mach3", "shave gel", "hair removal", "epilator", "wax strip", "veet"]),
+    ("Perfume", ["eau de toilette", "eau de parfum", "body mist", "fragrance", "cologne"]),
+    ("First Aid", [
+        "paracetamol", "ibuprofen", "aspirin", "multivitamin", "vitamin c",
+        "vitamin d", "vitamin b", "lozenge", "nasal spray",
+        "saline", "eye drop", "hand sanitiser", "hand sanitizer", "thermometer",
+        "elastoplast", "compeed", "betadine", "savlon", "germolene", "gauze",
+        "antihistamine", "cough syrup", "throat spray", "rehydration",
+        "effervescent tablet",
+    ]),
+    ("Hair & Nail Accessories", ["hair band", "hairband", "hair tie", "hair clip", "hair grip", "bobby pin", "scrunchie", "hair brush", "hairbrush", "paddle brush", "tweezer", "nail clipper", "nail scissors", "emery board", "hair roller", "shower cap"]),
+    ("Nappies", ["pampers", "huggies"]),
+    ("Baby Essentials", ["soother", "baby bottle", "bottle teat", "muslin", "baby bib", "bepanthen"]),
+    ("Adult Nappies", ["tena"]),
+    ("Baby Food", ["cerelac", "aptamil", "hipp organic", "nestum", "baby puree", "follow on milk"]),
+
+    # ---- Household: laundry & dishwashing ----
+    ("Laundry Tablets", ["ariel pod", "washing pod", "laundry pod", "laundry capsule", "washing capsule", "bio capsule", "laundry tab"]),
+    ("Laundry Washing Liquids", ["washing liquid", "liquid detergent", "non bio", "detersivo", "laundry liquid"]),
+    ("Laundry Washing Powders", ["washing powder", "powder detergent", "detergent powder"]),
+    ("Fabric Softener", ["coccolino", "fabric conditioner", "vernel", "downy", "softner"]),
+    ("Stain Removers", ["vanish", "stain remover", "oxi action", "smacchiatore", "pre wash"]),
+    ("Dish Washing Liquid", ["washing up liquid", "svelto", "piatti", "dish soap", "dishwashing liquid"]),
+    ("Dishwasher Tablets", ["powerball", "rinse aid", "dishwasher salt", "dishwasher tab", "brilliant shine"]),
+
+    # ---- Household: cleaning ----
+    ("All-purpose Cleaners", [
+        "multi purpose", "multipurpose", "all purpose", "surface spray",
+        "surface cleaner", "degreaser", "sgrassatore", "window cleaner",
+        "glass cleaner", "limescale", "viakal", "antibacterial spray",
+        "mr muscle", "ajax", "pink stuff", "universal cleaner", "kitchen spray",
+    ]),
+    ("Bathroom & Wc Cleaner", ["toilet duck", "rim block", "descaler", "candeggina", "toilet block", "wc gel", "bathroom cleaner", "toilet gel"]),
+    ("Floor Cleaners", ["mop", "floor wipe", "floor gel"]),
+    ("Drain Unblockers", ["unblocker", "plughole", "drain gel", "drain granule"]),
+    ("Cloths & Sponges", ["dishcloth", "dish cloth", "steel wool", "scrub pad", "microfibre cloth", "floor cloth", "j cloth", "wash cloth"]),
+    ("Disposables", ["bin liner", "bin bag", "refuse sack", "baking paper", "greaseproof", "freezer bag", "sandwich bag", "food bag", "paper plate", "paper cup", "plastic cutlery", "plastic plate", "drinking straw", "paper straw", "aluminium foil", "tin foil", "kitchen foil", "paper towel"]),
+    ("Air Fresheners", ["glade", "ambi pur", "air wick", "airwick", "room spray", "automatic spray", "vent clip"]),
+    ("Insect Killer", ["mosquito", "ant killer", "fly paper", "fly spray", "cockroach", "baygon", "insetticida", "insect repellent", "fly trap"]),
+
+    # ---- Household / Home & Entertainment: kitchenware, storage, tools ----
+    # Listed BEFORE Toys & Games on purpose -- see the note at the top of
+    # this block about "Balloon Whisk".
+    ("Household Goods", [
+        "tatay", "curver", "hosepipe", "picnic cooler", "cooler box",
+        "cool box", "storage box", "clothes peg", "clothes hanger",
+        "coat hanger", "laundry basket", "ironing board", "drying rack",
+        "clothes airer", "bucket", "washing up basin", "dustpan", "broom",
+        "doormat", "pedal bin", "waste bin", "garden hose", "watering can",
+        "muffin tin", "baking tray", "roasting tin", "cake tin", "frying pan",
+        "saucepan", "casserole dish", "round dish", "oven dish", "serving dish",
+        "chopping board", "grater", "peeler", "whisk", "spatula", "colander",
+        "sieve", "kitchen tong", "ladle", "corkscrew", "tin opener",
+        "can opener", "bottle opener", "oven glove", "tea towel", "apron",
+        "thermos", "mixing bowl", "measuring jug", "dish rack", "dish drainer",
+    ]),
+    ("Electrical", [
+        "charger", "usb", "adapter", "adaptor", "battery", "batteries",
+        "rechargeable", "rechargable", "duracell", "energizer", "led bulb",
+        "light bulb", "torch", "extension lead", "kettle", "toaster",
+        "blender", "hand mixer", "food mixer", "hair dryer", "hairdryer",
+        "straightener", "trimmer", "earphone", "headphone", "bluetooth speaker",
+        "power bank", "plug adapter", "electric shaver",
+    ]),  # "rechargable" is a real misspelling in the source data
+    ("Candles", ["wax melt"]),
+    ("Hand Tools", ["screwdriver", "hammer", "plier", "spanner", "wrench", "tape measure", "spirit level", "hacksaw", "wd40", "wd 40", "duct tape", "insulating tape", "cable tie", "super glue", "allen key", "utility knife", "stanley knife", "power drill", "cordless drill"]),
+    ("Stationery", [
+        "diary", "ballpoint", "biro", "notebook", "notepad",
+        "eraser", "ruler", "sharpener", "marker", "stapler", "staple",
+        "envelope", "ring binder", "glue stick", "sellotape", "scotch tape",
+        "post it", "sticky note", "calculator", "crayon", "colouring pencil",
+        "colour pencil", "felt tip", "exercise book", "copybook",
+        "printer paper", "copy paper", "paper clip", "highlighter pen",
+        "pencil case", "pencil sharpener", "whiteboard", "correction fluid",
+        "tippex", "chalk",
+    ]),
+    ("Toys & Games", [
+        "toy", "bestway", "intex", "swim ring", "swim safe", "armband",
+        "inflatable", "beach ball", "jigsaw", "puzzle", "lego", "teddy",
+        "plush", "doll", "action figure", "playing card", "chess", "domino",
+        "dominoe", "dice", "skipping rope", "water gun", "bubble blower",
+        "play dough", "play doh", "sticker", "colouring book", "football",
+        "basketball", "racket", "frisbee", "scooter", "rattle", "balloon",
+        "yo yo", "kite",
+    ]),
+    ("Gift Sets", ["wrapping paper", "gift wrap", "gift bow", "greeting card", "birthday card", "party bag", "gift box", "gift ribbon"]),
 ]
 
 
@@ -1848,6 +2078,51 @@ MULTI_KEYWORD_RULES = [
     ("Hair Treatment", ["pantene", "treatment"]),
 
     ("Pet Care", ["camon"]),  # Camon (WebSearch-confirmed pet-grooming-only brand) needs Pass 0 to beat the later "cleansing wipes" Skin Care phrase (Pass 1 phrases always beat Pass 2 bare words, regardless of list order) -- found via this round's own regression sweep on "Camon Talc Cleansing Wipes"
+
+    # 18 Aug 2026 bulk sweep -- two cases where the words that identify the
+    # product are real words that sit apart from each other in the name, so a
+    # contiguous phrase can never catch them.
+    ("Intimate Care", ["fresh", "clean", "wipe"]),  # "Fresh & Clean Sensitive Wipe" -- Fresh & Clean is an Italian intimate-hygiene brand; needs all three words because "fresh" and "clean" on their own are far too generic to key a rule on
+    ("Laundry Washing Liquids", ["surf", "liquid"]),
+
+    # ------------------------------------------------------------------
+    # 18 Aug 2026 bulk sweep -- tie-breakers found by the collision report.
+    #
+    # Every rule below is a single unambiguous word that was LOSING a
+    # same-tier tie to an unrelated bare word that happened to also appear
+    # in the product name (chocolate brands losing to "milk", sweets losing
+    # to "fruit", a vegetable PEELER losing to "vegetable"). Pass 0 always
+    # wins, so putting them here settles it without disturbing list order
+    # anywhere else. Each is a word that means exactly one thing in a
+    # supermarket, which is what makes Pass 0 safe to use for it.
+    # ------------------------------------------------------------------
+    ("Chocolates", ["toblerone"]),   # "Toblerone Milk" was landing on Milk
+    ("Chocolates", ["galaxy"]),      # "Galaxy Smooth Milk" was landing on Milk
+    ("Chocolates", ["milka"]),       # brand name literally contains "milk"
+    ("Chocolates", ["milkybar"]),    # same
+    ("Sweet Snacks", ["skittles"]),  # "Skittles Fruits" was landing on Fruits
+    ("Sweet Snacks", ["mentos"]),    # "Mentos Fruit Roll" was landing on Fruits
+    ("Carbonated Drinks", ["fanta"]),   # "Fanta Orange" was landing on Fruits
+    ("Energy Drinks", ["lucozade"]),    # "Lucozade Sport Orange" was landing on Fruits
+    ("Chips", ["wotsit"]),              # "Wotsits Cheese Puffs" was landing on Cheese
+    ("Sauces & Condiments", ["ketchup"]),      # "Heinz Tomato Ketchup" was landing on Vegetables
+    ("Sauces & Condiments", ["pepper sauce"]), # "Tabasco Pepper Sauce" was landing on Vegetables (bare "pepper")
+    ("Sauces & Condiments", ["hot sauce"]),    # same pattern
+    ("Sauces & Condiments", ["gherkin"]),      # "Gherkins In Vinegar" was landing on Vinegars
+    ("Soups", ["bouillon"]),                   # "Vegetable Bouillon Powder" was landing on Vegetables
+    ("Cake Preparations", ["bicarbonate"]),    # "Bicarbonate Of Soda" was landing on Carbonated Drinks
+    ("Household Goods", ["peeler"]),           # "Vegetable Peeler" was landing on Vegetables
+    ("Pasta & Couscous", ["tortellini"]),      # "Tortellini Prosciutto" was landing on Ham
+    ("Baby Essentials", ["baby oil"]),         # "Baby Oil Chamomile" was landing on Oils
+    ("First Aid", ["lozenge"]),                # "Throat Lozenges Honey Lemon" was landing on Honey
+    ("Skin Care", ["micellar"]),               # "Micellar Cleansing Water" was landing on Water
+    ("Body Lotions", ["e45"]),                 # "E45 Cream" was landing on Cooking Creams
+    ("Chocolates", ["lindt"]),                 # "Lindt Gold Milk Raisin Nut" was landing on Milk, "Lindt Lindor Egg ... Milk" on Eggs
+    ("Jelly", ["marmalade"]),                  # "Orange Marmalade With Whisky" was landing on Fruits (bare "orange")
+    ("Make Up", ["rimmel"]),                   # "Rimmel Lip Oil Slip Stick: Cappuccino" was landing on Coffee
+    ("Sauces & Condiments", ["bisto"]),        # "Bisto Gravy Granules Beef" was landing on Beef  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
+    ("Pasta & Couscous", ["pasta natura"]),
+    ("Perfume", ["impulse"]),  # keeps the earlier round's deliberate Impulse=Perfume decision intact now that "body spray" is a Deodorants phrase (Pass 1 phrases beat Pass 2 bare words, so Impulse needs Pass 0 to hold its place)  # gluten-free pasta brand whose product names say what the pasta is MADE of ("Corn Flour", "Rice") -- needs Pass 0 so those ingredient words don't win  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
 ]
 
 
@@ -2052,8 +2327,83 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({"Honey", "Milk"}),  # e.g. honey kefir, wheat milk honey drink
     frozenset({"Herbs & Spices", "Sauces & Condiments"}),  # e.g. bruschetta topping with sea salt (resolves to Herbs & Spices via list order) -- new tie from adding the "bruschetta" keyword on 19 Aug 2026
     frozenset({"Olives", "Sauces & Condiments"}),  # e.g. bruschetta topping with olives -- same product, same reasoning as above
-}
 
+    # ------------------------------------------------------------------
+    # 18 Aug 2026 bulk sweep -- pairs reviewed and accepted in one go.
+    #
+    # The sweep added general product vocabulary ("sauce", "crisp",
+    # "mustard", "cream", "cake"...), and words that general naturally
+    # co-occur: a crispbread flavoured with cheese matches both Crackers
+    # and Cheese, a marmalade made with whisky matches both Jelly and
+    # Spirits. Every pair below was checked by running the real product
+    # names behind it through classify_by_name and confirming it already
+    # lands on the sensible category -- the ones that did NOT were fixed
+    # with Pass-0 tie-breakers in MULTI_KEYWORD_RULES instead (Lindt
+    # landing on Milk, Rimmel landing on Coffee, Bisto landing on Beef,
+    # marmalade landing on Fruits).
+    #
+    # They're listed here so the run report stays readable: without this,
+    # the next report would print 56 extra "possible collision" lines that
+    # have all already been looked at, and the genuinely new ones would be
+    # lost in the noise.
+    # ------------------------------------------------------------------
+    frozenset({'Beef', 'Dried Fruit'}),
+    frozenset({'Beef', 'Sauces & Condiments'}),
+    frozenset({'Beers', 'Herbs & Spices'}),
+    frozenset({'Beers', 'Sauces & Condiments'}),
+    frozenset({'Biscuits', 'Chips'}),
+    frozenset({'Biscuits', 'Chocolates'}),
+    frozenset({'Biscuits', 'Sauces & Condiments'}),
+    frozenset({'Bread', 'Chips'}),
+    frozenset({'Butter', 'Jelly'}),
+    frozenset({'Cake Preparations', 'Herbs & Spices'}),
+    frozenset({'Cakes', 'Chips'}),
+    frozenset({'Cakes', 'Chocolates'}),
+    frozenset({'Cakes', 'Sauces & Condiments'}),
+    frozenset({'Canned Seafood', 'Sauces & Condiments'}),
+    frozenset({'Cereals', 'Chips'}),
+    frozenset({'Cheese', 'Chips'}),
+    frozenset({'Cheese', 'Chocolates'}),
+    frozenset({'Chicken', 'Sauces & Condiments'}),
+    frozenset({'Chicken', 'Soups'}),
+    frozenset({'Chilled Fish', 'Olive Oil'}),
+    frozenset({'Chilled Fish', 'Sauces & Condiments'}),
+    frozenset({'Chilled Fish', 'Soups'}),
+    frozenset({'Chips', 'Chocolates'}),
+    frozenset({'Chips', 'Cooking Creams'}),
+    frozenset({'Chips', 'Herbs & Spices'}),
+    frozenset({'Chips', 'Honey'}),
+    frozenset({'Chips', 'Olives'}),
+    frozenset({'Chips', 'Rice'}),
+    frozenset({'Chips', 'Sauces & Condiments'}),
+    frozenset({'Chips', 'Sweet Snacks'}),
+    frozenset({'Chips', 'Vegetables'}),
+    frozenset({'Chocolates', 'Cooking Creams'}),
+    frozenset({'Chocolates', 'Crackers, Crispbread & Breadsticks'}),
+    frozenset({'Chocolates', 'Pastry'}),
+    frozenset({'Cold Cuts', 'Pasta & Couscous'}),
+    frozenset({'Cooking Creams', 'Skin Care'}),
+    frozenset({'Crackers, Crispbread & Breadsticks', 'Sauces & Condiments'}),
+    frozenset({'Crackers, Crispbread & Breadsticks', 'Snacks'}),
+    frozenset({'Dilutables', 'Sauces & Condiments'}),
+    frozenset({'Dried Fruit', 'Eggs'}),
+    frozenset({'Dried Fruit', 'Ham'}),
+    frozenset({'Face Creams', 'Skin Care'}),
+    frozenset({'Flour', 'Legumes'}),
+    frozenset({'Frozen', 'Sauces & Condiments'}),
+    frozenset({'Herbs & Spices', 'Pastry'}),
+    frozenset({'Honey', 'Sauces & Condiments'}),
+    frozenset({'Household Goods', 'Toys & Games'}),
+    frozenset({'Jelly', 'Nuts'}),
+    frozenset({'Lamb', 'Sauces & Condiments'}),
+    frozenset({'Legumes', 'Oils'}),
+    frozenset({'Legumes', 'Olives'}),
+    frozenset({'Milk', 'Sweet Snacks'}),
+    frozenset({'Oils', 'Tea'}),
+    frozenset({'Olive Oil', 'Olives'}),
+    frozenset({'Pasta & Couscous', 'Sauces & Condiments'}),
+    frozenset({'Rice', 'Sauces & Condiments'}),
+}
 
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
