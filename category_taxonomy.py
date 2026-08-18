@@ -1017,10 +1017,11 @@ KEYWORD_RULES = [
     # ---- Health & Beauty: skin, body, make up ----
     ("Skin Care", [
         "face mask", "sheet mask", "peel off", "micellar", "cleanser",
-        "face scrub", "facial scrub", "exfoliat", "eye contour", "eye cream",
+        "face scrub", "facial scrub", "exfoliating", "exfoliator",
+        "exfoliant", "eye contour", "eye cream",
         "eye serum", "face serum", "facial serum", "day cream", "night cream",
         "face cream", "anti wrinkle", "sun protect", "sunscreen", "sun cream",
-        "sun lotion", "after sun", "aftersun", "aloe vera", "hydro boost",
+        "sun lotion", "sun care", "after sun", "aftersun", "aloe vera", "hydro boost",
         "neutrogena", "face toner", "facial toner",
     ]),
     ("Body Lotions", ["body lotion", "body cream", "body butter", "hand cream", "vaseline", "intensive care lotion", "foot cream", "e45"]),
@@ -1123,6 +1124,79 @@ KEYWORD_RULES = [
         "yo yo", "kite",
     ]),
     ("Gift Sets", ["wrapping paper", "gift wrap", "gift bow", "greeting card", "birthday card", "party bag", "gift box", "gift ribbon"]),
+
+    # ========================================================================
+    # 18 Aug 2026 -- SECOND bulk sweep, run the same way as the first.
+    #
+    # The first sweep took the four catch-all buckets from 17,008 unclassified
+    # listings down to 11,878. This round wrote out another 205 realistic
+    # product names aimed squarely at what the new report's examples revealed
+    # was still missing -- world foods and seeds in Food Cupboard, nail and
+    # cotton-wool items in Health & Beauty, DIY and specialist cleaners in
+    # Household, and tableware, cookware and car care in Home & Entertainment
+    # -- and closed the 145 of them that came back unclassified.
+    #
+    # Same word-choice discipline as before: no bare word that changes meaning
+    # between aisles ("towel" is a tea towel, a paper towel and a bath towel;
+    # "polish" is nail polish, shoe polish and metal polish; "glove" is an
+    # oven glove, a rubber glove and an exfoliating glove), so each of those
+    # is written as a qualified phrase.
+    # ========================================================================
+
+    # ---- Food Cupboard: world foods, seeds, baking, grains ----
+    ("Pasta & Couscous", ["saikebon", "nudolini", "instant noodle", "ramen", "cup noodle"]),
+    ("Tea", ["teekanne", "chai"]),
+    ("Crackers, Crispbread & Breadsticks", ["ritz", "poppadom", "pretzel"]),
+    ("Legumes", ["lima bean", "mung bean", "falafel", "butter beans"]),
+    ("Herbs & Spices", ["sesame seed", "poppy seed", "wasabi", "nori", "seaweed", "miso"]),
+    ("Nuts", ["pistacchio", "sunflower seed", "pumpkin seed", "chia seed", "flax seed", "linseed", "trail mix"]),
+    ("Snacks", ["bombay mix", "festive mix", "snack mix", "party mix", "wasabi pea"]),
+    ("Sauces & Condiments", ["tahini"]),
+    ("Flour", ["breadcrumb", "panko", "polenta"]),
+    ("Vegetables", ["bamboo shoot"]),
+    ("Cake Preparations", ["pancake mix", "batter mix", "dessert whip", "jelly crystal", "desiccated", "tapioca"]),
+    ("Sugar", ["molasses", "glucose syrup"]),
+    ("Cereals", ["quinoa", "bulgur", "bran"]),
+
+    # ---- Health & Beauty: nails, cotton wool, body, pharmacy ----
+    ("Mouthwash", ["listerine", "m wash", "mouth wash"]),
+    ("Hair & Nail Accessories", ["nail file", "nail buffer", "cuticle", "foot file", "callus", "pumice stone", "body brush"]),
+    ("Cotton Buds", ["cotton disc", "cotton wool", "cotonet"]),
+    ("Conditioners", ["balsamo"]),  # Italian for hair conditioner -- appears on Carrefour's own-brand range
+    ("Make Up", ["kohl", "kajal", "catrice", "lip pencil", "eye pencil"]),
+    ("Skin Care", ["exfoliating glove", "bath bomb", "talcum", "talco", "massage oil"]),
+    ("First Aid", ["ear plug", "contact lens", "reading glasses", "pregnancy test", "athletes foot"]),
+    ("Intimate Care", ["condom"]),
+    ("Baby Essentials", ["breast pad", "nipple cream"]),
+    ("Deodorants", ["foot spray"]),
+
+    # ---- Household: DIY, specialist cleaners, shoe care ----
+    ("Hand Tools", ["drill bit", "wall plug", "picture hook", "paint brush", "paint roller", "masking tape", "dust collector", "drilling", "dust mask"]),
+    ("Disposables", ["foil container", "foil tray", "foil dish"]),
+    ("Air Fresheners", ["freshener", "aria di casa", "deodorante ambiente"]),
+    ("Dish Washing Liquid", ["morning fresh"]),
+    ("All-purpose Cleaners", ["oven cleaner", "grill cleaner", "carpet cleaner", "mould remover", "disinfectant", "wood polish", "metal polish", "silver cleaner", "antibacterial wipe"]),
+    ("Insect Killer", ["mothball"]),
+
+    # ---- Home & Entertainment: tableware, cookware, textiles, car care ----
+    ("Electrical", ["lightbulb", "table lamp", "fuse wire", "bedside lamp"]),
+    ("Household Goods", [
+        "vileda", "tefal", "sistema", "turtle wax", "beach towel", "bath towel",
+        "hand towel", "cooking tong", "frypan", "fry pan", "wok", "griddle pan",
+        "dinner plate", "side plate", "coffee mug", "mug", "wine glass",
+        "wine glasses", "tumbler",
+        "champagne flute", "cutlery set", "steak knife", "kitchen knife",
+        "knife sharpener", "placemat", "coaster", "storage jar",
+        "food container", "picture frame", "wall clock", "alarm clock",
+        "cushion cover", "throw blanket", "shower curtain", "bath mat",
+        "laundry bag", "umbrella", "salad bowl", "bowl set", "cereal bowl",
+        "water bottle", "drink bottle", "shoe rack", "shoe polish",
+        "shoe brush", "suede cleaner", "silica gel", "dehumidifier",
+        "moisture absorber", "door hook", "vacuum bag", "rubber glove",
+        "disposable glove", "vinyl glove", "chamois", "screen wash",
+        "car shampoo", "wiper blade",
+    ]),  # "vileda" spans mops, cloths, sponges and buckets -- all non-consumable cleaning equipment, which is what Household Goods is for here; the more specific words above (e.g. bare "sponge") still win where they apply
+    ("Floor Cleaners", ["mocio", "steam mop"]),
 ]
 
 
@@ -2120,7 +2194,19 @@ MULTI_KEYWORD_RULES = [
     ("Chocolates", ["lindt"]),                 # "Lindt Gold Milk Raisin Nut" was landing on Milk, "Lindt Lindor Egg ... Milk" on Eggs
     ("Jelly", ["marmalade"]),                  # "Orange Marmalade With Whisky" was landing on Fruits (bare "orange")
     ("Make Up", ["rimmel"]),                   # "Rimmel Lip Oil Slip Stick: Cappuccino" was landing on Coffee
-    ("Sauces & Condiments", ["bisto"]),        # "Bisto Gravy Granules Beef" was landing on Beef  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
+    ("Sauces & Condiments", ["bisto"]),        # "Bisto Gravy Granules Beef" was landing on Beef
+
+    # 18 Aug 2026 second bulk sweep -- words that sit apart in the real name.
+    ("Legumes", ["bean", "lima"]),                        # "Good Earth Beans Lima" -- the words are the wrong way round for a phrase
+    ("Laundry Washing Liquids", ["ariel", "liquid"]),     # "Ariel Professional Liquid Regular 2 X70 Washes"
+    ("Laundry Washing Powders", ["ariel", "powder"]),     # "Ariel Professional Powder"
+    ("Air Fresheners", ["gel", "freshener"]),             # "Felce Azzurra Aria Di Casa Gel Freshener"
+    ("Tea", ["chai"]),                                    # "Chai Latte" is a tea drink, but was losing to "latte" -> Coffee
+    ("Hair & Nail Accessories", ["cuticle"]),             # "Cuticle Oil Pen" was landing on Oils
+    ("First Aid", ["athletes foot"]),                     # "Athletes Foot Cream" was landing on Body Lotions
+    ("Pasta & Couscous", ["fusilli"]),                    # pasta shapes are unambiguous, and were losing to ingredient words
+    ("Pasta & Couscous", ["fusili"]),                     # real one-L spelling in the source data
+    ("Pasta & Couscous", ["egg pasta"]),                  # "Borgo De Medici Egg Pasta Pistacchio" was landing on Eggs  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
     ("Pasta & Couscous", ["pasta natura"]),
     ("Perfume", ["impulse"]),  # keeps the earlier round's deliberate Impulse=Perfume decision intact now that "body spray" is a Deodorants phrase (Pass 1 phrases beat Pass 2 bare words, so Impulse needs Pass 0 to hold its place)  # gluten-free pasta brand whose product names say what the pasta is MADE of ("Corn Flour", "Rice") -- needs Pass 0 so those ingredient words don't win  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
 ]
@@ -2403,8 +2489,27 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Olive Oil', 'Olives'}),
     frozenset({'Pasta & Couscous', 'Sauces & Condiments'}),
     frozenset({'Rice', 'Sauces & Condiments'}),
-}
 
+    # 18 Aug 2026 second bulk sweep -- same review as the block above: each of
+    # these pairs was traced back to the real product names behind it and
+    # confirmed to already land on the sensible category (a quinoa pasta
+    # matching both Cereals and Pasta, a Vileda sponge matching both Cloths &
+    # Sponges and Household Goods, a rooibos infusion matching both Herbs &
+    # Spices and Tea). The ones that did NOT were fixed with Pass-0
+    # tie-breakers instead -- see MULTI_KEYWORD_RULES.
+    frozenset({'Cereals', 'Olives'}),
+    frozenset({'Cereals', 'Sauces & Condiments'}),
+    frozenset({'Cheese', 'Household Goods'}),
+    frozenset({'Chilled Fish', 'Nuts'}),
+    frozenset({'Cloths & Sponges', 'Household Goods'}),
+    frozenset({'Dilutables', 'Nuts'}),
+    frozenset({'Disposables', 'Household Goods'}),
+    frozenset({'Eggs', 'Nuts'}),
+    frozenset({'Herbs & Spices', 'Tea'}),
+    frozenset({'Household Goods', 'Pasta & Couscous'}),
+    frozenset({'Nuts', 'Sauces & Condiments'}),
+    frozenset({'Tea', 'Yoghurt'}),
+}
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
     # in welbees_crawler.py, where a product name was extracted straight
