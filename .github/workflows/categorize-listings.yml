@@ -9,12 +9,33 @@
 # writes your own database, never touches any of the three sites, and only
 # writes rows whose category actually changed.
 #
-# Run by hand (Actions tab -> "Categorize listings" -> Run workflow).
+# Two ways this runs:
+#   1. Automatically, every 3 days (see "schedule" below) -- catches
+#      whatever the nightly crawls have added since the last run and
+#      re-classifies it against whatever rules already exist in
+#      category_taxonomy.py at that point. This does NOT invent new
+#      keyword rules by itself -- it only applies the ones already
+#      written. Genuinely new/unrecognised brand names still show up in
+#      this run's "unclassified" report and need a person (or Claude,
+#      doing a research round) to add a rule for them.
+#   2. Manually, whenever you want, by clicking "Run workflow" on the
+#      Actions tab -- useful right before a categorization review, so
+#      the report you're looking at is as fresh as possible.
 # ============================================================================
 
 name: Categorize listings
 
 on:
+  schedule:
+    # Runs at 04:00 UTC every 3rd day of the month (1st, 4th, 7th, ...) --
+    # a few hours after the nightly crawls (23:00 UTC) so that night's new
+    # listings are already in the database. Note: because GitHub Actions
+    # cron only understands "day of month", not a true rolling "every 3
+    # days", the gap can occasionally shrink to 1 day or stretch to 4 at
+    # a month boundary (e.g. the 31st to the 1st) -- a known, accepted
+    # trade-off, same kind of thing as the crawlers' own DST drift.
+    - cron: '0 4 */3 * *'
+
   workflow_dispatch: {}
 
 jobs:
@@ -37,3 +58,22 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PYTHONUNBUFFERED: "1"
         run: python categorize_listings.py
+
+      # The printed report only shows 8 example names per unclassified
+      # bucket, which is nowhere near enough when a bucket holds 3,000 of
+      # them -- you close 8 and get 8 more next time. The script also writes
+      # the COMPLETE list of distinct unclassified names to
+      # unclassified_listings.txt; this step attaches that file to the run so
+      # it can be downloaded from the "Artifacts" box at the bottom of the
+      # run's summary page and worked through in one go.
+      #
+      # if: always() so the file is still attached even when the run failed
+      # partway -- a partial list is far more useful than none.
+      - name: Attach the full unclassified list
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unclassified-listings
+          path: unclassified_listings.txt
+          if-no-files-found: warn
+          retention-days: 30
