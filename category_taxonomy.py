@@ -1194,6 +1194,48 @@ MULTI_KEYWORD_RULES = [
     # "Dogero", "Puppy" etc, which still match the rules around this one.
     ("Sausages", ["hot dog"]),
     ("Dog", ["dog"]),
+    # New "Pet Food" category (18 Aug 2026) -- for real pet products whose
+    # name gives no way to tell cat from dog, even after everything above.
+    # Checked in order, so real evidence: Welbee's own site has exactly one
+    # flat "Pets" category (D-5445 in welbees_crawler.py) with no cat/dog
+    # split at all -- confirmed by reading the crawler itself, not
+    # guessed -- so a product like "ADULT DRY FOOD CHICKEN & TURKEY 2KG" or
+    # "CAN ADULT ALL BREEDS TURKEY&CARROT 400G" has NO species signal
+    # anywhere in the data this project has access to, not just in the
+    # product name. Before this category existed, these were falling
+    # straight into human food categories (Chicken, Turkey, Beef...),
+    # purely because that's whichever meat word the name happened to
+    # contain. Every phrase below is a generic pet-food packaging/format
+    # term with no realistic human-food meaning, found via real data.
+    # Placed AFTER every Cat/Dog rule above on purpose, so a product that
+    # CAN be identified by species (e.g. "cat food", "felix", "katsuobushi")
+    # still gets the more specific answer; this is only the fallback for
+    # when nothing more specific matched.
+    ("Pet Food", ["adult dry food"]),
+    ("Pet Food", ["dry food"]),
+    ("Pet Food", ["wet food"]),
+    ("Pet Food", ["all breeds"]),
+    # "senior tray" -- kept as this one specific phrase, not bare "senior"
+    # alone, since "senior" by itself is a real risk for human products
+    # (senior-specific vitamins/nutrition drinks exist) -- only one real
+    # example seen so far ("SENIOR TRAY TURKEY & RICE 400GR"), so a narrow
+    # phrase is the safer choice here, same reasoning as the "Lamb
+    # Himalayan"/"Lamb Rosemary" narrow carve-outs above.
+    ("Pet Food", ["senior tray"]),
+    # "paleo" -- WebSearch confirmed "Paleo" is used by pet-food brands
+    # across BOTH cat and dog lines (e.g. Acana Paleo dry dog food,
+    # VetExpert Raw Paleo cat food), which is why this lives in the
+    # species-unknown Pet Food bucket rather than Cat or Dog specifically.
+    # Originally left out of this file over a theoretical risk -- "paleo"
+    # is also a human diet/health-food marketing word elsewhere (paleo
+    # protein bars, paleo bread) -- but the user confirmed directly (18 Aug
+    # 2026) that in this project's own data, "Paleo" is specifically an
+    # animal-food brand, so that risk doesn't apply here. Fixes "PALEO PORK
+    # AND CHICKEN/TURKEY/LAMB 400G/800G", which were landing on whichever
+    # meat word happened to be listed earliest in KEYWORD_RULES (Chicken
+    # for the Chicken pairing, Pork for the Turkey/Lamb pairings -- pure
+    # list-order luck, not anything about the product).
+    ("Pet Food", ["paleo"]),
     # Baby-food brand names -- found via the same 12 Aug 2026 collision
     # report: real baby/toddler-food brands (Hipp, Ella's Kitchen, Piccolo,
     # Plasmon, Organix, Kiddylicious) were losing to whatever ingredient
@@ -1291,6 +1333,19 @@ MULTI_KEYWORD_RULES = [
     # that a bare brand-name match is safe here, the same reasoning
     # already used for "felix" (a cat food brand) above.
     ("Chocolates", ["cadbury"]),
+    # "Zott Monte" -- a real Zott (German dairy company) chilled dairy-
+    # dessert/pudding brand, confirmed via WebSearch, sold in small pots
+    # with flavour/topping variants like biscuit crumble. "Zott Monte
+    # Butter Biscuits (125grms)" is that dessert, not an actual packet of
+    # biscuits -- was landing on Butter (bare "butter" tied with bare
+    # "biscuit", Butter listed earlier). Filed under Yoghurt, not a new
+    # category, since this taxonomy already groups chilled dairy desserts
+    # with yoghurt (see GREENS_CATEGORY_MAP's "Yoghurts And Desserts" ->
+    # "Yoghurt" mapping above) -- confirmed correct by the user directly
+    # (18 Aug 2026), who knows this specific product. The whole "Zott
+    # Monte" range is this same dessert line, so a bare two-word brand-name
+    # match is safe, the same reasoning as "cadbury" just above.
+    ("Yoghurt", ["zott monte"]),
     # The six "chocolate"+fruit-word carve-outs that used to live here
     # (orange/banana/apple/grape/melon/fruit -- for "Condorelli...Vanilla /
     # Chocolate / Orange / Lemon" and similar, which were losing to the
