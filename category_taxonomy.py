@@ -1199,6 +1199,25 @@ MULTI_KEYWORD_RULES = [
     # Spices (bare "salt", listed earlier than Snacks). No other realistic
     # meaning for "popcorn" in a grocery product name.
     ("Snacks", ["popcorn"]),
+    # Bare "snack" -- the same general-fix pattern as "chips"/"pizza"/
+    # "sausage" above, extended to "snack" itself once it became clear (18
+    # Aug 2026 collision report) this was recurring across more than a
+    # dozen different categories at once: a product clearly sold AS a
+    # snack (e.g. "Biosaurus Cheese Snack Multipack", "Lotto Peanut
+    # Snack") was losing to whichever flavour/ingredient word it also
+    # contained (bare "cheese", "peanut", "spice"...), purely because
+    # those categories are listed earlier than Snacks. Deliberately NOT
+    # done in an earlier round (see the comment on the "crisps"/"pretzel"
+    # KEYWORD_RULES entry above, which explicitly called out "cheese
+    # snacks" as the risk of doing this) -- reconsidered now that the SAME
+    # collision shape was showing up against Cheese, Nuts, Herbs & Spices,
+    # Chilled Fish, Milk, Biscuits, Dental Care and more all at once in a
+    # single report, the same "recurring with a new base word every round"
+    # threshold that justified the "chips" general fix originally. A real,
+    # deliberate trade-off: a bulk-sold nut/cheese product that ISN'T
+    # marketed as a "snack" would still correctly stay Nuts/Cheese, since
+    # this only fires when the word "snack" itself is actually present.
+    ("Snacks", ["snack"]),
     # "choc" -- see the comment on the "chocolate"/"choco" KEYWORD_RULES
     # entry above for why this needs to be here (Pass 0) rather than there:
     # "MILK CHOC WAFER BAR" was matching bare "milk" (Milk) and bare
@@ -1374,6 +1393,39 @@ KNOWN_ACCEPTED_COLLISIONS = {
     # a bigger sub-categories pass (e.g. a dedicated "Plant Milks" bucket),
     # not guessed at with a keyword carve-out today.
     frozenset({"Milk", "Nuts"}),
+
+    # Flavour/mix-in-descriptor and dish-ingredient overlaps -- a product
+    # whose name genuinely, correctly mentions two different food
+    # categories at once (an apple-cinnamon biscuit, a chicken-and-rice
+    # ready meal, a ham-and-cheese sandwich), with no single "right"
+    # answer between them -- extended here (18 Aug 2026) at the user's
+    # explicit request, after the dual-protein-meat pairs above proved out
+    # the same "record a reviewed decision, stop re-showing it" approach.
+    # Scoped to the highest-count pairs actually seen in a real report so
+    # far, not exhaustively to every possible flavour-word combination --
+    # add more here as they turn up, the same way this whole file grows.
+    frozenset({"Chicken", "Chilled Fish"}),  # dual-protein pet food/ready meals, same shape as the meat pairs above
+    frozenset({"Cheese", "Vegetables"}),  # e.g. cheese & onion, cheese & tomato flavour snacks
+    frozenset({"Herbs & Spices", "Vegetables"}),  # e.g. tomato & basil/oregano flavour crackers and sauces
+    frozenset({"Fruits", "Yoghurt"}),  # fruit-flavoured yoghurt
+    frozenset({"Chicken", "Rice"}),  # dish combinations, e.g. chicken biryani
+    frozenset({"Chilled Fish", "Rice"}),  # dish combinations, e.g. tuna & rice pouches
+    frozenset({"Cereals", "Fruits"}),  # e.g. fruit & nut muesli -- Cereals is the base product, Fruits is a mix-in
+    frozenset({"Fruits", "Herbs & Spices"}),  # e.g. apple & cinnamon flavour
+    frozenset({"Cheese", "Herbs & Spices"}),  # e.g. cheese & garlic/herbs flavour
+    frozenset({"Biscuits", "Nuts"}),  # e.g. pistachio/peanut wafers
+    frozenset({"Fruits", "Milk"}),  # e.g. fruit-flavoured kefir
+    frozenset({"Fruits", "Jelly"}),  # e.g. fruit cocktail in jelly
+    frozenset({"Chicken", "Herbs & Spices"}),  # e.g. chicken with paprika/herb seasoning
+    frozenset({"Chicken", "Vegetables"}),  # dish combinations, e.g. chicken & vegetable gyoza
+    frozenset({"Biscuits", "Cooking Creams"}),  # cream-filled biscuits/cookies
+    frozenset({"Pasta & Couscous", "Vegetables"}),  # e.g. tomato pasta sauce, tomato couscous
+    frozenset({"Dilutables", "Fruits"}),  # fruit cordials/squashes
+    frozenset({"Cakes", "Fruits"}),  # e.g. orange/jaffa cake
+    frozenset({"Cheese", "Ham"}),  # dual-ingredient, e.g. ham & cheese products
+    frozenset({"Biscuits", "Fruits"}),  # e.g. apple/orange flavour biscuits
+    frozenset({"Chilled Fish", "Pasta & Couscous"}),  # dish combinations, e.g. tuna pasta salad
+    frozenset({"Chilled Fish", "Oils"}),  # fish tinned/preserved in oil, fish oil supplements
 }
 
 
