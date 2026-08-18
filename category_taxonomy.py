@@ -1396,6 +1396,67 @@ KEYWORD_RULES = [
         "vassoio", "tagliere", "pentola", "padella", "coperchio", "bicchieri",
         "tazza", "posate", "ciotola",
     ]),
+
+    # ========================================================================
+    # 18 Aug 2026 -- SIXTH bulk sweep.
+    #
+    # Two things this round, prompted by what the fifth round left behind.
+    #
+    # 1. PLAIN FRUIT AND VEG. Five rounds in, ordinary produce words were
+    #    still missing -- "blueberries", "strawberries", "bananas", "pears",
+    #    "potatoes", "onions", "carrots". They kept slipping through because
+    #    the existing rules had the singular collective ("berry", "berries")
+    #    but matching is whole-word, so "blueberries" never matched
+    #    "berries". Each fruit now gets both its singular and plural form.
+    #
+    # 2. THE BARE WORD "bean". Deliberately held back until now because of
+    #    the two obvious traps -- COFFEE beans and JELLY beans. Both are
+    #    already caught by earlier phrase rules ("coffee bean", "ground
+    #    bean", "jelly bean"), which win because phrases are checked before
+    #    bare words, and the one brand that says "Beans" while meaning coffee
+    #    (Saquella) gets its own Pass-0 rule below. With those covered it is
+    #    safe, and it reaches every "White Beans"/"Butter Beans"/"Broad
+    #    Beans" tin at once.
+    #
+    # Deliberately still NOT added: bare "lemon", "lime" and "orange". They
+    # are fruit, but in this data they are overwhelmingly a SCENT -- washing
+    # up liquid, floor cleaner, air freshener, shower gel -- so claiming them
+    # for Fruits would mis-file more products than it fixed.
+    # ========================================================================
+
+    # ---- Produce: singular AND plural, because matching is whole-word ----
+    ("Fruits", [
+        "blueberry", "blueberries", "raspberry", "raspberries",
+        "strawberry", "strawberries", "blackberry", "blackberries",
+        "cherry", "cherries", "banana", "pear", "peach", "peaches",
+        "plum", "grape", "apricot", "nectarine", "watermelon",
+        "clementine", "mandarin", "grapefruit", "fig",
+    ]),
+    ("Vegetables", ["potato", "potatoes", "onion", "carrot", "cucumber", "garlic", "ginger", "pumpkin", "turnip", "parsnip", "kale", "chard", "peperoncini", "farciti"]),
+    ("Legumes", ["bean", "white bean", "black eyed bean"]),
+
+    # ---- Food Cupboard leftovers ----
+    ("Chocolates", ["nutella"]),
+    ("Coffee", ["saquella"]),
+    ("Tea", ["easytea"]),
+    ("Crackers, Crispbread & Breadsticks", ["brezel"]),
+    ("Cake Preparations", ["cocktail cherry", "cocktail cherries", "maraschino"]),
+
+    # ---- Health & Beauty leftovers ----
+    ("Skin Care", ["skin active", "nutribomb", "derma", "skin clear"]),
+    ("Hair & Nail Accessories", ["headband", "silicone brush"]),
+    ("Hair Styling", ["mousse", "wet look", "aqua gel"]),
+    ("First Aid", ["hydrogen peroxide"]),
+
+    # ---- Household leftovers ----
+    ("Cloths & Sponges", ["scouring", "scrouer", "scouring pad", "abrasive pad"]),  # "scrouer" is a real misspelling of "scourer" in the source data
+    ("Insect Killer", ["flytrap"]),
+    ("Disposables", ["garbage bag", "rubbish bag", "waste bag", "nappy sack", "sacc rid", "sacchi rifiuti"]),
+    ("Household Goods", ["ice pack", "cool pack", "hot water bottle", "arix"]),  # Arix, like Vileda, makes cleaning equipment across sponges, cloths, mops and gloves -- the more specific words still win where they apply
+    ("Floor Cleaners", ["floor liquid"]),
+
+    # ---- Home & Entertainment leftovers ----
+    ("Stationery", ["shopping list", "pritt", "corrector", "memo pad", "to do list", "planner", "notice board"]),
 ]
 
 
@@ -2423,7 +2484,12 @@ MULTI_KEYWORD_RULES = [
     ("Toothbrushes", ["colgate", "hard"]),
     ("Sanitary Towels", ["ultra thin", "absorbent"]),
     ("Cloths & Sponges", ["cloth", "absorbent"]),
-    ("Disposables", ["ice", "cube", "bag"]),           # "Frio Ice Cubes Bags" -- both words are pluralised mid-phrase, so no contiguous phrase can match it      # "CAR CLOTH SUPER WATER ABSORBENT" -- absorbency is a cloth's selling point too, so a cloth that says "absorbent" stays a cloth  # "Dove Bath Seta Preziosa" -- bare "bath" is far too generic on its own (bath salts, bath towel, bath mat, bathroom cleaner), so it only counts alongside the brand  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
+    ("Disposables", ["ice", "cube", "bag"]),
+    ("Coffee", ["saquella"]),                         # "Saquella Bar Sud Beans" is coffee -- needs Pass 0 to beat the new bare "bean" Legumes rule
+    ("Chocolates", ["nutella"]),                      # "Nutella Hazelnut Spread" was landing on Butter via the bare word "spread"
+    ("Floor Cleaners", ["floor", "cleaner"]),         # "Fresh Floor Liquid Cleaner Marseille & Lavender" -- the two words are split by "Liquid"
+    ("Sanitary Towels", ["every day", "sensitive"]),  # "Every Day Up Sensitive With Cotton"
+    ("Sanitary Towels", ["every day", "up"]),           # "Frio Ice Cubes Bags" -- both words are pluralised mid-phrase, so no contiguous phrase can match it      # "CAR CLOTH SUPER WATER ABSORBENT" -- absorbency is a cloth's selling point too, so a cloth that says "absorbent" stays a cloth  # "Dove Bath Seta Preziosa" -- bare "bath" is far too generic on its own (bath salts, bath towel, bath mat, bathroom cleaner), so it only counts alongside the brand  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
     ("Pasta & Couscous", ["pasta natura"]),
     ("Perfume", ["impulse"]),  # keeps the earlier round's deliberate Impulse=Perfume decision intact now that "body spray" is a Deodorants phrase (Pass 1 phrases beat Pass 2 bare words, so Impulse needs Pass 0 to hold its place)  # gluten-free pasta brand whose product names say what the pasta is MADE of ("Corn Flour", "Rice") -- needs Pass 0 so those ingredient words don't win  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
 ]
@@ -2755,7 +2821,20 @@ KNOWN_ACCEPTED_COLLISIONS = {
     # case and a presentation box, so a boxed pistachio cream matches
     # Stationery as well as Nuts -- it already resolves to Nuts correctly.
     frozenset({'Nuts', 'Stationery'}),
+
+    # 18 Aug 2026 sixth bulk sweep -- all seven traced back and confirmed to
+    # land correctly (a ginger kefir, a beef-and-green-beans rice meal, a
+    # cheddar made with ginger and whisky, an oat "derma" shampoo).
+    frozenset({'Beef', 'Legumes'}),
+    frozenset({'Cereals', 'Skin Care'}),
+    frozenset({'Fruits', 'Juices'}),
+    frozenset({'Fruits', 'Olives'}),
+    frozenset({'Jelly', 'Vegetables'}),
+    frozenset({'Milk', 'Vegetables'}),
+    frozenset({'Spirits - Whisky', 'Vegetables'}),
 }
+
+
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
     # in welbees_crawler.py, where a product name was extracted straight
