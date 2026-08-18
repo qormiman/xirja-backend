@@ -1320,6 +1320,82 @@ KEYWORD_RULES = [
         "gel liner", "shopping bag", "guanti", "scopa", "paletta",
         "secchio", "stendibiancheria", "tovaglia",
     ]),
+
+    # ========================================================================
+    # 18 Aug 2026 -- FIFTH bulk sweep, deliberately much wider than the fourth.
+    #
+    # The fourth sweep only closed ~250 listings, because it was written from
+    # the eight example names the report prints per bucket and so it caught
+    # those eight and little else. The lesson: at this depth, hitting the
+    # examples is not the same as closing the bucket.
+    #
+    # So this block goes after the VOCABULARY the examples are drawn from
+    # rather than the examples themselves -- above all Italian, which is what
+    # Welbee's four catch-all buckets are mostly made of at this point.
+    # Carrefour's own-brand range and the Italian imports are labelled in
+    # Italian throughout, so one pass of ordinary Italian grocery words
+    # ("pane", "burro", "uova", "farina", "miele", "ceci", "lenticchie",
+    # "formaggio", "bicchieri", "pentola", "quaderno") reaches far more
+    # listings than any number of individual brand rules would.
+    #
+    # Two Italian words are deliberately NOT here:
+    #   * "latte" -- it means milk, but in this data it appears far more often
+    #     in "Caffe Latte"/"Latte Macchiato" coffee products.
+    #   * "piatti" -- it means plates, but it is already a Dish Washing Liquid
+    #     keyword ("Svelto Piatti"), which is the commoner use here.
+    # ========================================================================
+
+    # ---- Italian pantry ----
+    ("Pasta & Couscous", ["orecchiette", "ditalini", "bucatini", "paccheri", "trofie", "strozzapreti", "sedanini", "pastina", "stelline", "risoni", "mezze penne", "pici", "maccheroncini", "divella"]),
+    ("Legumes", ["ceci", "fagioli", "lenticchie", "piselli"]),
+    ("Canned Seafood", ["sgombro", "alici", "tonno", "filetti di"]),
+    ("Flour", ["farina"]),
+    ("Honey", ["miele"]),
+    ("Jelly", ["confettura", "marmellata"]),
+    ("Juices", ["succo", "spremuta"]),
+    ("Tea", ["tisana", "camomilla"]),
+    ("Soups", ["zuppa", "minestra"]),
+    ("Oils", ["olio di semi", "olio di girasole", "olio di mais"]),
+    ("Water", ["acqua naturale", "acqua frizzante"]),
+    ("Sweet Snacks", ["caramelle", "liquirizia", "morbide"]),
+    ("Cakes", ["pandoro", "panettone", "colomba", "krapfen", "merendine"]),
+    ("Chocolates", ["cioccolatini", "baci", "perugina", "novi", "venchi", "ritter", "cote d or", "mignonette", "cacao", "reese", "milky way", "crunchie"]),
+    ("Biscuits", ["bahlsen", "loacker", "quadratini", "pavesini", "gocciole", "pan di stelle", "oro saiwa", "speculoos", "lotus", "biscotto"]),
+    ("Chips", ["patatine", "pomstick", "lorenz", "san carlo", "fonzies", "chipster"]),
+    ("Coffee", ["kimbo", "borbone", "segafredo", "nespresso", "lungo", "ristretto", "espresso napoletano"]),
+    ("Nuts", ["pinoli", "noci", "mandorle", "nocciole", "arachidi", "anacardi", "sgusciati"]),
+    ("Herbs & Spices", ["rosmarino", "basilico", "prezzemolo", "alloro", "cannella", "noce moscata", "pepe nero", "curcuma", "origano"]),
+    ("Sausages", ["frankfurter", "wurst", "bockwurst", "wiener", "chipolata", "bratwurst", "salsiccia", "hot dog sausage"]),
+
+    # ---- Italian chilled / bakery ----
+    ("Cheese", ["formaggio", "parmigiano", "grana", "pecorino", "mozzarella", "mascarpone", "gorgonzola", "taleggio", "fontina", "asiago"]),
+    ("Butter", ["burro", "margarina"]),
+    ("Eggs", ["uova", "uovo"]),
+    ("Bread", ["pane", "panino", "focaccia", "michetta", "rosetta", "baguette"]),
+
+    # ---- Health & Beauty ----
+    ("Sanitary Towels", ["always", "ultra plus", "maxi night", "notte", "con ali"]),
+    ("Shower Gels", ["bodywash"]),
+    ("Skin Care", ["bioten", "creamy mask", "maschera viso"]),
+    ("Hair & Nail Accessories", ["jean louis david", "hair elastic", "thin elastic", "claw clip", "medium claw"]),
+    ("Nappies", ["pannolini"]),
+
+    # ---- Household ----
+    ("Disposables", ["alcofoil", "tovaglioli", "tavaglioli", "ice cube bag", "pellicola", "carta forno", "sacchetti", "bicchieri di carta"]),
+    ("Cloths & Sponges", ["dish brush", "spazzolone", "strofinacci"]),
+    ("Insect Killer", ["fly swapper", "fly swatter", "citronella", "repellant", "zampirone", "piastrine"]),
+    ("All-purpose Cleaners", ["lavavetri"]),
+    ("Dishwasher Tablets", ["brillantante"]),
+
+    # ---- Home & Entertainment ----
+    ("Clothes", ["atelier couture", "bra extender", "bra fastener", "iron on label", "sewing", "haberdashery", "tights", "underwear", "boxer short", "t shirt", "pyjama", "slipper", "scarf", "beanie"]),
+    ("Stationery", ["quaderno", "penna", "matita", "righello", "astuccio", "raccoglitore", "cartella"]),
+    ("Household Goods", [
+        "specchio", "cornice", "portafoto", "orologio", "cuscino", "coperta",
+        "tenda", "tappeto", "mollette", "stendino", "appendiabiti", "cesto",
+        "vassoio", "tagliere", "pentola", "padella", "coperchio", "bicchieri",
+        "tazza", "posate", "ciotola",
+    ]),
 ]
 
 
@@ -2346,7 +2422,8 @@ MULTI_KEYWORD_RULES = [
     ("Toothbrushes", ["colgate", "soft"]),
     ("Toothbrushes", ["colgate", "hard"]),
     ("Sanitary Towels", ["ultra thin", "absorbent"]),
-    ("Cloths & Sponges", ["cloth", "absorbent"]),      # "CAR CLOTH SUPER WATER ABSORBENT" -- absorbency is a cloth's selling point too, so a cloth that says "absorbent" stays a cloth  # "Dove Bath Seta Preziosa" -- bare "bath" is far too generic on its own (bath salts, bath towel, bath mat, bathroom cleaner), so it only counts alongside the brand  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
+    ("Cloths & Sponges", ["cloth", "absorbent"]),
+    ("Disposables", ["ice", "cube", "bag"]),           # "Frio Ice Cubes Bags" -- both words are pluralised mid-phrase, so no contiguous phrase can match it      # "CAR CLOTH SUPER WATER ABSORBENT" -- absorbency is a cloth's selling point too, so a cloth that says "absorbent" stays a cloth  # "Dove Bath Seta Preziosa" -- bare "bath" is far too generic on its own (bath salts, bath towel, bath mat, bathroom cleaner), so it only counts alongside the brand  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
     ("Pasta & Couscous", ["pasta natura"]),
     ("Perfume", ["impulse"]),  # keeps the earlier round's deliberate Impulse=Perfume decision intact now that "body spray" is a Deodorants phrase (Pass 1 phrases beat Pass 2 bare words, so Impulse needs Pass 0 to hold its place)  # gluten-free pasta brand whose product names say what the pasta is MADE of ("Corn Flour", "Rice") -- needs Pass 0 so those ingredient words don't win  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
 ]
@@ -2673,8 +2750,12 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Cereals', 'Lamb'}),
     frozenset({'Cooking Creams', 'Fabric Softener'}),
     frozenset({'Sanitary Towels', 'Water'}),
-}
 
+    # 18 Aug 2026 fifth bulk sweep. "astuccio" is Italian for both a pencil
+    # case and a presentation box, so a boxed pistachio cream matches
+    # Stationery as well as Nuts -- it already resolves to Nuts correctly.
+    frozenset({'Nuts', 'Stationery'}),
+}
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
     # in welbees_crawler.py, where a product name was extracted straight
