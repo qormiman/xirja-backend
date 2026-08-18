@@ -188,11 +188,18 @@ def categorize_all(conn, cur):
             # A few real product names per bucket, same idea as
             # collision_examples above -- the tally alone (e.g. "3271
             # welbees / 'Food Cupboard'") gives no way to tell which
-            # keywords are missing. Capped at 3 per bucket and deduped so
-            # one repeated product doesn't waste all three slots.
+            # keywords are missing. Capped at 8 (not 3) so large, diverse
+            # catch-all buckets -- "Food Cupboard", "Health & Beauty" --
+            # give enough real names to actually close the gap in one or
+            # two rounds instead of dribbling out 3 at a time; small
+            # buckets are unaffected since they simply run out of distinct
+            # names before hitting the cap. Deduped so one repeated
+            # product doesn't waste a slot. Raised from 3 to 8 on 18 Aug
+            # 2026 after the first full-production run showed 3 wasn't
+            # enough signal for buckets in the thousands.
             name = row["chain_product_name"]
             examples = unclassified_examples.setdefault(key, [])
-            if name and len(examples) < 3 and name not in examples:
+            if name and len(examples) < 8 and name not in examples:
                 examples.append(name)
 
         if new_category == row["shopping_category"]:
@@ -227,14 +234,51 @@ def categorize_all(conn, cur):
     }
 
 
-def main():
+def _connect_and_categorize():
     conn = get_connection()
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        summary = run_with_timeout(
+            lambda: categorize_all(conn, cur),
+            DB_WRITE_HARD_TIMEOUT_SECONDS,
+        )
+    return conn, summary
+
+
+def main():
+    conn = None
     try:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            summary = run_with_timeout(
-                lambda: categorize_all(conn, cur),
-                DB_WRITE_HARD_TIMEOUT_SECONDS,
-            )
+        try:
+            conn, summary = _connect_and_categorize()
+        except psycopg2.OperationalError:
+            # Same real issue already found and fixed in api/main.py's
+            # run_query(): Neon's free tier puts the database to sleep
+            # after a few idle minutes, and this script leaves a real gap
+            # between its one big SELECT (fetch_listings) and its first
+            # WRITE -- re-classifying every listing in memory, now against
+            # a much bigger keyword list than when this script was first
+            # written, can itself take a couple of minutes with no
+            # database traffic at all. If Neon suspends the connection
+            # during that gap, the next query raises "OperationalError:
+            # SSL connection has been closed unexpectedly" -- seen for
+            # real on 24 Aug 2026's first automatic run.
+            #
+            # Discard the dead connection and retry the *entire* run
+            # exactly once with a fresh one, which forces Neon to wake
+            # back up. Redoing the whole thing (not just the failed write)
+            # is safe and correct here: categorize_all() is idempotent by
+            # design (see this module's own docstring -- safe to run as
+            # often as you like, it only ever writes rows whose category
+            # actually changed), so there's no risk of double-writing or
+            # skipping anything by starting over.
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:  # noqa: BLE001 -- already dead, nothing to clean up
+                    pass
+                conn = None
+            print("(lost the database connection mid-run -- Neon's free tier likely put it to "
+                  "sleep -- retrying the whole run once with a fresh connection)", file=sys.stderr)
+            conn, summary = _connect_and_categorize()
 
         total_unclassified = sum(summary["unclassified_tally"].values())
         print(f"Done: {summary['total']} listing(s) checked, {summary['updated']} row(s) written "
@@ -289,11 +333,25 @@ def main():
             for (category_a, category_b), count in ranked_accepted:
                 print(f"    {count:>5}  {category_a} / {category_b}")
     except Exception as exc:  # noqa: BLE001 -- surface any failure plainly, then exit non-zero
-        conn.rollback()
+        # Real bug found on 24 Aug 2026: if the connection is already dead
+        # (e.g. the OperationalError above, on its second/final attempt),
+        # conn.rollback() itself raises "InterfaceError: connection
+        # already closed" -- which then replaces the real error in the
+        # traceback with a confusing, unrelated-looking second one. Guard
+        # it so a dead connection can't mask the actual failure.
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:  # noqa: BLE001 -- connection may already be dead; nothing more to do
+                pass
         print(f"ERROR during categorization: {type(exc).__name__}: {exc}", file=sys.stderr)
         sys.exit(1)
     finally:
-        conn.close()
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001 -- already closed/dead is fine here
+                pass
 
 
 if __name__ == "__main__":
