@@ -864,6 +864,35 @@ KEYWORD_RULES = [
     ("Sauces & Condiments", ["bruschetta"]),  # tomato-based bruschetta topping mix, e.g. "Fresh By Ela Bruschetta Mix"
     ("Cake Preparations", ["cocao powder"]),  # real misspelling of "cocoa powder" seen in data ("Alce Nero Organic Cocao Powder") -- the correctly-spelled version was already added above
     ("Sports", ["protein donut", "protein bar"]),  # e.g. "Body Attack Protein Donut Blueberry"
+
+    # ---- 24 Aug 2026: 3rd unclassified-bucket pass, from the first run
+    # under the new automatic 3-day schedule. All the small/medium buckets
+    # from the last full report are now fully cleared (Drinks, Laundry,
+    # Baby, Pets, Bakery, Toilet Paper, and a dozen more) -- only the
+    # original 4 large catch-all buckets remain as genuinely large chunks
+    # (Food Cupboard, Health & Beauty, Household, Home & Entertainment).
+    ("Chocolates", ["kinder", "cioccolato"]),  # "Kinder" (Ferrero, WebSearch-confirmed confectionery-only) was flagged in this project's own status notes as a known hard case -- a well-known brand with no generic food word attached; "cioccolato" is Italian for chocolate
+    ("Pasta & Couscous", ["rummo", "tagliatelle"]),  # Rummo (WebSearch-confirmed pasta-only Italian brand); "tagliatelle" is a pasta shape with no brand needed
+    ("Tea", ["rooibos"]),  # herbal tea type, e.g. "Twining's Pure Rooibos" -- Twinings itself needs no rule since "rooibos" alone is enough
+    ("Sauces & Condiments", ["caper"]),  # e.g. "3 Leaves Capers" (WebSearch-confirmed real Maltese-market brand) -- capers have no closer existing category
+
+    ("Crackers, Crispbread & Breadsticks", ["tuc"]),  # WebSearch-confirmed: TUC (LU/Mondelez) is a cracker-only brand -- e.g. "Lu Tuc Bacon" is a bacon-FLAVOURED cracker, not real bacon
+
+    ("Cotton Buds", ["demak up", "septona lady care"]),  # Demak'Up (WebSearch-confirmed cotton-pad-only French brand) and Septona's "Lady Care" cotton-round/cotton-bud line (WebSearch-confirmed)
+    ("Deodorants", ["deo body spray"]),  # e.g. "Charlie Black Deo Body Spray" -- "Deo" and "Spray" aren't adjacent ("Body" sits between them), so the existing "deo spray" phrase doesn't match; Charlie (WebSearch-confirmed Revlon deodorant/body-spray line) needs no separate brand rule since "Deo Body Spray" already identifies it
+    ("Perfume", ["impulse"]),  # WebSearch-confirmed UK body-spray-only brand ("the UK's #1 female body spray brand")
+    ("Sanitary Towels", ["proteggi slip"]),  # Italian for "panty liner" (WebSearch-confirmed via Carrefour Italy's own product pages)
+    ("Adult Nappies", ["incont"]),  # real abbreviation seen in data ("Carrefour Assorb. Incont. Mini") -- the existing "incontinence" keyword doesn't match a shortened form like this
+
+    ("Laundry Tablets", ["dixan"]),  # Dixan (WebSearch-confirmed Henkel detergent-only brand); "Discs" here means predosed detergent capsules, not a softener
+    ("All-purpose Cleaners", ["scrub daddy"]),  # WebSearch-confirmed cleaning-paste-only brand ("PowerPaste")
+    ("Dishwasher Tablets", ["dishwasher capsule"]),  # extends the existing "dishwasher tablet"/"dishwasher pod" phrases -- Astonish (WebSearch-confirmed cleaning-only brand) uses "Capsules" specifically
+
+    ("Household Goods", ["lunchbox", "plastic bin", "rolling pin", "tala", "go travel", "scrub daddy"]),  # "lunchbox" (one word) is the real spacing variant seen in data -- the existing "lunch box" (two words) doesn't match it; Tala (WebSearch-confirmed kitchenware-only brand) and Go Travel (WebSearch-confirmed travel-accessories-only brand, e.g. padlocks) are brand rules
+    ("Hand Tools", ["dekton"]),  # WebSearch-confirmed tools-only brand (drill sets/bits)
+    ("Stationery", ["legami"]),  # WebSearch-confirmed Italian stationery/creative-gifts brand -- their main product line by far is stationery, even though this brand occasionally also sells novelty items like binoculars
+
+    ("Toys & Games", ["barbie", "volleyball", "volley ball", "party hat"]),  # Barbie (Mattel, well-known toys-only brand); "volleyball"/"volley ball" and "party hat" are recreational/party items with no better home
 ]
 
 
