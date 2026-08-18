@@ -21,6 +21,17 @@
 #   2. Manually, whenever you want, by clicking "Run workflow" on the
 #      Actions tab -- useful right before a categorization review, so
 #      the report you're looking at is as fresh as possible.
+#
+# 18 Aug 2026 -- categorize_listings.py now deliberately exits non-zero
+# whenever ANY listing is still unclassified at the end of a run, even
+# though nothing actually went wrong -- categorizing itself always
+# succeeds and writes its results either way. This is on purpose: it's
+# what makes this run show up as "failed" (red X) on the Actions tab and
+# in GitHub's own automatic failure-notification email, which is the
+# simplest way to get notified without setting up a new integration. So:
+# a red X here means "some listings need new keyword rules", not "this
+# workflow is broken" -- check the run's log (or the unclassified-listings
+# artifact below) for what's still open, same as any other run.
 # ============================================================================
 
 name: Categorize listings
