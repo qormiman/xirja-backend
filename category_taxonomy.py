@@ -1660,6 +1660,199 @@ KEYWORD_RULES = [
     ("Sauces & Condiments", ["tamari"]),
     ("Meat Alternatives", ["tempeh", "jackfruit", "crocchette"]),
     ("Cereals", ["supergrain", "organic flake", "hoops"]),
+
+    # 18 Aug 2026 -- EIGHTH bulk sweep. Second round written from real data --
+    # this time from the export taken AFTER the seventh sweep had already run in
+    # production (4,663 -> 1,518 distinct unclassified names), so this is a much
+    # longer tail: less brand-cluster repetition, more one-off Italian own-brand
+    # imports, cleaning products, toys, and stationery. Same discipline as the
+    # seventh sweep: read straight off the real names, avoid bare words that mean
+    # different things in different aisles (kept "sanex" out for the same reason
+    # noted next to the Deodorants rule above -- it spans deodorant/shower gel/
+    # perfume), and cross-checked every new keyword against the existing list
+    # before adding it.
+    ('Beef', ['corned beed', 'corned beef']),
+    ('Chocolates', ['easter bunny', 'gianduiotti', 'gianduitto', 'milky bar', 'milky buttons', 'quality street', 'sperlari', 'pralinis', 'praline']),
+    ('Pasta & Couscous', ['couc cous', 'cous cous', 'coucous', 'medium coucous', 'capellini', 'elicoidali', 'renne rigate', 'spagetti vermicelloni', 'fregola', 'girasoli', 'tortelloni', 'conchiglioni', 'canestrelli']),
+    ('Sauces & Condiments', ['maionese', 'mayoketchup', 'mayomust', 'sugu', 'zalza', 'tadam', 'provista sugu', 'b b q rich', 'bbq glaze', 'barbeque glaze', 'sambal oelek', 'aromat', 'cooking sause', 'cooking sauce', 'grinder']),
+    ('Fresh Pastry', ['cornetto di pastasfoglia', 'sfogliatine', 'pasty']),
+    ('Snacks', ['tortillas', 'wrap tortillas', 'taco shells', 'taco tubs', 'salatini', 'crackers salati', 'twistees', 'smiths bacon flavour fries', 'smiths scampi flavour fries', 'tastees bacon flavour', 'takis', 'hundred & thousands']),
+    ('Sweet Snacks', ['poppets', 'sour patch kids', 'randoms pouch', 'swizzels', 'love hearts', 'squashies', 'party rings', 'hoeny', 'stroop wafel', 'stroop caramel filled waffles', 'gingerbread with caramel', 'sweet pastries', 'sweey chilli']),
+    ('Biscuits', ['branettes', 'vitabakes', 'tosta rica', 'mini crackers salted', 'cocktail crackers', 'healthline']),
+    ('Nuts', ['chestnuts', 'cashewnuts', 'roasted cashewnuts', 'hemp seeds', 'bulgar', 'rye flakes', 'wheat flakes', 'vinefruit']),
+    ('Dried Fruit', ['deglet nour', 'pitted dried dates', 'dates whole']),
+    ('Legumes', ['broadbeans', 'chilli broadbeans']),
+    ('Canned Seafood', ['mussels in brine', 'baby clams in brine', 'mackarel fillets', 'acciughe', 'filetti di acciughe', 'naturally mussels', 'tina pouch']),
+    ('Cake Preparations', ['bake mix for pancake', 'pancake shaker mix', 'buttery mash']),
+    ('Cereals', ['bulgar wheat', 'taboule', 'tasty grains medley']),
+    ('Coffee', ['ciobar zero', 'rich blend', 'capuccino', 'capsule deicaffeinato']),
+    ('Herbs & Spices', ['korma', 'rogan josh', 'japanese style curry', 'green curry', 'red curry', 'massaman curry', 'meal mix country stew', 'mealmaker country stew', 'cottage pie', "shepherd's pie mix"]),
+    ('Sugar', ['carrefour sugar']),
+    ('Honey', ['miel']),
+    ('Vegetables', ['arthicokes hearts', 'quartered & marinated']),
+    ('Fruits', ['composta di fragola', 'pruna']),
+    ('Floor Cleaners', ['floor detergent', 'floor wash', 'floor disnfectant', 'floor disinfectant', 'parquet cleaner', 'laminate & parquet', 'detergent for laminate']),
+    ('All-purpose Cleaners', ['kitchen cleaner', 'bathroom mould spray', 'mould spray cleaner', 'chandelier spray cleaner', 'grease away', 'hob cleaner', 'oven, grill & barbecue', 'hygenical spray', 'disinfecting spray', 'disinfettante', 'sanitizing liquid', 'detergente vetri', 'vetri spray', 'stainless steel cleaner spray', 'stainless steel spray', 'power wash intense', 'glass cleaner', 'leather cleaner', 'hygiene cleaner', 'shower & bath cleaner', 'toilet super powerful', 'brill & refill', '2 in 1 disinfettante', 'actif']),
+    ('Household Goods', ['copper polish', 'silver polish', 'crystal chandelier cleaner', 'scratch cover', 'fridge odour', 'odour absorber', 'moisture trap', 'fire extinguisher', 'thermo bag', 'toilet brush', 'hand brush', 'hanger', 'led golf ball', 'night light', 'socket remote control', '3-pin fused', 'partylights', 'sink mat', 'lunch bag', 'indoor dryer', 'vacuum storage bag', 'extention pole', 'door mat', 'bottle holder', 'cross body', 'steering wheel cover', 'sports backpack', 'disposable bbq', 'bbq grill', 'fire lighter liquid', 'solid starter', 'firewood', 'bbq briquettes', 'bbq tool set', 'bamboo skewers', 'wooden skewers', 'fireflares', 'sparklers', 'super attack', 'super attak', 'contact mastice', 'double sided tape', 'double side tape', 'creative stip', 'rust remover', 'furniture polish']),
+    ('Bathroom & Wc Cleaner', ['harpic', 'grout cleaner', 'black mould', 'mould cleaner', 'damp clear']),
+    ('Drain Unblockers', ['drain blocker', 'kitchen unblock']),
+    ('Dishwasher Tablets', ['autodishwashing', 'dishwashing tablet', 'dishwashing tabs', 'dishwashing pods', 'dishwasher gel', 'machine cleaner']),
+    ('Dish Washing Liquid', ['dishwash power spray', 'dishwashing liqui']),
+    ('Fabric Softener', ['outdoorable', 'fabric conditionr', 'fabric conditioner', 'tumble dryer sheets', 'tumble dry sheets', 'dryer ball', 'ultra ocean breeze', 'ultra spring awakening', 'ultra lavender']),
+    ('Laundry Tablets', ['caps 3in1', 'capsules colour', 'capsules passion bloom', 'capsules peony & rose']),
+    ('Laundry Washing Powders', ['colour protect powder', 'powder bio', 'power bio']),
+    ('Laundry Washing Liquids', ['baby detergent liquid', 'laundry detergent eliminates odor', 'sanitizing laundry detergent']),
+    ('Air Fresheners', ['febreze', 'felce azzurra spray', 'felce azzurra sacchett', 'oudor neutralizer', 'airfreshner', 'spray refill', 'profumo blue', 'profuma pink', 'spruzzatore', 'diffusore', 'spray ambiente', 'incence sticks', 'incensce sticks', 'concentrated gardenia']),
+    ('Insect Killer', ['zigzag', 'anti insect spray', 'eco trap cockroaches', 'fly coils', 'anti spider & web']),
+    ('Stain Removers', ['stain off', 'stain solve']),
+    ('Cloths & Sponges', ['reusable gloves', 'nitrile gloves', 'cotton gloves', 'gloves multi touch', 'microfibre', 'micro fibre', 'scrub mommy', 'dust magnet', 'yellow duster', 'cleaning pads', 'iron cleaning pads']),
+    ('Disposables', ['foiltray', 'foil container', 'roasting bag', 'roasting dish', 'cling wrap', 'non stickpaper', 'flan dish', 'flan dishes', 'pie dish', 'foodsaver bags', 'toliet paper', 'hankies', 'hanky', 'cartapaglia', 'gran tavola scozzersi', 'super soft color']),
+    ('Stationery', ['writing set', 'colour peps', 'compass study holder', 'flexible', 'protractor', 'hilghlighters', 'pastel highlighters', 'clip board', 'transparent plastic folder', 'poster paint', 'jotter', 'blister pen', 'xblister', 'xblisters', 'duplicate book', 'whsmith tags', 'doodlerz gel', 'retractable ball', 'z-grip', 'zb ola ball', 'clay paint', 'sensory art', 'heart style pen']),
+    ('Toys & Games', ['hot wheels', 'matchbox', 'skip bo', 'magnetic letters', 'magnetic numbers', 'play food set', 'pull back', 'farm animals', 'playset dinosauri', 'princess bust', 'real baby', 'doctor set', 'glass marbles', 'construction vehicle', 'assorted cars', 'friction fire engine', 'changeable robot', 'mixer playset', 'combat set', 'racer', 'stacking flowers', 'space balls', 'free wheel trailer']),
+    ('Electrical', ['stand fan', 'cordless black', 'vacuum cleaner', 'powerbank', 'mini chopper', 'high power aa', 'high power aaa', 'instax', 'sodastream']),
+    ('Household Goods', ['slow cooker', 'sandwich tin', 'loaf tin', 'stainless steel fillet knife', 'personal cool bag', 'set of plates', 'double walled', 'strainer', 'citrus squeezer', 'bed sheets', 'fitted sheet', 'pillow case', 'toilet brush & holder', 'air fryer', "dish w'lid", 'dish w/llid', 'rectangular dish', 'cook&store', 'b b q plates', 'square plates 24cm', 'tablecloth', 'bio plates', 'christmas plates', 'pla cups', 'birthday flags', 'streamers', 'gas pump clock', 'thumblers', 'ashtrays', 'long drink glass', 'empire glasses', 'manicare essentials travel bottle', 'bestlock belt', 'massage glove', 'simpl hob']),
+    ('Deodorants', ['nike colors', 'nike ultra', 'nike turquoise vibes', 'nike viral', 'nike trendy', 'bodyspray', 'pot homme', 'shirt protect', 'anti traccia', 'adidas pure game']),
+    ('Sanitary Towels', ['every day normal', 'every day sens', 'everyday liners', 'everyday natura', 'sani pants', 'feminine hygiene']),
+    ('Intimate Care', ['o.b. organic', 'ob organic']),
+    ('Skin Care', ['dermo gel', 'aloa vera dermo', 'anti age serum', 'cleansing miscellar', 'hyaluronic rose serum', 'aqua micellare', 'hydrabomb mask', 'bb crema', 'pure active 3 in 1', 'mask sachet priobotics', 'anti fatigue effect eye mask', 'thalasso scrub', 'blackhead daily scrub', 'cellular epigenetics', 'clear-up strip', 'refreshing toner', 'face & beard wash', 'deep cleaning facewash', 'pure effect clean', 'rose care wipes', 'beauty fluid', 'complete care lotion', 'total effects', 'crema pelle', 'mask cryo jel', 'pure active serum anti imperfections', 'kind to skin', 'radiant booster', 'soothing eye balm', 'snail extract serum', 'face disks', 'eyes & face wipes', 'glysolid', 'labbra tin', 'depilatorie', 'strips arms & legs', 'facial pop up']),
+    ('Body Lotions', ['nivea body', 'nivea nivea bath', 'nivea bath creme', 'nivea bath diamond', 'nivea creme', 'nivea hand 3in1', 'nivea hand age defying', 'nivea handprotective']),
+    ('Shower Gels', ['dove pump', 'infasil', 'bagnodiccia', 'nivea shower', 'shower & shave', 'shower foam', 'lynx shower']),
+    ('Hair Treatment', ['frizz off deep treatment', 'keratina deep treatment', 'keep curl deep treatment', 'wella deluxe wonder', 'wella pure fullness']),
+    ('Hair Styling', ['forming wax top form', 'hair power paste', 'sculpting claytime', 'one stop styler booster']),
+    ('Hair Colouring', ['ritocco perfetto', 'rotocco perfetto', 'biondo', 'natural & easy', 'soft color kit', 'excellence creme', 'col.minisize', 'masch.cap']),
+    ('Perfume', ['aoura collection', 'bespoke legend', 'bossa nova mini mist', 'luscious four set', 'mar e sol set', 'secret love mini mist', 'three for me', 'unique deluxe duo', 'mini galore']),
+    ('Dental Care', ['steradent', 'floss picks']),
+    ('Make Up', ['dischetti struccanti', 'cosmetics applicators']),
+    ('First Aid', ['nose strips', 'mouth tape', 'hand senitiser', 'cleansing hand gel', 'antibacterial hand gel', 'hand sanitizing gel']),
+    ('Shaving Creams', ['after shaving', 'shave lotion', 'shaver gel']),
+    ('Cotton Buds', ['cotton buda']),
+    ('Cloths & Sponges', ['bath glove', 'shower puff']),
+    ('Wine - White', ['fiano', 'trebbiano', 'liebfraumilch', 'malvasia di castelnuovo', 'pouilly fume', 'grechetto', 'arneis', 'anthilia', 'damarino', 'passito', 'lugana', 'torrontes']),
+    ('Wine - Red', ['albarossa', 'sangre de toro', 'santa cristina', 'cannonau', 'aglianico', 'montepulciano', 'montepuliciano', 'camenere', 'carmenere', 'medoc', 'pinto noir', 'sedara', 'famoso rubicone', 'sangria']),
+    ('Wine - Sparkling', ['frizzantissima', 'spritzzoso', 'bollicine', 'fragolino']),
+    ('Spirits - Whisky', ['chivas regal', 'douglas laing', 'famous grouse', 'glen moray', 'glenfiddich', "grant's triple wood", 'togouchi', "jack daniel's coke"]),
+    ('Spirits - Liquers', ['drambuie', 'fernet-branca', 'ameretto', 'cooking brandy', 'hennessy', 'jagermeister', 'amaretto', 'french brandy', 'anisette', 'napoleon brandy', 'grappa', 'ramazzotti', 'sambuca', 'limoncello', 'mediterranean aperitif', 'crema liquor', 'mojito', 'pina colada', 'sex on the beach', 'martini bellini', 'martini extra dry', 'martini fiero']),
+    ('Spirits - Vodka', ['smirnoff ice']),
+    ('Beers', ['corona cero', 'hollandia pilsener', 'leffe brune', 'lowenbrau', 'mahou', 'peroni nastro azzurro', 'stella artois', 'tripel', 'karmeliet']),
+    ('Ciders', ['kopparberg', 'strongbow', 'thatchers']),
+    ('Dilutables', ['elevenfit']),
+    ('Sports', ['gatorade', 'powerade']),
+    ('Energy Drinks', ['hell energy', 'monster hamilton', 'monster lando', 'monster monarch', 'monster pipeline', 'monster ultra', 'shark stimulation', 'wow hydrate']),
+    ('Juices', ['kombucha', 'aloe drink', 'bi frutas', 'vitamin reload', 'morning boost', 'mandarino al limone', 'chinotto', 'mandarino verde', 'aloe verao', 'yippy multi', 'ribena', 'lychee drink', 'mighty burst', 'belvoir farm', 'sanguinello']),
+    ('Carbonated Drinks', ['perrier', 'ice teach', 'elderflower sparkling']),
+    ('Coffee', ['iced coffe', 'frappuccino', 'capuccino']),
+    ('Cold Cuts', ['bacon cubes', 'streaky bacon', 'back bacon', 'collar bacon', 'bacon slices', 'bacon diced', 'antipasto', 'spianata', 'fuet', 'chistorra', 'tapas mix', 'coppa stagionata', 'salametto', 'stripes of pig cheek', 'weisswurst', 'duck mouse', 'jamon serrano', 'pechuga de pavo', 'salam mistret', 'choriza', 'chorizo', 'spareribs', 'tacchino arrosto', 'prositcutto cotto', 'tivoli fumo', 'fiortoast', 'burger slices', 'light slices', 'toast slices']),
+    ('Cheese', ['kefalotiri', 'mimolette', 'dolcelatte', 'parmiggiano reggiano', 'grattugiato', 'rikottina', 'mix di formaggi', 'chesse slices', 'leerdammer', 'gran regale', 'snowdonia', 'irkotta', 'rikotta']),
+    ('Butter', ['lurpak', 'meadow lea', 'utterly butterly', 'vitalite', 'flora light', 'flora plant', 'baking margerine', 'cooking fat', 'kerrygold']),
+    ('Yoghurt', ['greek yog', 'stracciatella', 'straciatella', 'yakult', 'dairy free greek style', 'benecol']),
+    ('Chilled Fish', ['caviar', 'fisch alaska pollock', 'pollock shredded']),
+    ('Sweet Snacks', ['dessert vaniglia', 'cheescake', 'cheesecake']),
+    ('Pasta & Couscous', ['cappellacci', 'cortecce', 'stozzapreti', "capelli d'angelo", 'capelli d angelo', 'elicoidali integrali']),
+    ('Fresh Pastry', ['filo pastry', 'pinsa romana', 'pinsa formato famiglia', 'pinsa margherita']),
+    ('Snacks', ['chicche di patate']),
+    ('Sauces & Condiments', ['humus', 'babaganoush', 'baba ghanoush', 'muhamarra', 'cooking spray', 'vegetarian maionese', 'amatriciana']),
+    ('Sports', ['boost hydrabalance', 'boost magnesium glycinate', 'boost omega', 'boost vitamin d3', 'boost 360 greens powder', 'shilajit', 'protein bites', 'protein salty caramel', 'protein ball', 'protein hots', 'skinny protein', 'protein toast', 'protein dessert', 'protein pancake', 'lipitek', 't booster', 'suplement diety', 'melatonin capsules', 'zma', 'carnitine', 'tribulus', 'zero drinx', 'purasana', 'probar', 'hematogen', 'wheatgrass powder', 'protein pancakes']),
+    ('Meat Alternatives', ['beyond meat burger', 'burger seitan', 'quarter pounder burger', 'vegan bbq tortilla', 'vegetarian lemon bites']),
+    ('Vegetables', ['kimchi']),
+    ('Snacks', ['corn triangles', 'curvies bbq', 'curvies original', 'mini calzone bites']),
+    ('Milk', ['drink oatmeal', 'soia drink', 'bio drink soia']),
+    ('Nuts', ['semi di girasole biologici', 'shelled hemp']),
+    ('Pasta & Couscous', ['elicoidali integrali bio']),
+    ('Crackers, Crispbread & Breadsticks', ['gallette', 'crusca di avena', 'crackers pocket', 'gluten free cracker toast', 'gluten free crackers', 'gluten salinis free', 'gluten-free salti crackers', 'salinis sticks', 'grissin ondulati', 'knacke', 'pita thins']),
+    ('Frozen', ['margherita gluten free', 'senza glutine margerita', 'magnum vegan']),
+    ('Frozen Vegetables', ['stir fry mix']),
+    ('Bread', ['kaiser rolls', 'diet light toast', 'panfette']),
+    ('Cereals', ['porrige gluten free', 'kelkin porrige']),
+    ('Sweet Snacks', ['maxi break', 'gluten free twin bar', 'goccefrolla']),
+    ('Biscuits', ['milly gris', 'schar notes']),
+    ('Chocolates', ['white choclate', 'torras']),
+    ('Vegetables', ['corn baby', 'on the cob', 'sweet potatoe fries', 'frottartna', 'orto primavera']),
+    ('Herbs & Spices', ['bayleaves local fresh', 'rosemary fresh in pots', 'rosemary local fresh', 'thyme local fresh']),
+    ('Meat Alternatives', ['to-fu fresh pack']),
+    ('Cold Cuts', ["welbee's deli", 'welbees deli']),
+    ('Bread', ['margherita pastizzeria style', 'vegan ciabatta', 'vegan panina sesame', 'vegan pastizzi', 'sliced xiklun', 'gluten free wraps', 'pan bauletto bianco', 'bon matin', 'ciabatta rolls', 'pangrati', 'vital mastro panettiere', 'schar wrap', 'incola gluten free breakfast roll']),
+    ('Crackers, Crispbread & Breadsticks', ['schar cracker pocket', 'schar crackers', 'schar salinis', 'schar salti', 'fette croccanti toast', "wellaby's crackers", 'inno foods crackers', 'misura crackers fibextra', 'misura crackers fibrextra', 'misura crackers soia', 'the beginnings hemp seed crackers', 'misura fette fibextra', 'misura fette natura', 'misura fette dolcesenza']),
+    ('Sweet Snacks', ['crostatina', 'schar maxi break', 'schar twin bar', 'pausa ciok', 'quadritos nocciola', 'soft waffles', 'icecream cones', 'salted caramel stick', 'profiteroles', 'ecomil desert', 'waffles part baked', 'tortina privolat', 'barretta cioccolate', 'cornetto dolcesenza', 'cornetti fibrextra', 'cornetto fibrextra']),
+    ('Snacks', ['schar curvies', 'mini calzone bites', 'good & honest salted', 'protien pops']),
+    ('Pasta & Couscous', ['gluten free pappardelle', 'acini di pepe', 'cavatappi', 'concighlie rigate', 'schar lasgane', 'azuki soy capellini', 'edamame capellini', 'vitabella gluten free cous cous']),
+    ('Biscuits', ['schar notes', 'ciambelline']),
+    ('Fresh Pastry', ['schar pinsa margherita', 'shortcrust pastry', 'sweet pastry']),
+    ('Cereals', ['cioko crispies', 'color loops', 'pensa bio oatflakes', 'pensa bio small oatflakes']),
+    ('Sugar', ['dolcificante', 'truvia', 'hermesetas', 'sweetex', 'xilitol', 'zuccheri da mele', 'agave inulin']),
+    ('Honey', ['agave syrop', 'agave syrup']),
+    ('Herbs & Spices', ['pensa bio curry', 'pensa bio tumeric']),
+    ('Dried Fruit', ['pensa bio dates', 'essicata']),
+    ('Oils', ['pensa bio ghi', 'smart organic ghee']),
+    ('Nuts', ['pensa bio hemp seeds', 'pensa bio mixed seeds', 'pensa bio wheat germ', 'linwoods organic multi boost', 'linwoods organic seed mix', 'linwoods shelled hemp']),
+    ('Meat Alternatives', ['pensa bio seitan', 'pensa bio conventional soy steacks', 'pensa bio soy granular']),
+    ('Legumes', ['pensa bio mung beens', 'steamed chckpeas']),
+    ('Vegetables', ['spincah leafs']),
+    ('Sports', ['mogyi fit mix', 'mogyi protein mix', 'melatonina istantanea', 'acai packs', 'vivo d3', 'melinda protein', 'turtle bio protein cluster']),
+    ('Tea', ['pukka organic']),
+    ('Sauces & Condiments', ['servivita', 'tahin', 'tahina']),
+    ('Wine - Red', ['le natruel zero zero red']),
+    ('Wine - White', ['le natruel zero zero white']),
+    ('Chocolates', ['stella chocolat organic']),
+    ('Milk', ['alpro drink coco', 'alpro drink protein soya', 'soya original', 'barista soya', 'senza lattosio', 'soy barista', 'hemp drink sugar free']),
+    ('Sweet Snacks', ['debron', 'de bron', 'dietor sweetenerer', 'vitalp']),
+    ('Cheese', ['hello-v', 'benna rikotta']),
+    ('Chocolates', ['moo free']),
+    ('Milk', ['buttermilk']),
+    ('First Aid', ['iron oral spray', 'ketone test strips']),
+    ('Hair Treatment', ['anti hair loss']),
+    ('Cooking Creams', ['gran cucina']),
+
+    # 18 Aug 2026 -- EIGHTH bulk sweep, second pass: Food Cupboard again, after
+    # measuring the first pass against the real file and finding it still only
+    # 44% closed -- this bucket turned out to be the longest, most scattered tail
+    # of any aisle so far, mostly one-off imported snack/confectionery brands.
+    ("Sweet Snacks", ["flares with hearts", "magdalena", "waffle cones", "large cones", "twister mallows", "ufo crunvhy", "ufo crunchy", "coating", "ufo's bag", "hellema ufo's", "gecchele", "bbq mallows", "tortica original", "kunefe", "midi farci", "ibulli crema", "crunchy dipped", "mix dolci", "pez assorted", "polo original", "polo sugar free", "trefin", "vivil", "flip top", "fliptop", "zero ice blue clean breath", "cinnmon flip top", "slush puppie", "pic nic break"]),
+    ("Chocolates", ["mars best of minis", "mars classic", "mars miniatures", "mars minis", "mars multipack", "mars xtra", "kimifinne", "moo freesas", "moo mini original", "cremino", "tunnock's", "prepacked english creamy", "hyper classicwith cocoa", "cacoa puro", "baileys bar"]),
+    ("Biscuits", ["ringo biscocioc", "ringo vaniglia", "buiscuits with vitamis", "sushki steinhauer", "lemon puff"]),
+    ("Coffee", ["hot chocolatta"]),
+    ("Sauces & Condiments", ["carnation caramel", "caramel topping", "sweet and sour", "mayonnise", "sweet barbecue sticky", "chunky burger", "strong & northern", "kapunata", "mincemeat", "concentrato di pomodoro", "preserved sorrel", "béchamel", "bechamel", "gran mix express", "mayolite"]),
+    ("Stock Cubes", ["star classico", "cubes delicato"]),
+    ("Cereals", ["cruesli", "roasted buckweat", "mornflake"]),
+    ("Snacks", ["ajinomoto", "triangles with corn", "cizmeci", "kanpeki chillie crackers", "lingue croccanti", "mi gor", "sesame sticks", "mini wraps original", "pata grigliata", "speedy flipper", "pata tortilla barbecue", "popz microwave", "exotic cocktail", "shopline tortilla", "piu buono"]),
+    ("Cooking Creams", ["soya cusine"]),
+    ("Oils", ["bakery spray", "fry light", "isio 4", "sania vegetale"]),
+    ("Herbs & Spices", ["erinn", "granules classico", "maggi aroma", "juicy cajun", "vegeta podravka", "crushed chillies"]),
+    ("Meat Alternatives", ["soya chunks"]),
+    ("Cake Preparations", ["pie filling"]),
+    ("Canned Seafood", ["excellence mussels", "mussles in brine"]),
+    ("Crackers, Crispbread & Breadsticks", ["suski malutka", "sweet & savory crackers"]),
+    ("Bread", ["pitta pockets"]),
+    ("Tea", ["peppermint herbal", "maraviglia", "pg tips", "pukka elderberry", "pukka tumeric gold", "melatonina & melissa"]),
+    ("Sports", ["kluth"]),
+    ("Milk", ["koko dairy free"]),
+    ("Sausages", ["american hotdogs jar"]),
+    ("Pasta & Couscous", ["tagliolini"]),
+    ("Legumes", ["lessati"]),
+    ("Vegetables", ["simpl mais", "cipolle in agrodolce", "mix mediterraneo"]),
+    ("Fruits", ["simpl pulp"]),
+    ("Rice", ["tilda tsb"]),
+    ("Household Goods", ["saitaku", "yutaka bamboo"]),
+    ("Juices", ["traditional russian beverage"]),
+
+    # 18 Aug 2026 -- EIGHTH bulk sweep, third pass: Household again, after
+    # measuring the first pass at only 63% closed.
+    ("All-purpose Cleaners", ["expert all in 1", "clean & fresh lime & lemon", "dettol liquid", "multiaction spray", "elbow grease", "cleaning & for polish wood", "steel polish", "lengno pulito", "kilrock black bbq cleaner", "polish spray", "quasar home & pet", "spin active", "power drops pink", "pink staff miracle cleaning", "sterminio", "ver nel dil blu"]),
+    ("Floor Cleaners", ["alpi green pine", "fabuloso", "merito spray", "nelsen lavanda", "parador pine", "top self shining"]),
+    ("Bathroom & Wc Cleaner", ["duck acqua", "duck bluing", "duck coloring", "duck deep action", "duck liquid", "duck marine toilet", "kilrock service"]),
+    ("Drain Unblockers", ["drain cleaner gel"]),
+    ("Dish Washing Liquid", ["dish detergent lemon", "dishwashing detergent lemon"]),
+    ("Dishwasher Tablets", ["ecover dish tablets", "dishwasher cleaner sachet"]),
+    ("Laundry Washing Liquids", ["44washes", "universal 44w", "universale 60washes", "silk & wool liquid", "derh cond", "derh liquid black", "derh mega gel", "laundry detergent colour magic"]),
+    ("Fabric Softener", ["mighty black fabric sheets", "fabric conditoner"]),
+    ("Household Goods", ["portanicensi", "super absorbants", "coral gas", "rectangular basin", "concrete chisel", "superassorbente", "attaccatutto", "epoxy syringe", "pattex silicone", "pledge", "spa lighter", "tonkita", "fil containers"]),
+    ("Disposables", ["ice bags", "diamond foil", "fior di carta", "foil alluminiun container", "pie dishes", "pack containers foil", "catering roasting dishes", "scottex", "asciugatutto", "tana x l", "toastabags"]),
+    ("Hand Tools", ["pwr work blade cutter"]),
+    ("Candles", ["pillar gold", "devotion light"]),
+    ("Cloths & Sponges", ["green shield", "silver duster", "reusable diamond gloves"]),
+    ("Electrical", ["cpro", "corepro led", "tulka powerplus"]),
+    ("Stationery", ["packing tape brown"]),
+    ("Pet Care", ["pet remedy", "pet hair dissolver"]),
+    ("Air Fresheners", ["wexor fabric spray", "spira green"]),
 ]
 
 
@@ -1678,6 +1871,22 @@ KEYWORD_RULES = [
 # below, since it's more specific than the bare "egg" single-word rule it's
 # here to override.
 MULTI_KEYWORD_RULES = [
+    # 18 Aug 2026 -- EIGHTH sweep regression fixes, checked ahead of everything
+    # else for the same reason as the Areon/Conditioner/Candle rules below: each
+    # is a brand or compound phrase that was losing to a shorter, more generic
+    # word elsewhere in the list once this sweep's new keywords were added.
+    # "Gecchele Treccia Cream & Raisins" (a wafer-cone snack) was landing on
+    # Cooking Creams because of the bare "cream" rule.
+    ("Sweet Snacks", ["gecchele"]),
+    # "Water Chestnuts Tin" was landing on Water because of the bare "water"
+    # rule -- water chestnuts are a canned vegetable/nut, not a drink.
+    ("Nuts", ["water chestnuts"]),
+    # "Snowdonia Spiced Tomato & Vodka" is a real Snowdonia cheese flavour
+    # (WebSearch-confirmed: Snowdonia's "Snowdonia Spiced Tomato & Vodka" is a
+    # cheddar), but was landing on Vegetables because of the bare "tomato"
+    # rule -- checked here so the brand wins over the flavour-name words.
+    ("Cheese", ["snowdonia"]),
+
     # Checked before everything else: Areon is a home-fragrance brand, and
     # its products are literally named "Areon Home Perfume ...", so the
     # generic "perfume" rule further down would otherwise claim them for
@@ -3099,6 +3308,23 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Toys & Games', 'Water'}),
 
     frozenset({'Air Fresheners', 'Perfume'}),  # Areon home fragrance -- resolves to Air Fresheners via the Pass-0 rule at the top of MULTI_KEYWORD_RULES
+
+    # 18 Aug 2026 eighth bulk sweep -- reviewed the same way as every block
+    # above: each traced back to the real product name and confirmed the
+    # existing resolution is correct. "Saitaku Nori Snack With Canola Oil"
+    # resolves to Snacks (correct -- it's a nori snack, not cookware or
+    # cooking oil) even though "saitaku" (Household Goods, for their
+    # chopsticks/sushi-mat line) and "canola oil"/"nori" also match.
+    # "Ajinomoto Gyozas Chicken & Vegetables" resolves to Chicken (correct --
+    # chicken is the named protein) even though "ajinomoto" (Snacks) and
+    # "vegetables" also match. "Mop Refill Head Microfibre" resolves to Floor
+    # Cleaners (correct -- it's a mop accessory) even though "microfibre"
+    # (Cloths & Sponges) also matches.
+    frozenset({'Household Goods', 'Oils'}),
+    frozenset({'Herbs & Spices', 'Household Goods'}),
+    frozenset({'Chicken', 'Snacks'}),
+    frozenset({'Snacks', 'Vegetables'}),
+    frozenset({'Cloths & Sponges', 'Floor Cleaners'}),
 }
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
