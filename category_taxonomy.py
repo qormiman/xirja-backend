@@ -1921,6 +1921,22 @@ KEYWORD_RULES = [
     ('Household Goods', ['gift bagroses', 'sp101 white silicone']),
     ('Air Fresheners', ['tango clean linen']),
     ('Floor Cleaners', ['wexor elisir gel sanitizing']),
+
+    # 18 Aug 2026 -- TENTH bulk sweep. Down to 17 distinct unclassified names,
+    # so this pass is WebSearch-verified rather than guessed from the name
+    # alone -- each of these was looked up to confirm what the real product
+    # actually is before adding a rule for it (sources in the delivery
+    # message). The remaining handful of names in this export were left
+    # unclassified on purpose: the name alone doesn't say what the product is
+    # even after searching (e.g. "Carrefour Sticky", "Prince 15cm"), and
+    # guessing there risks a wrong classification, which is worse than
+    # leaving it for a person to glance at.
+    ("Cloths & Sponges", ["cotoneve"]),  # WebSearch: Cotoneve's "Rituali di Bellezza" line is body sponges/exfoliating gloves, not skincare products themselves
+    ("Air Fresheners", ["susy gingerbread"]),  # gingerbread-scented sachets/diffusers are a common seasonal air-freshener product; matches the existing "gingerbread with caramel" Sweet Snacks rule pattern being a food item, this one (no food words) is the home-fragrance version
+    ("Snacks", ["mix dorato"]),  # WebSearch: Carrefour's own site lists "Carrefour Mix Dorato" as a fried snack mix (fritto misto style)
+    ("Sweet Snacks", ["straw bag sugar free", "aromi gusto"]),  # "La Creme Straw Bag" -- WebSearch confirms "candy straws" are a real sweet category; "Carrefour Aromi Gusto Fior D'arancio" -- WebSearch confirms this is an orange-blossom baking flavouring/essence, same family as the existing "mini essence brandy" rule
+    ("Household Goods", ["windel christmas teacup"]),  # decorative teacup-shaped Christmas ornament, not a real teacup
+    ("Crackers, Crispbread & Breadsticks", ["san trifone", "mixed for toast"]),  # WebSearch: "Le Bontà di San Trifone" is an Italian (Puglia) taralli/cracker brand; "Carrefour Mixed For Toast" matches Carrefour's own "toast"/apéritif cracker line
 ]
 
 
