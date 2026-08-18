@@ -390,6 +390,26 @@ def main():
             ranked_accepted = sorted(accepted_collisions.items(), key=lambda kv: kv[1], reverse=True)
             for (category_a, category_b), count in ranked_accepted:
                 print(f"    {count:>5}  {category_a} / {category_b}")
+
+        if total_unclassified > 0:
+            # 18 Aug 2026 -- deliberately exit non-zero here even though
+            # nothing actually went wrong: this makes the GitHub Actions run
+            # show up as "failed", which is what makes GitHub send its
+            # automatic failure-notification email (same email as the GitHub
+            # account) -- no new secrets, no new integration, just reusing
+            # the notification GitHub already sends for free. Requested
+            # 18 Aug 2026 so unclassified items get flagged automatically
+            # instead of only being noticed the next time someone happens to
+            # read a run's log. Everything above this point (the categorize
+            # step itself, the full unclassified-listings.txt export) has
+            # already completed and been written by the time this exits, so
+            # nothing is lost or skipped -- this only changes the run's
+            # final status, not its behaviour.
+            print(f"\nExiting non-zero so this run shows as \"failed\" and GitHub emails a "
+                  f"notification -- {total_unclassified} listing(s) still need keyword rules; "
+                  f"see the report above and the unclassified_listings.txt artifact.",
+                  file=sys.stderr)
+            sys.exit(1)
     except Exception as exc:  # noqa: BLE001 -- surface any failure plainly, then exit non-zero
         # Real bug found on 24 Aug 2026: if the connection is already dead
         # (e.g. the OperationalError above, on its second/final attempt),
