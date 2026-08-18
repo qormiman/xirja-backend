@@ -1937,6 +1937,29 @@ KEYWORD_RULES = [
     ("Sweet Snacks", ["straw bag sugar free", "aromi gusto"]),  # "La Creme Straw Bag" -- WebSearch confirms "candy straws" are a real sweet category; "Carrefour Aromi Gusto Fior D'arancio" -- WebSearch confirms this is an orange-blossom baking flavouring/essence, same family as the existing "mini essence brandy" rule
     ("Household Goods", ["windel christmas teacup"]),  # decorative teacup-shaped Christmas ornament, not a real teacup
     ("Crackers, Crispbread & Breadsticks", ["san trifone", "mixed for toast"]),  # WebSearch: "Le Bontà di San Trifone" is an Italian (Puglia) taralli/cracker brand; "Carrefour Mixed For Toast" matches Carrefour's own "toast"/apéritif cracker line
+
+    # 18 Aug 2026 -- user-confirmed: "Carrefour Sticky" is the same kind of
+    # savoury snack as Twistees (Snacks), not a food-cupboard topping/spread.
+    ("Snacks", ["carrefour sticky"]),
+
+    # 18 Aug 2026 -- user-confirmed (photo of a Hot Wheels City playset):
+    # "Hochwald City Explorer Ast" is a toy, not a Hochwald dairy product.
+    ("Toys & Games", ["hochwald city explorer"]),
+
+    # 18 Aug 2026 -- user-confirmed (photo of the box): "Bdl Mohhok Hemm" is
+    # "Mohhok Hemm", a Maltese quiz/board game (KWIZZ).
+    ("Toys & Games", ["mohhok hemm"]),
+
+    # 18 Aug 2026 -- user-confirmed (photo): "Prince 15cm" is a TY Beanie Boo
+    # plush soft toy (a husky named "Prince"), not a real-world 15cm item.
+    ("Toys & Games", ["prince 15cm"]),
+
+    # 18 Aug 2026 -- user-confirmed with photos, the last four names in this
+    # export:
+    ("Household Goods", ["la casa delle cose delta"]),  # a hand/tea towel
+    ("Stationery", ["tiggi & bird", "shoppig list"]),  # a branded notepad
+    ("Hair Styling", ["lisgel"]),  # "Lisgel Wet -- Lucidante Effetto Bagnato" is an Italian wet-look hair styling gel
+    ("Shaving Creams", ["swiss disp extreme activ"]),  # disposable razors (Wilkinson Sword-style multipack) -- closest existing category, this taxonomy has no separate Razors bucket
 ]
 
 
