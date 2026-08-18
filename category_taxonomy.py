@@ -1271,6 +1271,55 @@ KEYWORD_RULES = [
     ("Fruits", ["berry", "berries", "avocado", "coconut", "mango", "papaya", "pomegranate", "kiwi", "melon", "pineapple"]),
     ("Vegetables", ["mangetout", "asparagus", "spinach", "courgette", "aubergine", "broccoli", "cauliflower", "leek", "celery", "beetroot", "radish", "rocket", "lettuce", "cabbage"]),
     ("Juices", ["freshly squeezed", "just squeeze"]),
+
+    # ========================================================================
+    # 18 Aug 2026 -- FOURTH bulk sweep.
+    #
+    # After the aisle fallback and the third sweep, the run report is down to
+    # the four Welbee's catch-alls and nothing else of size, so this round is
+    # aimed squarely at them. It is the most Italian- and Maltese-heavy block
+    # in the file, because that is what is left at this depth: Carrefour's
+    # own-brand labels are largely Italian ("collutorio", "assorbenti",
+    # "salvaslip", "docciaschiuma", "spazzolino", "guanti", "spugna"), and a
+    # handful of items are Maltese ("gulepp tal-harrub" -- carob syrup).
+    # ========================================================================
+
+    # ---- Food Cupboard ----
+    ("Coffee", ["caffe", "arabica", "robusta"]),
+    ("Rice", ["riso", "carnaroli", "risotto rice"]),
+    ("Herbs & Spices", ["garam masala", "masala", "tandoori", "za atar", "sumac", "five spice", "dried porcini", "dried mushroom", "ras el hanout"]),
+    ("Dilutables", ["gulepp"]),  # Maltese for a thick fruit/carob syrup, drunk diluted
+    ("Milk", ["milk powder", "powdered milk", "regilait", "vitamilk", "evaporated milk", "condensed milk"]),
+    ("Snacks", ["bankok", "bar bite", "prawn cracker", "corn puff", "cheese puff", "snack bar"]),
+    ("Biscuits", ["dolcerie", "veneziane"]),
+    ("Cereals", ["buckwheat", "millet", "amaranth", "sorghum", "freekeh", "groat"]),
+    ("Olive Oil", ["tesoro del rio", "ext virgin", "extr vrg", "olio extravergine", "extravergine"]),
+
+    # ---- Health & Beauty ----
+    ("Mouthwash", ["collutorio"]),
+    ("Toothbrushes", ["spazzolino"]),
+    ("Hair & Nail Accessories", ["nail polisher", "clic clac", "hair slide", "hair pin", "hair claw"]),
+    ("Sanitary Towels", ["absorbent", "assorbenti", "salvaslip", "double dry"]),
+    ("Deodorants", ["deodorante", "antitraspirante", "sure"]),  # bare "sure" claimed for the deodorant brand: in this data the word only ever appears as the brand, never as the ordinary English adjective
+    ("Shower Gels", ["docciaschiuma", "doccia schiuma", "bagnodoccia", "bagno doccia"]),
+    ("Skin Care", ["latte detergente", "crema viso", "struccante", "acqua micellare"]),
+    ("Body Lotions", ["crema corpo", "crema mani"]),
+
+    # ---- Household ----
+    ("All-purpose Cleaners", ["ammonia", "ammoniaca", "multiuso"]),
+    ("Drain Unblockers", ["drain away", "disgorgante"]),
+    ("Cloths & Sponges", ["spugna", "strofinaccio", "panno"]),
+    ("Disposables", ["koolsak", "degradable", "sacchi"]),
+    ("Fabric Softener", ["comfort"]),  # the Unilever softener brand; the Pass-0 rules below protect the handful of products where "comfort" is genuinely just the English word
+
+    # ---- Home & Entertainment ----
+    ("Stationery", ["refill pad", "asticky", "a4 file", "lever arch", "box file", "document wallet", "display book", "index card", "pencil box", "school bag", "subject book", "writing pad"]),
+    ("Hand Tools", ["tesa", "hand tearable"]),
+    ("Household Goods", [
+        "mirror", "picnic set", "shoe lace", "shoelace", "insole",
+        "gel liner", "shopping bag", "guanti", "scopa", "paletta",
+        "secchio", "stendibiancheria", "tovaglia",
+    ]),
 ]
 
 
@@ -2283,7 +2332,21 @@ MULTI_KEYWORD_RULES = [
     ("Pasta & Couscous", ["egg pasta"]),                  # "Borgo De Medici Egg Pasta Pistacchio" was landing on Eggs
 
     # 18 Aug 2026 third bulk sweep.
-    ("Shower Gels", ["dove", "bath"]),  # "Dove Bath Seta Preziosa" -- bare "bath" is far too generic on its own (bath salts, bath towel, bath mat, bathroom cleaner), so it only counts alongside the brand  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
+    ("Shower Gels", ["dove", "bath"]),
+
+    # 18 Aug 2026 fourth bulk sweep -- Pass-0 guards for the two broad words
+    # this round claims ("comfort" for the softener brand, "ultra thin" for
+    # sanitary towels), plus names whose defining words sit apart.
+    ("Intimate Care", ["condom"]),                        # keeps "Condoms Ultra Thin" off the new Sanitary Towels phrase
+    ("Household Goods", ["gel liner"]),                   # "Shoes' Xpert Woman Extreme Comfort Gel Liner Cushions" -- insoles, not fabric softener
+    ("Household Goods", ["shoes xpert"]),                 # same brand, same reason
+    ("Household Goods", ["lock lace"]),                   # "Sport Fast Lock Laces"
+    ("Skin Care", ["septona", "wipe"]),                   # "Septona Antibacterial Orage Wipes" -- a personal wipe, not a surface cleaner
+    ("Toothbrushes", ["colgate", "medium"]),              # "Colgate Extra Clean Medium" -- bristle firmness, i.e. a brush not a paste
+    ("Toothbrushes", ["colgate", "soft"]),
+    ("Toothbrushes", ["colgate", "hard"]),
+    ("Sanitary Towels", ["ultra thin", "absorbent"]),
+    ("Cloths & Sponges", ["cloth", "absorbent"]),      # "CAR CLOTH SUPER WATER ABSORBENT" -- absorbency is a cloth's selling point too, so a cloth that says "absorbent" stays a cloth  # "Dove Bath Seta Preziosa" -- bare "bath" is far too generic on its own (bath salts, bath towel, bath mat, bathroom cleaner), so it only counts alongside the brand  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
     ("Pasta & Couscous", ["pasta natura"]),
     ("Perfume", ["impulse"]),  # keeps the earlier round's deliberate Impulse=Perfume decision intact now that "body spray" is a Deodorants phrase (Pass 1 phrases beat Pass 2 bare words, so Impulse needs Pass 0 to hold its place)  # gluten-free pasta brand whose product names say what the pasta is MADE of ("Corn Flour", "Rice") -- needs Pass 0 so those ingredient words don't win  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
 ]
@@ -2602,8 +2665,15 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Fruits', 'Legumes'}),
     frozenset({'Fruits', 'Sauces & Condiments'}),
     frozenset({'Jelly', 'Sweet Snacks'}),
-}
 
+    # 18 Aug 2026 fourth bulk sweep -- reviewed the same way; all four land
+    # correctly already (buckwheat flour pasta, a millet dog food, a denture
+    # cream that mentions "comfort", an absorbent car cloth).
+    frozenset({'Cereals', 'Flour'}),
+    frozenset({'Cereals', 'Lamb'}),
+    frozenset({'Cooking Creams', 'Fabric Softener'}),
+    frozenset({'Sanitary Towels', 'Water'}),
+}
 
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
