@@ -1197,6 +1197,80 @@ KEYWORD_RULES = [
         "car shampoo", "wiper blade",
     ]),  # "vileda" spans mops, cloths, sponges and buckets -- all non-consumable cleaning equipment, which is what Household Goods is for here; the more specific words above (e.g. bare "sponge") still win where they apply
     ("Floor Cleaners", ["mocio", "steam mop"]),
+
+    # ========================================================================
+    # 18 Aug 2026 -- THIRD bulk sweep.
+    #
+    # This round paired with a structural change (LAST_RESORT_CATEGORY_MAP,
+    # further down this file), which handles every bucket whose own name
+    # states the category -- "Laundry Detergent", "Tampons", "Fresh Bread".
+    # What's left over, and what this block is for, are the buckets where the
+    # aisle genuinely tells you nothing: Welbee's four catch-alls plus its
+    # "Drinks" and "Chilled Food", and Greens' dietary aisles ("Gluten Free",
+    # "Organic", "Low Fat"), which are a LABEL rather than a product type and
+    # hold milk, pasta, biscuits and yoghurt side by side.
+    #
+    # Heavier on Italian than earlier rounds, because that's what the real
+    # data looks like at this depth -- "salame", "provola", "bevanda",
+    # "frollino", "caserecce", "veline" -- along with several misspellings
+    # that are genuinely in the source data ("Toohtbrush", "Breadcrubs",
+    # "Alluminum", "Canneloni", "Insted").
+    # ========================================================================
+
+    # ---- Wine, by grape and style. The bottles often name nothing else. ----
+    ("Wine - Red", ["appassimento", "nero d avola", "cabernet", "malbec", "merlot", "chianti", "primitivo", "montepulciano", "valpolicella", "zinfandel", "syrah", "sangiovese", "tempranillo", "rioja", "barolo", "nebbiolo", "negroamaro"]),
+    ("Wine - White", ["chardonnay", "sauvignon", "pinot", "riesling", "moscato", "vermentino", "catarratto", "gewurztraminer", "grillo", "verdicchio", "soave", "gavi"]),
+    ("Wine - Sparkling", ["prosecco", "spumante", "cava", "franciacorta"]),
+    ("Beers", ["shandy"]),
+    ("Dilutables", ["bolero", "instant drink", "instant mix", "insted drink"]),  # "Insted" is a real misspelling on Bolero's own listings
+
+    # ---- Food Cupboard leftovers ----
+    ("Biscuits", ["macaron", "frollino", "frollini", "bucaneve", "gullon", "doria", "galbusera", "biscottate"]),
+    ("Pasta & Couscous", ["radiatori", "caserecce", "canneloni", "tortiglioni", "casarecce", "saltimbocca"]),
+    ("Sugar", ["xylitol", "cane sugar", "white sugar", "raw sugar", "date sugar", "sugar cube", "zucchero"]),  # deliberately NOT the bare word "sugar": in this data it appears overwhelmingly in "Sugar Free"/"No Added Sugar" labels on biscuits, sweets and drinks, so it flagged those as sugar rather than what they are
+    ("Coffee", ["horlicks", "gran caffe", "ground bean", "coffee bean", "macchiato"]),
+    ("Nuts", ["hazelnut", "flaxseed", "milled flax", "nut kernel"]),
+    ("Sweet Snacks", ["candies", "dietorelle", "choccy", "chocolate button"]),
+    ("Cereals", ["oat", "farro", "spelt", "multigrain", "muesli bar"]),
+    ("Crackers, Crispbread & Breadsticks", ["rusk", "protein thin", "tarallini", "taralli", "fette biscottate"]),
+    ("Legumes", ["aduki", "adzuki", "borlotti bean", "bean sprout"]),
+    ("Cake Preparations", ["agar agar", "brownie mix", "muffin mix"]),
+    ("Cakes", ["brownie", "crostatino", "crostata", "muffin"]),
+    ("Sauces & Condiments", ["curry paste", "date paste", "tomato paste", "harissa"]),
+    ("Flour", ["breadcrub"]),  # real misspelling of "breadcrumbs" in the source data
+    ("Sports", ["enervit", "iron maxx", "proteccino", "maca powder", "whey", "creatine"]),
+
+    # ---- Health & Beauty leftovers ----
+    ("Hand Wash Liquids", ["handwash", "hand wash", "beauty bar", "sapone liquido", "liquid soap"]),
+    ("Toothbrushes", ["toohtbrush", "tooth brush"]),  # "Toohtbrush" is how Colgate's listing is really spelled
+    ("Hair & Nail Accessories", ["manicure", "pedicure", "nail art", "press on nail"]),
+    ("Skin Care", ["wet wipe", "facial wipe", "cleansing wipe"]),  # deliberately NOT "make up wipe" -- the shorter Make Up keyword "make up" shadows it, so it could never fire (caught by audit_keyword_rules.py)
+
+    # ---- Household leftovers ----
+    ("Bathroom & Wc Cleaner", ["wc net", "wc brill", "wc disincrostante", "anticalcare"]),
+    ("Electrical", ["gls bulb", "screw cap", "e27", "e14", "b22", "varta", "bayonet"]),
+    ("Disposables", ["veline", "fazzoletti", "alluminum", "alluminium", "carta igienica", "salviette"]),
+    ("Insect Killer", ["mosquitoes", "zanzare", "raid", "topicida", "antipuntura"]),
+    ("All-purpose Cleaners", ["mildew", "smacchia", "brasso", "silvo"]),
+    ("Household Goods", [
+        "peg", "kitchen scale", "photo frame", "picture frame", "pedrini",
+        "pastry scraper", "scraper", "bowl", "pot holder", "spoon",
+        "cutter knife", "serving spoon", "wooden spoon",
+    ]),
+
+    # ---- Chilled / dairy-free / vegetarian leftovers ----
+    ("Cold Cuts", ["salame", "salchichon", "peperami", "mortadella", "bresaola", "speck"]),
+    ("Cheese", ["provola", "violife", "cheeselet", "gbejniet", "scamorza", "caciotta", "stracchino"]),
+    ("Butter", ["lard", "strutto"]),
+    ("Milk", ["milkshake", "bevanda", "mandorla", "latte di", "plant drink"]),
+    ("Yoghurt", ["yofu", "liegeois", "skyr"]),
+    ("Cooking Creams", ["alpro cuisine", "panna da cucina"]),
+    ("Chilled Fish", ["surimi", "chele di"]),
+
+    # ---- Fruit & veg counter ----
+    ("Fruits", ["berry", "berries", "avocado", "coconut", "mango", "papaya", "pomegranate", "kiwi", "melon", "pineapple"]),
+    ("Vegetables", ["mangetout", "asparagus", "spinach", "courgette", "aubergine", "broccoli", "cauliflower", "leek", "celery", "beetroot", "radish", "rocket", "lettuce", "cabbage"]),
+    ("Juices", ["freshly squeezed", "just squeeze"]),
 ]
 
 
@@ -2206,7 +2280,10 @@ MULTI_KEYWORD_RULES = [
     ("First Aid", ["athletes foot"]),                     # "Athletes Foot Cream" was landing on Body Lotions
     ("Pasta & Couscous", ["fusilli"]),                    # pasta shapes are unambiguous, and were losing to ingredient words
     ("Pasta & Couscous", ["fusili"]),                     # real one-L spelling in the source data
-    ("Pasta & Couscous", ["egg pasta"]),                  # "Borgo De Medici Egg Pasta Pistacchio" was landing on Eggs  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
+    ("Pasta & Couscous", ["egg pasta"]),                  # "Borgo De Medici Egg Pasta Pistacchio" was landing on Eggs
+
+    # 18 Aug 2026 third bulk sweep.
+    ("Shower Gels", ["dove", "bath"]),  # "Dove Bath Seta Preziosa" -- bare "bath" is far too generic on its own (bath salts, bath towel, bath mat, bathroom cleaner), so it only counts alongside the brand  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
     ("Pasta & Couscous", ["pasta natura"]),
     ("Perfume", ["impulse"]),  # keeps the earlier round's deliberate Impulse=Perfume decision intact now that "body spray" is a Deodorants phrase (Pass 1 phrases beat Pass 2 bare words, so Impulse needs Pass 0 to hold its place)  # gluten-free pasta brand whose product names say what the pasta is MADE of ("Corn Flour", "Rice") -- needs Pass 0 so those ingredient words don't win  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
 ]
@@ -2509,7 +2586,25 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Household Goods', 'Pasta & Couscous'}),
     frozenset({'Nuts', 'Sauces & Condiments'}),
     frozenset({'Tea', 'Yoghurt'}),
+
+    # 18 Aug 2026 third bulk sweep -- same review again: each traced back to
+    # the real product names behind it and confirmed to land correctly (a
+    # macaron liqueur, an oat shampoo, an avocado hair conditioner, a
+    # coconut lentil cake). Listed so the run report stays readable.
+    frozenset({'Biscuits', 'Spirits - Liquers'}),
+    frozenset({'Cake Preparations', 'Fruits'}),
+    frozenset({'Cereals', 'Cooking Creams'}),
+    frozenset({'Cereals', 'Crackers, Crispbread & Breadsticks'}),
+    frozenset({'Cereals', 'Perfume'}),
+    frozenset({'Cheese', 'Sweet Snacks'}),
+    frozenset({'Conditioners', 'Fruits'}),
+    frozenset({'Frozen', 'Nuts'}),
+    frozenset({'Fruits', 'Legumes'}),
+    frozenset({'Fruits', 'Sauces & Condiments'}),
+    frozenset({'Jelly', 'Sweet Snacks'}),
 }
+
+
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
     # in welbees_crawler.py, where a product name was extracted straight
@@ -2670,6 +2765,109 @@ def matching_categories_by_name(product_name):
     return best_tier
 
 
+# ============================================================================
+# Last-resort chain-category fallback.
+#
+# The maps above (PAVI_CATEGORY_MAP / GREENS_CATEGORY_MAP) are applied BEFORE
+# the product name is looked at, which makes them a strong claim: everything
+# in that bucket IS this category. That's right for a bucket like "Rice", and
+# wrong for a bucket like "Laundry Detergent", which holds liquids, powders,
+# capsules and dryer sheets -- mapping the whole bucket would take "Ariel
+# Pods" away from Laundry Tablets, which the name already gets right.
+#
+# This map is the opposite claim, and a much weaker one: only reached when
+# the product NAME matched nothing at all, so it can never overrule a good
+# name match. It answers "we can't tell from the name -- what aisle was it
+# on?", which for these buckets is a far better answer than leaving the
+# listing uncategorised.
+#
+# Keyed on the exact (store_id, chain_category) string as it appears in the
+# database. Only buckets whose own name states the category are listed --
+# deliberately NOT here are the genuinely mixed ones, where the aisle says
+# nothing useful about what the product is:
+#   * Welbee's "Food Cupboard", "Health & Beauty", "Household",
+#     "Home & Entertainment", "Drinks", "Chilled Food", "Healthy Section"
+#   * Greens' "Gluten Free Products", "Organic Food", "Dietary Food",
+#     "Lactose Free Products", "Low Fat Products" -- a dietary label, not a
+#     product type; the aisle holds milk, pasta, biscuits and yoghurt alike.
+# Those still need real keywords, and still show up in the run report until
+# they get them.
+# ============================================================================
+LAST_RESORT_CATEGORY_MAP = {
+    # ---- Greens: laundry ----
+    ("greens", "Household / Laundry Products / Laundry Detergent"): "Laundry Washing Liquids",
+    ("greens", "Household / Laundry Products / Laundry Conditioner"): "Fabric Softener",
+    ("greens", "Household / Laundry Products / Laundry Freshner"): "Fabric Softener",
+    ("greens", "Household / Laundry Products / Laundry Detergent Sheets"): "Laundry Tablets",
+    ("greens", "Household / Laundry Products / Laundry Stain Remover"): "Stain Removers",
+    ("greens", "Household / Laundry Products / Laundry Color Run Remover"): "Stain Removers",
+    ("greens", "Household / Laundry Products / Laundry Color Dye"): "Stain Removers",
+    ("greens", "Household / Laundry Products / Laundry Whitener"): "Stain Removers",
+    ("greens", "Household / Laundry Products / Laundry Bleach"): "Stain Removers",
+    ("greens", "Household / Laundry Products / Laundry Starch"): "Stain Removers",
+
+    # ---- Greens: cleaning ----
+    ("greens", "Household / Bathroom Care And Essentials / Bathroom Cleaning Products"): "Bathroom & Wc Cleaner",
+    ("greens", "Household / Bathroom Care And Essentials / Toilet Refreshner"): "Bathroom & Wc Cleaner",
+    ("greens", "Household / Household Care And Essentials / Floor Wash And Bleach"): "Floor Cleaners",
+    ("greens", "Household / Household Care And Essentials / Metal Polish"): "All-purpose Cleaners",
+    ("greens", "Household / Household Care And Essentials / Carpet Cleaners"): "All-purpose Cleaners",
+    ("greens", "Household / Household Care And Essentials / Window And Glass Cleaner"): "All-purpose Cleaners",
+    ("greens", "Household / Household Care and Essentials / Cleaning Wipes"): "All-purpose Cleaners",  # lowercase "and" is how this one really appears
+    ("greens", "Household / Household Care And Essentials / Insect Pest Control"): "Insect Killer",
+    ("greens", "Household / Household Care And Essentials / Degradable Refuse Bags"): "Disposables",
+    ("greens", "Household / Household Care And Essentials / First Aid"): "First Aid",
+    ("greens", "Household / Household Care And Essentials / Candles"): "Candles",
+    ("greens", "Household / Household Care And Essentials / Travel Accessories"): "Household Goods",
+    ("greens", "Household / Household Care And Essentials / Humidity Absorbers"): "Household Goods",
+    ("greens", "Household / Bathroom Care And Essentials / Bath Towels And Face Cloths"): "Household Goods",
+
+    # ---- Greens: personal care ----
+    ("greens", "Personal Care / Bathroom Care And Essentials / Tampons"): "Intimate Care",  # matches the existing bare "tampon" keyword, which also points at Intimate Care
+    ("greens", "Personal Care / Bathroom Care And Essentials / Hand Soap"): "Hand Wash Liquids",
+    ("greens", "Personal Care / Bathroom Care And Essentials / Toilet Paper"): "Disposables",
+    ("greens", "Personal Care / Personal Hygiene And Care / Cosmetics"): "Make Up",
+    ("greens", "Personal Care / Personal Hygiene And Care / Hair Shampoo And Conditioners"): "Shampoos",
+    ("greens", "Personal Care / Personal Hygiene And Care / Perfumes"): "Perfume",
+    ("greens", "Personal Care / Personal Hygiene And Care / Cotton Wool And Buds"): "Cotton Buds",
+    ("greens", "Personal Care / Personal Hygiene And Care / Tissues"): "Disposables",
+    ("greens", "Personal Care / Personal Hygiene And Care / Shoe Care"): "Household Goods",
+    ("greens", "Personal Care / Personal Hygiene And Care / Foot Care"): "First Aid",
+    ("greens", "Personal Care / Personal Hygiene And Care / Condoms"): "Intimate Care",
+    ("greens", "Personal Care / Personal Hygiene And Care / Sun Lotion"): "Skin Care",
+    ("greens", "Personal Care / Personal Hygiene And Care / Wipes"): "Skin Care",  # this bucket is facial/cleansing wipes -- the odd alcohol or spectacle wipe is the exception, not the rule
+
+    # ---- Greens: food ----
+    ("greens", "Bakery / Bread / Fresh Bread"): "Bread",
+    ("greens", "Bakery / Bread / Sliced White Bread"): "Bread",
+    ("greens", "Bakery / Bread / Packed White Bread"): "Bread",
+    ("greens", "Bakery / Bread / Pita And Nan Bread"): "Bread",
+    ("greens", "Bakery / Bread / Bruschetta And Croutons"): "Crackers, Crispbread & Breadsticks",
+    ("greens", "Bakery / Bread / Bread Crumbs"): "Flour",
+    ("greens", "Confectionery / Bread / Wraps"): "Bread",
+    ("greens", "Health / Vegetarian / Vegetarian Products"): "Meat Alternatives",
+    ("greens", "Health / Vegetarian / Chilled Vegetarian Products"): "Meat Alternatives",
+    ("greens", "Health / Gluten Free / Gluten Free Pasta"): "Pasta & Couscous",
+    ("greens", "Groceries / Oil And Vinegar / Other Oil"): "Oils",
+    ("greens", "Groceries / Oil And Vinegar / Olive Oil"): "Olive Oil",
+    ("greens", "Chilled And Dairy / Milk And Eggs / Eggs"): "Eggs",
+    ("greens", "Groceries / Milk And Eggs / Milk"): "Milk",
+
+    # ---- Welbee's: the few buckets that ARE a product type ----
+    ("welbees", "Frozen Food"): "Frozen",
+    ("welbees", "Tobacco"): "Tobacco & Tobacco Accessories",
+    ("welbees", "Bakery"): "Bread",
+    ("welbees", "Clothes & Accessories"): "Clothes",
+    ("welbees", "Pets"): "Pet Food",
+    ("welbees", "Baby"): "Baby Essentials",
+    ("welbees", "Fresh Fish Counter"): "Chilled Fish",
+
+    # ---- PAVI/PAMA ----
+    ("pavipama", "COTTON BUDS / COTTON PADS"): "Cotton Buds",
+    ("pavipama", "OILS"): "Oils",
+}
+
+
 def classify_listing(store_id, chain_category, chain_product_name):
     """The single entry point categorize_listings.py calls per listing.
     Returns a canonical category name, or None if nothing could classify
@@ -2699,4 +2897,16 @@ def classify_listing(store_id, chain_category, chain_product_name):
     # Welbee's always lands here (its categories are too broad to map
     # directly), as does anything above that fell through or was flagged
     # KEYWORD_FALLBACK.
-    return classify_by_name(chain_product_name)
+    by_name = classify_by_name(chain_product_name)
+    if by_name is not None:
+        return by_name
+
+    # Nothing in the name matched. Before giving up, fall back to the aisle
+    # the product was found on -- but only for the buckets whose own name
+    # states the category (see LAST_RESORT_CATEGORY_MAP). Deliberately last:
+    # a real name match always wins, so this can only ever fill in blanks,
+    # never overrule something already decided.
+    if chain_category:
+        return LAST_RESORT_CATEGORY_MAP.get((store_id, chain_category.strip()))
+
+    return None
