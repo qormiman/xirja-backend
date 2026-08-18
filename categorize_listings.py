@@ -59,7 +59,7 @@ from product_matcher import (
     get_connection,
     run_with_timeout,
 )
-from category_taxonomy import classify_listing, matching_categories_by_name
+from category_taxonomy import classify_listing, matching_categories_by_name, KNOWN_ACCEPTED_COLLISIONS
 
 
 def fetch_listings(cur):
@@ -124,13 +124,23 @@ def find_category_collisions(listings):
     shape of "noise" pair recurring report after report for categories
     that were never actually broken.
 
-    Returns (pair_counts, pair_examples): pair_counts maps a sorted
-    (category_a, category_b) tuple to how many listings triggered it;
-    pair_examples maps the same tuple to up to 3 real product names, so
+    Also skips a pair entirely when it's listed in category_taxonomy.py's
+    KNOWN_ACCEPTED_COLLISIONS -- a real product that genuinely, correctly
+    matches both categories at once (e.g. "chicken & salmon" cat food),
+    already individually reviewed and decided, not a bug. Still counted
+    (see accepted_counts below) so nothing is silently hidden, just not
+    re-printed with examples every single run -- see that constant's own
+    comment for the full reasoning and the 17 Aug 2026 feedback behind it.
+
+    Returns (pair_counts, pair_examples, accepted_counts): pair_counts maps
+    a sorted (category_a, category_b) tuple to how many listings triggered
+    it; pair_examples maps the same tuple to up to 3 real product names, so
     the report below can show *why* a pair is flagged, not just that it
-    was."""
+    was; accepted_counts maps a KNOWN_ACCEPTED_COLLISIONS pair to how many
+    listings it matched, for the single compact summary line in main()."""
     pair_counts = Counter()
     pair_examples = {}
+    accepted_counts = Counter()
 
     for row in listings:
         name = row["chain_product_name"]
@@ -148,12 +158,15 @@ def find_category_collisions(listings):
             continue
 
         for pair in itertools.combinations(tied_categories, 2):
+            if frozenset(pair) in KNOWN_ACCEPTED_COLLISIONS:
+                accepted_counts[pair] += 1
+                continue
             pair_counts[pair] += 1
             examples = pair_examples.setdefault(pair, [])
             if len(examples) < 3 and name not in examples:
                 examples.append(name)
 
-    return pair_counts, pair_examples
+    return pair_counts, pair_examples, accepted_counts
 
 
 def categorize_all(conn, cur):
@@ -188,7 +201,7 @@ def categorize_all(conn, cur):
     # Read-only report, computed from the same listings already fetched
     # above -- no extra database round trip. See find_category_collisions'
     # docstring for what this is looking for and why.
-    collision_pairs, collision_examples = find_category_collisions(listings)
+    collision_pairs, collision_examples, accepted_collisions = find_category_collisions(listings)
 
     return {
         "total": len(listings),
@@ -198,6 +211,7 @@ def categorize_all(conn, cur):
         "unclassified_tally": unclassified_tally,
         "collision_pairs": collision_pairs,
         "collision_examples": collision_examples,
+        "accepted_collisions": accepted_collisions,
     }
 
 
@@ -244,6 +258,22 @@ def main():
                 print(f"    {count:>5}  {category_a} / {category_b}")
                 for example in examples:
                     print(f"             e.g. {example!r}")
+
+        accepted_collisions = summary["accepted_collisions"]
+        if accepted_collisions:
+            # A compact summary only, no examples -- these pairs are
+            # already individually reviewed and decided (see
+            # category_taxonomy.py's KNOWN_ACCEPTED_COLLISIONS), so
+            # there's nothing new here to look at every run. Still printed
+            # in full (not truncated) so the count stays honest.
+            total_accepted = sum(accepted_collisions.values())
+            print(f"\n  {total_accepted} more listing(s) matched a KNOWN, already-reviewed category pair "
+                  f"(dual-protein meat products, almond milk, etc) -- not shown individually since these "
+                  f"are decided, not bugs. See category_taxonomy.py's KNOWN_ACCEPTED_COLLISIONS for the "
+                  f"full list and reasoning. Breakdown:")
+            ranked_accepted = sorted(accepted_collisions.items(), key=lambda kv: kv[1], reverse=True)
+            for (category_a, category_b), count in ranked_accepted:
+                print(f"    {count:>5}  {category_a} / {category_b}")
     except Exception as exc:  # noqa: BLE001 -- surface any failure plainly, then exit non-zero
         conn.rollback()
         print(f"ERROR during categorization: {type(exc).__name__}: {exc}", file=sys.stderr)

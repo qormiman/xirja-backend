@@ -451,7 +451,14 @@ KEYWORD_RULES = [
     # Biscuits, since bare "cookie" and bare "cream" tie and Cooking Creams
     # is listed earlier.
     ("Biscuits", ["biscuit", "cookie", "oreo", "petit beurre", "petite beurre", "wafer milk", "milk wafer", "wafer", "cookies and cream", "cookies & cream", "cookies n cream", "milk cookie", "milk biscuit", "cookie milk", "biscuit milk"]),  # "oreo" and "petit(e) beurre" -- specific, well-known biscuit brand/type names, found via real data. "cookies n cream" -- a third real spelling of the cookies-and-cream flavour ("Hersheys Cookies N Cream"), found the same way "cookies and cream"/"cookies & cream" were. "milk cookie"/"milk biscuit"/"cookie milk"/"biscuit milk" -- same shape as "wafer milk"/"milk wafer" above: "Paw Patrol Mini Milk Cookies", "Peppa Pig Mini Milk Cookies" and "Kinder Duo Biscuit Milk & White" were landing on Milk (listed earlier than Biscuits), even when the name literally says "biscuit"/"cookie" too -- both word orders are listed since real products used both.
-    ("Cakes", ["cake"]),
+    # "sponge cake" -- a real, recurring tie with Cloths & Sponges (bare
+    # "sponge" also means a cleaning sponge) that happened to already
+    # resolve correctly by list order (Cakes is listed before Cloths &
+    # Sponges), but was still showing up as noise in every collision
+    # report. Listed as its own phrase here so it wins outright and stops
+    # depending on list order at all -- found via real data ("David's
+    # Bakery Plain Sponge Cake", "La Granja Almond Sponge Cake").
+    ("Cakes", ["sponge cake", "cake"]),
     ("Cereals", ["cereal", "cornflakes", "muesli", "granola"]),
     ("Cereal & Cereal Bars", ["cereal bar"]),
     ("Crackers, Crispbread & Breadsticks", ["crispbread", "oatcake"]),
@@ -622,7 +629,13 @@ KEYWORD_RULES = [
     # and after the existing "hair oil"/"facial oil"/"dry oil" phrases
     # elsewhere in this list (those are multi-word, always checked first).
     ("Oils", ["oil"]),
-    ("Vinegars", ["vinegar"]),
+    # "rice vinegar" -- was landing on Rice instead (both bare "rice" and
+    # bare "vinegar" are single-word/tier-2, with Rice listed earlier),
+    # found via real data ("Blue Dragon Rice Vinegar", "Yutaka Rice
+    # Vinegar"). Listed as its own phrase so it wins over bare "rice"
+    # outright, the same way "olive oil" already wins over bare "olive"/
+    # "oil".
+    ("Vinegars", ["rice vinegar", "vinegar"]),
 
     # Household cleaning (targets the "Household Care And Essentials" catch-all)
     ("Laundry Washing Liquids", ["laundry liquid", "washing liquid"]),
@@ -666,7 +679,10 @@ KEYWORD_RULES = [
     ("Deodorants", ["deodorant", "antiperspirant", "deo spray", "deo roll on", "deo stick"]),
     ("Body Lotions", ["body lotion", "hand lotion", "moisturiser", "moisturizer"]),
     ("Face Creams", ["face cream", "facial cream"]),
-    ("Skin Care", ["face wash", "facial wash", "cleansing gel", "facial cleanser", "facial oil", "dry oil"]),
+    # "latte detergente" -- Italian for "cleansing milk", a skincare
+    # product -- found via real data ("Roberts Rose Water Latte Detergente
+    # Sensitive"), which was landing on Coffee (bare "latte") or Water.
+    ("Skin Care", ["face wash", "facial wash", "cleansing gel", "facial cleanser", "facial oil", "dry oil", "latte detergente"]),
     ("Hand Wash Liquids", ["hand wash", "hand soap"]),
     ("Shaving Creams", ["shaving cream", "shaving foam", "razor"]),
     ("Hair Colouring", ["hair colour", "hair dye", "hair color"]),
@@ -755,6 +771,125 @@ MULTI_KEYWORD_RULES = [
     # (shampoo, lotion, soap etc. could plausibly have the same issue).
     ("Conditioners", ["conditioner"]),
     ("Candles", ["candle"]),
+    # Everything below here (through the end of this personal-care/
+    # household block) is the SAME "unambiguous, product-defining word"
+    # pattern as Conditioners/Candles just above, applied broadly for the
+    # first time -- found via real data (17 Aug 2026 collision report):
+    # dozens of shampoos, deodorants, toothpastes, nappies etc. were losing
+    # to whatever food-flavour word their own scent/ingredient list also
+    # happened to share (e.g. "Antica Herbal Shampoo Almond Milk 2in1" was
+    # landing on Milk, "Old Spice Deodorant Spray Whitewater" was landing
+    # on Herbs & Spices via bare "spice", "Childs Farm Nappy Cream
+    # Fragrance Free" was landing on Cooking Creams via bare "cream").
+    # Every one of these words already existed as an ordinary KEYWORD_RULES
+    # single word for its own category further down -- this doesn't change
+    # WHAT category any of them map to, only WHEN they're checked, exactly
+    # the same fix already applied to "conditioner"/"candle" (and
+    # "grater", further down this same list). None of these words has a
+    # realistic food meaning (checked against every real example in this
+    # round's report before adding).
+    # "Baby Shampoo"/"Adult Nappy" -- carve-outs required BEFORE the
+    # general "shampoo"/"nappy" rules right below, the same "specific
+    # phrase before the general rule that would otherwise swallow it"
+    # pattern already used for "chocolate milk" vs bare "chocolate" above.
+    # Found by this round's own test suite (test_category_taxonomy.py):
+    # "Baby Essentials" and "Adult Nappies" both already had a more
+    # specific multi-word phrase ("baby shampoo", "adult nappy") that used
+    # to correctly beat the bare "shampoo"/"nappy" single word by tier
+    # (phrase beats bare word) -- but Pass 0 always beats BOTH tiers, so
+    # adding "shampoo"/"nappy" to Pass 0 below would have silently broken
+    # those two existing, working rules without this.
+    ("Baby Essentials", ["baby shampoo"]),
+    ("Adult Nappies", ["adult nappy"]),
+    ("Shampoos", ["shampoo"]),
+    ("Deodorants", ["deodorant"]),
+    ("Deodorants", ["antiperspirant"]),
+    ("Toothpaste", ["toothpaste"]),
+    ("Toothbrushes", ["toothbrush"]),
+    ("Mouthwash", ["mouthwash"]),
+    # Both spellings needed -- "nappy" plus the trailing "s?" that
+    # _keyword_matches always adds only catches "nappys", not the real
+    # irregular plural "nappies" (see _keyword_matches' own docstring
+    # further down for why irregular plurals need their own explicit
+    # entry).
+    ("Nappies", ["nappy"]),
+    ("Nappies", ["nappies"]),
+    ("Dental Care", ["dental"]),
+    ("Dental Care", ["denture"]),
+    ("Dental Care", ["corega"]),
+    ("Make Up", ["lipstick"]),
+    ("Make Up", ["mascara"]),
+    ("Make Up", ["foundation"]),
+    ("Make Up", ["eyeshadow"]),
+    ("Make Up", ["makeup"]),  # one word, no space -- "make up" (two words) is already a safe multi-word phrase without this
+    ("Perfume", ["perfume"]),
+    ("Perfume", ["cologne"]),
+    # NOT "fragrance" -- deliberately left out. "Fragrance Free" is
+    # extremely common on shampoos, creams and nappy products precisely
+    # BECAUSE they're not perfumed, so elevating it here would create the
+    # opposite bug (tagging unscented products as Perfume). Real
+    # "Fragrance Free" shampoos/creams/nappy products are already handled
+    # correctly by the Shampoos/Nappies/etc words right above instead.
+    ("Body Lotions", ["moisturiser"]),
+    ("Body Lotions", ["moisturizer"]),
+    ("First Aid", ["plaster"]),
+    ("Household Goods", ["thermos"]),
+    ("Household Goods", ["flask"]),
+    # "whey" -- a sports-nutrition-supplement word with no other realistic
+    # meaning in this data (every real example is an Iron Maxx/QNT whey
+    # protein product), found losing to whatever flavour word it shared
+    # with an earlier category (bare "cream" -> Cooking Creams, bare
+    # "cookie" -> Biscuits, bare "pistachio" -> Nuts) purely by list order.
+    ("Sports", ["whey"]),
+    # "Acqua Panna" -- a real, well-known Italian NATURAL MINERAL WATER
+    # brand (Panna is the name of the town/spring it's bottled at, nothing
+    # to do with cream) -- was landing on Cooking Creams via the existing
+    # "panna" keyword (Italian for cream, correct for an actual cream
+    # product), since Cooking Creams is listed earlier than Water. A
+    # brand-name carve-out, same reasoning as "Cadbury"/"Lamb Brand" above.
+    ("Water", ["acqua panna"]),
+    # A cream-cheese product (checked both word orders -- real examples had
+    # "Cream Cheese" AND "Cheese Cream") was landing on Cooking Creams via
+    # bare "cream", since Cooking Creams is listed earlier than Cheese.
+    # Cream cheese is always a cheese product, never a tub of cooking
+    # cream, so both words appearing together anywhere in the name is a
+    # safe, reliable signal regardless of which order they're written in.
+    ("Cheese", ["cream", "cheese"]),
+    # "Butter Cookies" -- a real, well-known biscuit type (e.g.
+    # "Patisserie Matheo Butter Cookies", "BUTTER COOKIES S/F") was landing
+    # on dairy Butter instead, since Butter is listed earlier than
+    # Biscuits. Both words required together so a plain tub of butter (no
+    # "cookie" in the name) is unaffected. Deliberately NOT extended to
+    # "butter"+"biscuit" the same way -- caught by this round's own
+    # regression sweep: "Laurence Toffiq Chocolate Bar With Caramel,
+    # Peanut Butter & Biscuit" would match it too (clean_for_matching turns
+    # "Peanut Butter & Biscuit" and "Butter Biscuit" into the identical
+    # cleaned text "butter biscuit", so the two can't be told apart at the
+    # keyword level), which is exactly the same real counter-example that
+    # already ruled out a "chocolate"+"biscuit" carve-out further up this
+    # list. "Zott Monte Butter Biscuits" (no "cookie" in its name) is a
+    # known, accepted gap because of this -- still resolves to Butter.
+    ("Biscuits", ["butter", "cookie"]),
+    # Continuing the "Lamb Brand" nut/spice product line (see the several
+    # "Lamb Brand"/"Lamb Spices" entries below) with two more real
+    # phrasings that don't contain the word "brand" at all: "Lamb Walnuts
+    # Kernels 400g" and "Lamb Nuts Almonds Blanched..." -- both landing on
+    # the Lamb meat category via bare "lamb", since Lamb is listed earlier
+    # than Nuts. Kept narrow (the specific word combinations from the real
+    # examples), same reasoning as the other Lamb Brand carve-outs below.
+    ("Nuts", ["lamb nuts"]),
+    ("Nuts", ["lamb", "walnut"]),
+    # "Galletti" -- confirmed via WebSearch as both a traditional Maltese
+    # cracker/snack (this is a Maltese app) and a real Italian brand's
+    # shortbread-biscuit line (Mulino Bianco) -- either way, always a
+    # cracker/biscuit-type product, never a vegetable or spice. Was landing
+    # on Vegetables/Herbs & Spices via whatever flavour word it also
+    # carried (e.g. "Crackeys Galletti Tomato & Oregano"). "Crostini" --
+    # Italian for small toasted bread rounds, no other realistic grocery
+    # meaning -- added for the same reason ("Pan Ducale Crostini With Basil
+    # & Tomato" was landing on Herbs & Spices/Vegetables too).
+    ("Crackers, Crispbread & Breadsticks", ["galletti"]),
+    ("Crackers, Crispbread & Breadsticks", ["crostini"]),
     ("Chocolates", ["easter", "egg"]),
     # "Carrefour Filini Egg (250grms)" showed up as the cheapest "Eggs"
     # result -- "Filini" is a specific pasta shape (thin short noodles,
@@ -1189,6 +1324,57 @@ MULTI_KEYWORD_RULES = [
     # is an unambiguous, product-defining word with no food meaning at all.
     ("Household Goods", ["grater"]),
 ]
+
+
+# ----------------------------------------------------------------------------
+# 4. Known, reviewed, deliberately-NOT-fixed category collisions -- pairs
+# where a real product genuinely, correctly matches BOTH categories (e.g. a
+# pet food that's really both chicken AND fish, in the same tin), not a
+# classifier bug at all. There's no single keyword rule that would make one
+# of the two "right" and the other "wrong" -- both are true about the same
+# product.
+#
+# categorize_listings.py's collision report excludes these from the list of
+# individual pairs+examples it prints (still counts and reports the total,
+# just without repeating the same three examples every single run) -- found
+# via real feedback (17 Aug 2026): five straight collision reports kept
+# surfacing the exact same dual-protein pairs at the very top every time,
+# with nothing new to actually do about them, which was making the report
+# feel like it never got shorter even as real, fixable pairs kept getting
+# cleared out underneath them.
+#
+# A pair is added here only after being individually checked against real
+# product names, the same as every other decision in this file -- this is a
+# record of a decision already made, not a shortcut to avoid looking. Keep
+# it narrow: only add a pair here once real data has shown it's genuinely
+# unfixable by a keyword rule, not just because it's inconvenient.
+# ----------------------------------------------------------------------------
+KNOWN_ACCEPTED_COLLISIONS = {
+    # Dual/mixed-protein pet food and human products -- "Beef & Pork
+    # Sausages", "Chicken & Salmon" cat food, "Pedigree...Chicken & Lamb",
+    # and so on. Both meats are genuinely, correctly in the product; there's
+    # no single base ingredient to prefer without inventing a new "Mixed
+    # Meat"-style category, which hasn't been asked for. This makes
+    # permanent, and extends to every same-shaped meat pair, the "Beef/Pork
+    # mixed-meat products... not worth fixing" decision already made
+    # earlier this session for that one specific pair.
+    frozenset({"Beef", "Chicken"}),
+    frozenset({"Beef", "Pork"}),
+    frozenset({"Beef", "Lamb"}),
+    frozenset({"Beef", "Turkey"}),
+    frozenset({"Chicken", "Pork"}),
+    frozenset({"Chicken", "Lamb"}),
+    frozenset({"Chicken", "Turkey"}),
+    frozenset({"Lamb", "Pork"}),
+    frozenset({"Lamb", "Turkey"}),
+    frozenset({"Pork", "Turkey"}),
+    # "Blue Diamond Almond Milk", "Milk Pro Kefir Drink Pistacchio &
+    # Almond" -- an explicit decision made earlier this session: almond/nut
+    # milk stays filed under Milk for now, to be revisited later as part of
+    # a bigger sub-categories pass (e.g. a dedicated "Plant Milks" bucket),
+    # not guessed at with a keyword carve-out today.
+    frozenset({"Milk", "Nuts"}),
+}
 
 
 def clean_for_matching(name):
