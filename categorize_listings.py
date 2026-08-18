@@ -29,9 +29,10 @@ Known limitations, worth knowing about before trusting the output blindly:
     catch-all buckets and a few others) can only classify what it has a
     keyword for. Anything it doesn't recognise is left NULL rather than
     guessed at -- this script prints a tally of the most common
-    unclassified (store, chain_category) combinations at the end, so gaps
-    are visible instead of silent. Use that tally to add more keywords to
-    category_taxonomy.py's KEYWORD_RULES over time.
+    unclassified (store, chain_category) combinations at the end, with a
+    few real product name examples per bucket, so gaps are visible (and
+    diagnosable) instead of silent. Use that tally and its examples to add
+    more keywords to category_taxonomy.py's KEYWORD_RULES over time.
 
 How to run it:
   See SETUP.md's "Category normalization" section. In short: set
@@ -174,6 +175,7 @@ def categorize_all(conn, cur):
 
     to_update = []
     unclassified_tally = {}
+    unclassified_examples = {}
     classified_count = 0
     unchanged_count = 0
 
@@ -183,6 +185,15 @@ def categorize_all(conn, cur):
         if new_category is None:
             key = (row["store_id"], row["chain_category"])
             unclassified_tally[key] = unclassified_tally.get(key, 0) + 1
+            # A few real product names per bucket, same idea as
+            # collision_examples above -- the tally alone (e.g. "3271
+            # welbees / 'Food Cupboard'") gives no way to tell which
+            # keywords are missing. Capped at 3 per bucket and deduped so
+            # one repeated product doesn't waste all three slots.
+            name = row["chain_product_name"]
+            examples = unclassified_examples.setdefault(key, [])
+            if name and len(examples) < 3 and name not in examples:
+                examples.append(name)
 
         if new_category == row["shopping_category"]:
             unchanged_count += 1
@@ -209,6 +220,7 @@ def categorize_all(conn, cur):
         "unchanged": unchanged_count,
         "newly_classified": classified_count,
         "unclassified_tally": unclassified_tally,
+        "unclassified_examples": unclassified_examples,
         "collision_pairs": collision_pairs,
         "collision_examples": collision_examples,
         "accepted_collisions": accepted_collisions,
@@ -242,6 +254,8 @@ def main():
             ranked = sorted(summary["unclassified_tally"].items(), key=lambda kv: kv[1], reverse=True)
             for (store_id, chain_category), count in ranked:
                 print(f"    {count:>5}  {store_id} / {chain_category!r}")
+                for example in summary["unclassified_examples"].get((store_id, chain_category), []):
+                    print(f"             e.g. {example!r}")
 
         collision_pairs = summary["collision_pairs"]
         total_collisions = sum(collision_pairs.values())
