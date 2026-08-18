@@ -671,13 +671,26 @@ KEYWORD_RULES = [
     # Total Care").
     ("Shampoos", ["shampoo", "head and shoulders", "head & shoulders"]),
     ("Conditioners", ["conditioner"]),
-    ("Shower Gels", ["shower gel", "body wash", "bath foam", "bubble bath"]),
+    # "soap bar" -- found via real data (Dalan D'olive's Malta-sold range,
+    # confirmed via WebSearch as a real personal-care brand carried by
+    # M&Z p.l.c.): "Dalan D'olive Cocoa Butter Cream Soap Bar" and "...Aloe
+    # Vera Cream Soap Bar" were landing on Cooking Creams/Olives (bare
+    # "cream"/"olive"), since bare "soap" had NO keyword mapping anywhere
+    # in this file at all until now -- a real, previously undiscovered gap,
+    # not just a list-order bug. Filed under Shower Gels rather than a new
+    # category, matching how Greens' own data already groups "Bath And
+    # Shower Gels" as one bucket.
+    ("Shower Gels", ["shower gel", "body wash", "bath foam", "bubble bath", "soap bar"]),
     ("Hair & Nail Accessories", ["comb"]),
     ("Toothpaste", ["toothpaste"]),
     ("Toothbrushes", ["toothbrush"]),
     ("Mouthwash", ["mouthwash"]),
     ("Deodorants", ["deodorant", "antiperspirant", "deo spray", "deo roll on", "deo stick"]),
-    ("Body Lotions", ["body lotion", "hand lotion", "moisturiser", "moisturizer"]),
+    # "hand cream"/"body cream" -- found via the same Dalan D'olive real
+    # data: "Dalan D'olive Hand & Body Cream Grapeseed" was landing on
+    # Cooking Creams (bare "cream"), since neither phrase existed
+    # alongside the existing "hand lotion"/"body lotion" ones.
+    ("Body Lotions", ["body lotion", "hand lotion", "hand cream", "body cream", "moisturiser", "moisturizer"]),
     ("Face Creams", ["face cream", "facial cream"]),
     # "latte detergente" -- Italian for "cleansing milk", a skincare
     # product -- found via real data ("Roberts Rose Water Latte Detergente
@@ -890,6 +903,51 @@ MULTI_KEYWORD_RULES = [
     # & Tomato" was landing on Herbs & Spices/Vegetables too).
     ("Crackers, Crispbread & Breadsticks", ["galletti"]),
     ("Crackers, Crispbread & Breadsticks", ["crostini"]),
+    # "Olive Oil" is listed very early in KEYWORD_RULES (right after Bread/
+    # Cakes/etc, long before the Personal Care section), so any personal-
+    # care product whose name ALSO mentions olive oil as an ingredient was
+    # losing to it even though both are multi-word phrases (tier 1) --
+    # list order still decides a tie between two phrases, the same way it
+    # decides a tie between two bare words. Found via the same Dalan
+    # D'olive real data: "HAND SOAP OLIVE OIL EXTRACT 500ML" and "Dalan
+    # D'olive Olive Oil Nourishing Liquid Hand Soap" were landing on Olive
+    # Oil instead of Hand Wash Liquids, "D'olive Olive Oil Shower Gel
+    # Nourishing" instead of Shower Gels, "BODY LOTION VIRGIN OLIVE OIL
+    # EXTRACT" instead of Body Lotions. These three phrases already exist
+    # in KEYWORD_RULES further down (unchanged, same category) -- this
+    # only fixes WHEN they're checked, the same fix already applied to
+    # bare "shampoo"/"nappy"/etc further up this list.
+    ("Hand Wash Liquids", ["hand soap"]),
+    ("Hand Wash Liquids", ["hand wash"]),
+    ("Shower Gels", ["shower gel"]),
+    ("Body Lotions", ["body lotion"]),
+    # "Vitakraft" -- confirmed via WebSearch as a real German pet brand
+    # whose range is birds and small animals (rabbits, guinea pigs,
+    # rodents) specifically, NOT cat/dog food -- so the existing Cat/Dog
+    # Pass 0 rules above wouldn't be the right fit even if extended. Routed
+    # to "Fish & Other Animals" instead, the existing (already-flagged-as-
+    # imperfect-but-closest) catch-all this project already uses for
+    # non-cat/dog pets (see GREENS_CATEGORY_MAP's "Pets"/"Other Pets" ->
+    # "Fish & Other Animals" mapping). Found via real data: "Vitakraft Vita
+    # Veggies Stick Cheese +potato", "Vitakraft Beef Stick Turkey",
+    # "Vitakraft Kracker 3pck Canary Honey/egg" were all landing on
+    # whichever food/flavour word they also contained (Cheese, Beef,
+    # Honey...) since none of them say "cat"/"dog"/"bird"/"animal" at all.
+    ("Fish & Other Animals", ["vitakraft"]),
+    # "PREM PCH" -- lower confidence than the other brand rules in this
+    # file: WebSearch could NOT independently confirm "PREM" as a specific
+    # company/brand name (same result as when "katsuobushi" was
+    # investigated earlier this session). Added anyway based on strong
+    # circumstantial evidence from the product names themselves: "PCH" is
+    # almost certainly short for "pouch" (every real example is a small
+    # single-serve wet-food pouch -- "PREM PCH CHKN & TUNA W RICE &
+    # CARROT/CLAM/SHRIMP"), and the fish-plus-meat-in-a-small-pouch format
+    # matches the SAME already-confirmed "PREM CHICKEN, TUNA, RICE
+    # KATSUOBUSHI" product line (routed to Cat via the "katsuobushi" rule
+    # above). If this turns out to be wrong (e.g. some "PREM PCH" products
+    # are actually dog food), it should be easy to spot in a future report
+    # and narrow down from here.
+    ("Cat", ["prem pch"]),
     ("Chocolates", ["easter", "egg"]),
     # "Carrefour Filini Egg (250grms)" showed up as the cheapest "Eggs"
     # result -- "Filini" is a specific pasta shape (thin short noodles,
