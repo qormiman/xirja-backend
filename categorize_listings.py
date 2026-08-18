@@ -176,6 +176,15 @@ def categorize_all(conn, cur):
     to_update = []
     unclassified_tally = {}
     unclassified_examples = {}
+    # Every distinct unclassified product name, not just the 8 examples per
+    # bucket that get printed. The printed report is for a human skimming the
+    # Actions log; this full list is what actually lets a whole bucket be
+    # closed in one pass instead of eight names at a time. Written out to
+    # UNCLASSIFIED_EXPORT_PATH at the end of the run and uploaded by the
+    # workflow as a downloadable file. A set (not a list) because the same
+    # product appears once per outlet -- 129,703 listings collapse to far
+    # fewer distinct names, which is the thing worth reading.
+    unclassified_names = set()
     classified_count = 0
     unchanged_count = 0
 
@@ -201,6 +210,8 @@ def categorize_all(conn, cur):
             examples = unclassified_examples.setdefault(key, [])
             if name and len(examples) < 8 and name not in examples:
                 examples.append(name)
+            if name:
+                unclassified_names.add((row["store_id"], row["chain_category"] or "", name))
 
         if new_category == row["shopping_category"]:
             unchanged_count += 1
@@ -228,10 +239,50 @@ def categorize_all(conn, cur):
         "newly_classified": classified_count,
         "unclassified_tally": unclassified_tally,
         "unclassified_examples": unclassified_examples,
+        "unclassified_names": unclassified_names,
         "collision_pairs": collision_pairs,
         "collision_examples": collision_examples,
         "accepted_collisions": accepted_collisions,
     }
+
+
+UNCLASSIFIED_EXPORT_PATH = "unclassified_listings.txt"
+
+
+def write_unclassified_export(unclassified_names, path=UNCLASSIFIED_EXPORT_PATH):
+    """
+    Writes every distinct unclassified product name to a plain text file,
+    grouped by (store, chain category) and alphabetically sorted within each
+    group.
+
+    Why this exists: the printed report caps each bucket at 8 example names.
+    That is fine for a bucket of 12, and useless for a bucket of 3,050 --
+    you close 8 names, run again three days later, and get 8 more. This file
+    is the whole list, so a bucket can actually be worked through in one
+    sitting. The workflow uploads it as a downloadable artifact.
+
+    Deliberately plain text with no counts or extra columns: the point is to
+    be readable, greppable, and small enough to hand to someone (or paste
+    into a chat) whole.
+    """
+    grouped = {}
+    for store_id, chain_category, name in unclassified_names:
+        grouped.setdefault((store_id, chain_category), []).append(name)
+
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(
+            f"{sum(len(v) for v in grouped.values())} distinct unclassified "
+            f"product name(s), across {len(grouped)} (store, chain category) "
+            "group(s).\n"
+        )
+        for (store_id, chain_category), names in sorted(
+            grouped.items(), key=lambda kv: (-len(kv[1]), kv[0])
+        ):
+            handle.write(f"\n=== {store_id} / {chain_category!r} -- {len(names)} name(s) ===\n")
+            for name in sorted(names):
+                handle.write(f"{name}\n")
+
+    return path
 
 
 def _connect_and_categorize():
@@ -280,6 +331,8 @@ def main():
                   "sleep -- retrying the whole run once with a fresh connection)", file=sys.stderr)
             conn, summary = _connect_and_categorize()
 
+        export_path = write_unclassified_export(summary["unclassified_names"])
+
         total_unclassified = sum(summary["unclassified_tally"].values())
         print(f"Done: {summary['total']} listing(s) checked, {summary['updated']} row(s) written "
               f"(category changed or newly set), {summary['unchanged']} already up to date, "
@@ -300,6 +353,11 @@ def main():
                 print(f"    {count:>5}  {store_id} / {chain_category!r}")
                 for example in summary["unclassified_examples"].get((store_id, chain_category), []):
                     print(f"             e.g. {example!r}")
+            print(f"\n  The COMPLETE list of every distinct unclassified product name (not just "
+                  f"the 8 examples shown per bucket above) has been written to {export_path} -- "
+                  "download it from this run's 'Artifacts' section at the bottom of the Actions "
+                  "summary page. That file is what makes it possible to close a whole bucket in "
+                  "one pass.")
 
         collision_pairs = summary["collision_pairs"]
         total_collisions = sum(collision_pairs.values())
