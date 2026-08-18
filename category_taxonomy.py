@@ -1457,6 +1457,209 @@ KEYWORD_RULES = [
 
     # ---- Home & Entertainment leftovers ----
     ("Stationery", ["shopping list", "pritt", "corrector", "memo pad", "to do list", "planner", "notice board"]),
+
+    # ========================================================================
+    # 18 Aug 2026 -- SEVENTH sweep. THE FIRST ONE WRITTEN FROM REAL DATA.
+    #
+    # Every round before this was written from the eight example names the
+    # report prints per bucket, which meant inventing plausible product names
+    # and hoping Welbee's stocked them. Rounds four and five closed 250 and
+    # 605 listings respectively -- that is what guessing costs.
+    #
+    # This round was written against unclassified_listings.txt, the full
+    # export of all 4,663 distinct unclassified names, downloaded from the
+    # workflow run's artifacts. Clustering those names by their leading words
+    # showed immediately where the weight actually sits, and it was nowhere
+    # near where the examples suggested:
+    #
+    #     102 names  Wet n Wild (cosmetics)
+    #      44 names  Franck Provost (hair accessories)
+    #      43 names  Sally Hansen (nail colour)
+    #      40 names  Disney (Crd) (kids' gear)
+    #      31 names  Chef Aid (kitchenware)
+    #      28 names  Mulino Bianco (biscuits)
+    #      25 names  La Molisana (pasta)
+    #      24 names  Pap Star (party disposables)
+    #
+    # A single rule for "wet n wild" closes more listings than the whole of
+    # round four did. That is the difference the export makes, and it is why
+    # the rules below are brand-led rather than vocabulary-led: at this depth
+    # the tail really is brands, and now they can be read instead of guessed.
+    # ========================================================================
+
+    # ---- Health & Beauty: the big cosmetics and haircare houses ----
+    ("Make Up", ["wet n wild", "sally hansen", "lip smacker", "depesche", "top model", "bellaoggi", "essence cosmetics"]),
+    ("Hair & Nail Accessories", ["franck provost", "princesse lili", "elite accessories", "elliott", "jld", "fringe pin", "snap clip", "hair turban", "nail brush"]),
+    ("Skin Care", ["face facts", "7th heaven", "garnier synergie", "st moriz", "nivea sun", "hawaiian tropic", "clinians", "cera di cupra", "omnia botanica", "merci handy", "delice solaire", "dermolab", "nivea visage", "nivea q10", "nivea luminous", "nivea scrub", "instant tan", "self tan", "sun stick"]),
+    ("Hair Colouring", ["excellence creme", "garnier color", "garnier olia", "schwarzkopf brilliance", "wella kit", "hair kit"]),
+    ("Hair Styling", ["wella flex", "tigi", "bed head", "frizz ease", "john frieda", "blow dry", "workable wax", "styling spray"]),
+    ("Shampoos", ["alpecin", "pantene", "wella wonder"]),
+    ("Perfume", ["edt", "edp", "eau de", "bugatti", "david beckham", "tom tailor", "brut", "she women", "life by", "adidas edt", "adidas edp"]),
+    ("Deodorants", ["dove men", "nivea men", "apd", "deo spray", "invisible care"]),
+    ("Shower Gels", ["neutro roberts", "ushuaia", "bionsen", "jacklon", "amore mio", "foam bath", "bagno schiuma", "showel gel"]),
+    ("Hand Wash Liquids", ["spuma di sciampagna", "sapone crema"]),
+    ("Adult Nappies", ["abena", "abri form", "abri flex"]),
+    ("Intimate Care", ["durex", "contraceptive", "control contracept"]),
+    ("Electrical", ["remington", "russell hobbs", "beurer", "haircutter", "straightner", "multi styler"]),
+    ("First Aid", ["scholl", "party feet"]),
+    ("Sanitary Towels", ["sani lady", "hyper dry", "giga pack", "h dry"]),
+    ("Shaving Creams", ["the barb", "beard and moustache", "moustache wax"]),
+    ("Dental Care", ["oral b", "floss essential"]),
+    ("Toys & Games", ["disney pal", "disney crd", "sophie la girafe", "addo", "jovi", "hardening clay", "craft set"]),
+
+    # ---- Food Cupboard: the real brands ----
+    ("Biscuits", ["mulino bianco", "flauti", "plumcake", "niederegger"]),
+    ("Pasta & Couscous", ["la molisana", "calamarata", "ramyun", "nongshim", "berruto", "pastacup", "grantortelli"]),
+    ("Herbs & Spices", ["good health", "carmencita", "italpepe", "anise", "preparato per"]),
+    ("Sauces & Condiments", ["old el paso", "blue dragon", "poco loco", "patak", "sacla", "sugo", "besciamella", "kunserva", "ragu", "ajvar", "hummus", "tzatziki", "arjoli", "dip", "curd"]),
+    ("Crackers, Crispbread & Breadsticks", ["gran pavesi", "delser", "bake roll"]),
+    ("Sweet Snacks", ["impact mint", "werther", "trolli", "red band", "brain blasterz", "maynards", "fini", "suckers", "gems"]),
+    ("Chocolates", ["m m", "icam", "crema spalmabile", "pasticceria fondente"]),
+    ("Tea", ["ahmad", "twining", "yogi", "loyd", "superblend"]),
+    ("Cake Preparations", ["foster clark", "rayner", "fruttapec", "paneangeli", "food colour"]),
+    ("Chips", ["lay s", "mr riley", "salati preziosi", "cheesy ring", "veggie straw", "pata artigianale"]),
+    ("Cereals", ["kellogg", "nestle fitness", "ovaltine"]),
+    ("Sugar", ["billington"]),
+    ("Milk", ["parmalat", "zymil", "trevalli", "hopla"]),
+    ("Vegetables", ["caponata", "sauerkraut", "marrowfat", "peeled tomato", "chopped tomato", "roasted eggplant", "favetta"]),
+    ("Soups", ["brodo"]),
+    ("Cold Cuts", ["pate", "pashtet", "guanciale", "salamini", "chorizo", "wurstel"]),
+    ("Bread", ["naan", "ciabattine", "pan blanco", "pan ducale", "croissant"]),
+
+    # ---- Drinks: wine, spirits, beer ----
+    ("Wine - Red", ["marsala", "tawny port", "ruby port", "vino rosso", "red wine", "carmenere", "brachetto"]),
+    ("Wine - White", ["vino bianco", "white wine", "dry white", "chenin blanc", "inzolia", "girgentina", "greco", "blanc"]),
+    ("Wine - Rose", ["rosado", "rosato", "rose wine"]),
+    ("Wine - Sparkling", ["asti", "freixenet", "cordon negro", "hugo"]),
+    ("Spirits - Whisky", ["johnnie walker", "dewar", "aberfeldy", "single malt", "highland"]),
+    ("Spirits - Liquers", ["gin", "rum", "amaro", "liqueur", "liquore", "spritz", "aperitivo", "vermouth", "captain morgan", "havana club", "bacardi", "hendrick", "malfy", "gordons", "tanqueray", "breezer", "port"]),
+    ("Beers", ["cisk", "san miguel", "brewdog", "ipa", "lager"]),
+    ("Energy Drinks", ["prime hydration"]),
+    ("Carbonated Drinks", ["mirinda", "san pellegrino", "aranciata", "citrus fizz"]),
+    ("Juices", ["capri sonne", "nettare"]),
+    ("Dilutables", ["coolee"]),
+    ("Water", ["acqua naturale", "sant anna"]),
+
+    # ---- Chilled Food ----
+    ("Cheese", ["elite deli", "vonk", "emborg", "president", "philadelphia", "babybel", "brie", "edam", "gouda", "emmental", "provolone", "burratina", "gbejna", "gbejniet", "gibniet", "grano padano", "grana padano", "coombe castle", "garcia baquero", "paysan breton", "solo italia", "fior di vita", "la vache"]),
+    ("Yoghurt", ["fage", "fruyo", "zottis", "zott"]),
+    ("Sausages", ["aia wudy", "scarlino"]),
+
+    # ---- Healthy Section ----
+    ("Meat Alternatives", ["quorn", "valsoia", "green vie", "beyond meatball", "plant based"]),
+    ("Sports", ["applied nutrition", "leap nutrition", "maxi nutrition", "dragon superfoods", "collagen", "greens capsule", "hydration tab"]),
+    ("Bread", ["schar pan", "gluten free biss", "proceli", "golden harvest"]),
+
+    # ---- Household ----
+    ("Air Fresheners", ["areon", "ad trend", "acqua profumata", "airflor", "3volution"]),
+    ("Fabric Softener", ["tesoro mio", "profumo biancheria", "unstoppables"]),
+    ("Laundry Washing Liquids", ["il bucato", "perlana", "persil liquid"]),
+    ("Laundry Washing Powders", ["surf powder", "derh matic"]),
+    ("Stain Removers", ["dr beckmann", "omino bianco", "ace liquid", "ace gentile", "idrocaps", "colour catcher"]),
+    ("Dishwasher Tablets", ["autodish", "finish quantum", "auto dishwash"]),
+    ("Disposables", ["cuki", "cartaforno", "kc catering", "pap star", "hotpack", "ipak", "party plate", "party hat"]),
+    ("Candles", ["ser petali", "bolsius", "price s", "aladino", "tealight", "taper"]),
+    ("All-purpose Cleaners", ["zoflora", "astonish", "chante clair", "pronto", "domestos", "extra power spray"]),
+    ("Floor Cleaners", ["swiffer", "spic span", "trekker"]),
+    ("Bathroom & Wc Cleaner", ["duck fresh", "duck active", "toilet fresh"]),
+    ("Household Goods", [
+        "la briantina", "lock lock", "heidrun", "innova goods", "chef aid",
+        "households", "leifheit", "dr fresh", "sneaker angels", "brilla",
+        "latex glove", "food box", "bottle brush", "smash", "waf brevetti",
+        "bormioli", "zanetti", "ok stainless", "linea briancasa", "brita",
+        "campagnolo", "heaven sends", "travel hard", "luggage", "car mat",
+        "sunshade", "firelighter", "boning knife", "casserole",
+    ]),
+    ("Stationery", ["bic", "staedtler", "brunnen", "apli", "kangaro", "tipp ex", "uhu", "perforator", "box folder", "blending stump", "craft stick"]),
+    ("Gift Sets", ["on the wall", "florio carta", "gift wrapping", "banner"]),
+
+    # ---- Seventh sweep, second pass: read straight off the remaining names
+    # in the export. Mostly Carrefour's Italian own-brand range (pasta shapes
+    # by number, tinned vegetables, baking) plus the fresh produce counter,
+    # where the recurring problem was again plurals -- "tomatoes", "peas",
+    # "shallots", "sugarsnaps" -- which whole-word matching won't reach from
+    # the singular. ----
+    ("Pasta & Couscous", ["conchigliette", "barbine", "ditali", "ditalini", "farfalline", "gramigna", "rigatini", "sedani", "spaghettini", "mezze maniche", "trecce", "lasagna", "condipasta", "pastina"]),
+    ("Vegetables", [
+        "pea", "peas", "pelati", "giardiniera", "palm heart", "zucchine",
+        "funghi", "champignon", "trifolati", "zenzero", "tomatoes",
+        "broccolini", "brussel sprout", "capsicum", "chive", "corn on the cob",
+        "butternut", "sweet potato", "salad", "coleslaw", "iceberg", "rucola",
+        "misticanza", "insalata", "pakchoi", "paksoy", "parsley", "shallot",
+        "sugarsnap", "carote",
+    ]),
+    ("Fruits", ["pesche", "sciroppate", "prugne", "mirtilli", "physalis", "dragonfruit", "pithaya", "starfruit", "carambola", "tamarind", "medjoul", "medjool", "sharon"]),
+    ("Sauces & Condiments", ["bechamel", "doppio concentrato", "guacamole", "teryaki", "meat rub", "protein rub", "chilli con carne", "appetizer"]),
+    ("Crackers, Crispbread & Breadsticks", ["breadstick", "schiacciatine", "torinesi", "bruschette", "petals of cracker"]),
+    ("Chocolates", ["bounty", "condorelli", "torroncini", "barrette"]),
+    ("Sweet Snacks", ["meringue", "girella", "caramel slice", "catch mint"]),
+    ("Coffee", ["kafe", "intensita", "capsules forte", "extra intenso"]),
+    ("Tea", ["te verde", "te solubile", "mighty mint", "clipper"]),
+    ("Cake Preparations", ["budino", "creme caramel", "torta", "preparato", "cremor tartaro", "pirottini", "gelatina", "wheat decor", "aromi per dolci"]),
+    ("Cereals", ["fiber flake", "spelled", "pearly"]),
+    ("Legumes", ["butterbean", "bolotti", "dal makhani"]),
+    ("Canned Seafood", ["vongole", "pescato", "calvo", "lumpfish"]),
+    ("Chips", ["cheetos", "amica", "twistos", "crunchos"]),
+    ("Soups", ["bisque"]),
+    ("Sugar", ["fruttosio"]),
+    ("Herbs & Spices", ["sale superfino", "sale fino", "sale grosso", "peri peri"]),
+    ("Milk", ["alpro barista", "whitner", "completa"]),
+    ("Flour", ["pangrattato"]),
+    ("Household Goods", ["flowers fresh bouquet", "fresh bouquet"]),
+
+    # ---- Seventh sweep, third pass: Welbee's Household aisle, read off the
+    # export. Again heavily Italian own-brand ("vaschette", "bobina",
+    # "strappi", "sgorgatutto", "lavastoviglie", "piumino"). ----
+    ("All-purpose Cleaners", ["ace", "crema casa", "power clean", "disinfetta", "muriatic acid", "acido liquido", "oxygel", "power shine", "power and shine", "ultra muffa", "spray acciaio", "spray vetri", "cif"]),
+    ("Bathroom & Wc Cleaner", ["bref", "wc drops", "gel wc", "wc duo", "gel bagno", "spray bagni", "bagno brillante"]),
+    ("Laundry Washing Liquids", ["dash", "cenndie", "gel casa", "hand detergent", "optimal clean", "wool and delicate", "eco planet", "casa e bucato"]),
+    ("Laundry Tablets", ["dash pod"]),
+    ("Stain Removers", ["anti decoloration"]),
+    ("Dishwasher Tablets", ["lavastoviglie", "antiscale"]),
+    ("Drain Unblockers", ["sgorgatutto"]),
+    ("Disposables", ["aluminium", "aluminum", "alluminio", "vaschette", "bobina", "strappi", "maxiroll", "kitchen towel", "family roll", "frost bag", "aluminum tray"]),
+    ("Cloths & Sponges", ["brillo", "abrasive fiber", "abrasive fibre", "steelwool", "piumino", "microfibre towel", "chequered"]),
+    ("Insect Killer", ["autan", "tarme", "moth", "after bite", "afterbite"]),
+    ("Air Fresheners", ["airpure", "ariasana", "freshner", "deo wick", "diffuser refill", "electric diffuser"]),
+    ("Household Goods", ["matches", "safety match", "adriatic", "cooler", "colombo", "balcony dryer", "compactor", "stackable", "telescopic stick", "metal handle", "garbage lift", "calzanetto", "bufalo", "cleaning kit", "shoe polishing"]),
+    # ---- Seventh sweep, fourth pass: Health & Beauty and the remaining
+    # aisles, read off the export. ----
+    ("Electrical", ["babyliss", "demeliss", "braun", "curling iron", "multi groomer", "silk epil"]),
+    ("Hair Styling", ["brylcreem", "glossy hold", "kera protein", "liss & protect"]),
+    ("Hair & Nail Accessories", ["abc hello kitty", "hello kitty", "bow clip", "hair towel", "magic brush", "satin hair"]),
+    ("Cotton Buds", ["bastoncini cotonati", "bastoncini", "precut cotton", "cotton ball"]),
+    ("Dental Care", ["flosser", "waxed tape", "crema adesiva", "protesi", "full action refill"]),
+    ("Shaving Creams", ["classic blade", "perfect angle", "men s blade"]),
+    ("Hand Wash Liquids", ["sapone solido", "sapone", "dove bar", "dove pink"]),
+    ("Adult Nappies", ["traverse adult"]),
+    ("Skin Care", ["carroten", "sun spray", "bodyscrub", "lip care"]),
+    ("Baby Essentials", ["chicco", "nursing pad", "pre natal", "post natal"]),
+    ("Body Lotions", ["dove lotion", "deeply nourishing", "essential nourishing"]),
+    ("Household Goods", ["beauty in the air", "sleep mask", "vanity case", "toilet bag", "pill box", "pompom pouch"]),
+    ("Make Up", ["nail remover"]),
+    ("Disposables", ["flushable wipe"]),
+
+    # ---- Seventh sweep, fifth pass: Home & Entertainment, Chilled Food and
+    # the Greens dietary aisles, read off the export. ----
+    ("Household Goods", ["aeternum", "bialetti", "anilar", "alcas", "high pot", "tart pan", "roaster", "rubber mat", "car mat", "garden rake", "universal soil", "gas cartridge", "gas heater", "filter jug", "drink filter", "wide tape", "double gill", "paper case", "brown paper roll", "tablet pocket", "charcoal", "firestarter", "accendifuoco", "cubetti legna", "instant bbq", "instant lighting", "barbequick", "decorative", "lampada"]),
+    ("Cloths & Sponges", ["body puff", "body scrubber", "mesh pouf", "spugne", "optical wipe", "microfiber towel"]),
+    ("Electrical", ["ameego", "anker", "cecotec", "charging cable", "readers metal"]),
+    ("Toys & Games", ["giocattoli", "animali della", "econimic mill"]),
+
+    ("Cheese", ["camembert", "havarti", "edamer", "maasdam", "parmeggiano", "ricotta", "quark", "mozzarelline", "alpenhain", "ambrosi", "brescialat", "bayernland", "arla"]),
+    ("Pasta & Couscous", ["girasoli", "tortelloni", "conchiglioni", "suppli"]),
+    ("Yoghurt", ["probiotic drink", "alpro cocco", "pudding"]),
+    ("Chilled Fish", ["salmone", "octopus", "taramosalata", "gobon"]),
+    ("Cold Cuts", ["pepperoni", "cottomagro"]),
+
+    # ---- Greens: Gluten Free / Organic / Dietary aisles ----
+    ("Bread", ["balviten", "damhert", "sliced loaf", "bridge roll", "hamburger roll", "mini roll", "long roll", "bagel", "piadina", "white sandwich", "airos", "arios", "salty stick"]),
+    ("Sports", ["protein shake", "maca", "spirulina", "chlorella", "moringa", "ashwagandha", "matcha", "hemp protein", "superfood", "superberries", "biotona", "dragon", "chia protein", "detox", "greens capsule"]),
+    ("Nuts", ["semi di chia", "semi di lino", "semi girasole", "semi zucca", "semi di zucca", "seed blend"]),
+    ("Coffee", ["cafedirect", "roast & ground", "roast and ground"]),
+    ("Sauces & Condiments", ["tamari"]),
+    ("Meat Alternatives", ["tempeh", "jackfruit", "crocchette"]),
+    ("Cereals", ["supergrain", "organic flake", "hoops"]),
 ]
 
 
@@ -1475,6 +1678,12 @@ KEYWORD_RULES = [
 # below, since it's more specific than the bare "egg" single-word rule it's
 # here to override.
 MULTI_KEYWORD_RULES = [
+    # Checked before everything else: Areon is a home-fragrance brand, and
+    # its products are literally named "Areon Home Perfume ...", so the
+    # generic "perfume" rule further down would otherwise claim them for
+    # Perfume (the personal-fragrance category) rather than Air Fresheners.
+    ("Air Fresheners", ["areon"]),
+
     # "conditioner"/"candle" are checked FIRST, ahead of everything else in
     # this list on purpose -- both are unambiguous, product-defining words
     # with no food meaning at all, so nothing later in this list should
@@ -2487,6 +2696,11 @@ MULTI_KEYWORD_RULES = [
     ("Disposables", ["ice", "cube", "bag"]),
     ("Coffee", ["saquella"]),                         # "Saquella Bar Sud Beans" is coffee -- needs Pass 0 to beat the new bare "bean" Legumes rule
     ("Chocolates", ["nutella"]),                      # "Nutella Hazelnut Spread" was landing on Butter via the bare word "spread"
+
+    # 18 Aug 2026 seventh sweep -- brand rules that were losing to a generic
+    # word elsewhere in the name.
+    ("All-purpose Cleaners", ["astonish"]), # "Astonish Bleach Cream Cleaner" was landing on Cooking Creams via bare "cream"
+    ("Toys & Games", ["addo"]),             # "Addo Out To Impress Water Jelly Art" was landing on Water
     ("Floor Cleaners", ["floor", "cleaner"]),         # "Fresh Floor Liquid Cleaner Marseille & Lavender" -- the two words are split by "Liquid"
     ("Sanitary Towels", ["every day", "sensitive"]),  # "Every Day Up Sensitive With Cotton"
     ("Sanitary Towels", ["every day", "up"]),           # "Frio Ice Cubes Bags" -- both words are pluralised mid-phrase, so no contiguous phrase can match it      # "CAR CLOTH SUPER WATER ABSORBENT" -- absorbency is a cloth's selling point too, so a cloth that says "absorbent" stays a cloth  # "Dove Bath Seta Preziosa" -- bare "bath" is far too generic on its own (bath salts, bath towel, bath mat, bathroom cleaner), so it only counts alongside the brand  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
@@ -2832,9 +3046,60 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Jelly', 'Vegetables'}),
     frozenset({'Milk', 'Vegetables'}),
     frozenset({'Spirits - Whisky', 'Vegetables'}),
+
+    # 18 Aug 2026 seventh sweep -- the first round written from the real
+    # export, so this batch is larger. Each pair was traced to the product
+    # names behind it and confirmed to resolve sensibly; the four that did
+    # not (Areon, Astonish, Addo, Nutella) were fixed with Pass-0 rules
+    # instead of being accepted.
+    frozenset({'Air Fresheners', 'Fruits'}),
+    frozenset({'Air Fresheners', 'Honey'}),
+    frozenset({'Air Fresheners', 'Oils'}),
+    frozenset({'All-purpose Cleaners', 'Bathroom & Wc Cleaner'}),
+    frozenset({'All-purpose Cleaners', 'Cooking Creams'}),
+    frozenset({'Baby Essentials', 'Cooking Creams'}),
+    frozenset({'Baby Essentials', 'Fruits'}),
+    frozenset({'Beef', 'Canned Seafood'}),
+    frozenset({'Beef', 'Cold Cuts'}),
+    frozenset({'Bread', 'Chicken'}),
+    frozenset({'Bread', 'Cooking Creams'}),
+    frozenset({'Bread', 'Lamb'}),
+    frozenset({'Butter', 'Sauces & Condiments'}),
+    frozenset({'Cake Preparations', 'Cooking Creams'}),
+    frozenset({'Cake Preparations', 'Spirits - Liquers'}),
+    frozenset({'Canned Seafood', 'Pasta & Couscous'}),
+    frozenset({'Canned Seafood', 'Water'}),
+    frozenset({'Carbonated Drinks', 'Make Up'}),
+    frozenset({'Carbonated Drinks', 'Sweet Snacks'}),
+    frozenset({'Cheese', 'Milk'}),
+    frozenset({'Chilled Fish', 'Spirits - Liquers'}),
+    frozenset({'Chilled Fish', 'Sweet Snacks'}),
+    frozenset({'Cloths & Sponges', 'Sports'}),
+    frozenset({'Cold Cuts', 'Dried Fruit'}),
+    frozenset({'Cold Cuts', 'Eggs'}),
+    frozenset({'Cold Cuts', 'Fruits'}),
+    frozenset({'Cold Cuts', 'Ham'}),
+    frozenset({'Cooking Creams', 'Sports'}),
+    frozenset({'Deodorants', 'Shaving Creams'}),
+    frozenset({'Disposables', 'Electrical'}),
+    frozenset({'Flour', 'Sports'}),
+    frozenset({'Fruits', 'Make Up'}),
+    frozenset({'Fruits', 'Toys & Games'}),
+    frozenset({'Honey', 'Make Up'}),
+    frozenset({'Jelly', 'Make Up'}),
+    frozenset({'Jelly', 'Sauces & Condiments'}),
+    frozenset({'Jelly', 'Toys & Games'}),
+    frozenset({'Milk', 'Sports'}),
+    frozenset({'Nuts', 'Sports'}),
+    frozenset({'Rice', 'Spirits - Liquers'}),
+    frozenset({'Rice', 'Sports'}),
+    frozenset({'Sauces & Condiments', 'Sweet Snacks'}),
+    frozenset({'Sauces & Condiments', 'Vinegars'}),
+    frozenset({'Toys & Games', 'Vegetables'}),
+    frozenset({'Toys & Games', 'Water'}),
+
+    frozenset({'Air Fresheners', 'Perfume'}),  # Areon home fragrance -- resolves to Air Fresheners via the Pass-0 rule at the top of MULTI_KEYWORD_RULES
 }
-
-
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
     # in welbees_crawler.py, where a product name was extracted straight
@@ -2996,6 +3261,57 @@ def matching_categories_by_name(product_name):
 
 
 # ============================================================================
+# Aisle-scoped keyword rules.
+#
+# Sits between the ordinary name rules and the last-resort aisle map, and
+# exists for words that are decisive INSIDE one aisle and misleading
+# everywhere else.
+#
+# The case that forced it: Welbee's "Drinks" bucket is over half wine, and
+# what tells you the colour is the Italian or French word on the label --
+# "Bianco", "Rosso", "Rouge", "Rosato". But "bianco" cannot be a normal
+# keyword, because elsewhere in this shop it is Omino Bianco (a stain
+# remover), Mulino Bianco (biscuits), Cif Crema Bianco and Il Bucato Bianco.
+# Scoped to the Drinks aisle it is unambiguous; unscoped it would be a
+# disaster. Same for "rose" (wine vs. rose-scented everything).
+#
+# Checked only after classify_by_name() has already failed, so as with the
+# last-resort map below, this can only fill blanks -- never overrule a real
+# name match. Within an aisle the list is checked in order, first match wins.
+# ============================================================================
+SCOPED_KEYWORD_RULES = {
+    # Welbee's Health & Beauty labels use trade abbreviations that are far
+    # too short to be safe as ordinary keywords: "Sg" is shower gel, "As"
+    # aftershave, "Tp" toothpaste, "Apd" anti-perspirant deodorant.
+    ("welbees", "Health & Beauty"): [
+        ("Shower Gels", ["sg", "doccia", "gel doccia", "bagno"]),
+        ("Shaving Creams", ["as", "blade", "razor"]),
+        ("Toothpaste", ["tp"]),
+        ("Skin Care", ["spf"]),
+        ("Hair & Nail Accessories", ["brush", "clip", "comb"]),
+        ("Deodorants", ["spray", "roll on", "stick"]),
+    ],
+
+    ("welbees", "Drinks"): [
+        # Colour first -- it is the most reliable signal on a wine label.
+        ("Wine - Rose", ["rose", "rosato", "rosado", "anjou", "provence"]),
+        ("Wine - Sparkling", ["sparkling", "sparking", "frizzant", "cuvee", "champagne", "bollinger", "blue nun", "moscato d asti"]),
+        ("Wine - White", ["bianco", "white", "blanc", "cortese", "chablis", "verdejo", "albarino", "orvieto", "frascati", "bourgogne blanc"]),
+        ("Wine - Red", ["rouge", "rosso", "red", "tinto", "nerello", "pinotage", "zinfandel", "zinfadel", "gamay", "cinsault", "bardolino", "bordeaux", "chateau", "emilion", "brunello", "barbera", "dolcetto", "ammasso", "barrel aged"]),
+        ("Beers", ["alhambra", "bavaria", "budweiser", "baladin", "radler", "birra", "beer", "pilsner", "stout"]),
+        ("Spirits - Liquers", ["tequila", "teqila", "campari", "aperol", "bitters", "bitter", "advokaat", "bombay sapphire", "angostura", "caffo", "cocktail"]),
+        ("Carbonated Drinks", ["gazzosa", "limonata", "tonic", "britvic", "frizzante"]),
+        ("Juices", ["cappy", "belte", "multi vitamin", "multivitamin", "aloe vera drink", "aleo vera"]),
+        ("Water", ["acqua"]),
+        # Anything still unmatched in this aisle that names a grape or a
+        # region is wine; without a colour word Red is the commoner default
+        # for these bottles.
+        ("Wine - Red", ["doc", "docg", "igp", "igt", "dop", "vino", "wine", "riserva", "reserva"]),
+    ],
+}
+
+
+# ============================================================================
 # Last-resort chain-category fallback.
 #
 # The maps above (PAVI_CATEGORY_MAP / GREENS_CATEGORY_MAP) are applied BEFORE
@@ -3137,6 +3453,16 @@ def classify_listing(store_id, chain_category, chain_product_name):
     # a real name match always wins, so this can only ever fill in blanks,
     # never overrule something already decided.
     if chain_category:
-        return LAST_RESORT_CATEGORY_MAP.get((store_id, chain_category.strip()))
+        key = (store_id, chain_category.strip())
+
+        # Words that only mean what they look like inside this one aisle
+        # (see SCOPED_KEYWORD_RULES).
+        cleaned = clean_for_matching(chain_product_name)
+        for category, keywords in SCOPED_KEYWORD_RULES.get(key, ()):
+            for kw in keywords:
+                if _keyword_matches(kw, cleaned):
+                    return category
+
+        return LAST_RESORT_CATEGORY_MAP.get(key)
 
     return None
