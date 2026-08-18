@@ -525,7 +525,7 @@ KEYWORD_RULES = [
     # (bare "cream" is listed earlier than Carbonated Drinks). Listed as its
     # own phrase so it wins over bare "cream" outright, the same shape as
     # "olive oil" vs bare "oil".
-    ("Carbonated Drinks", ["cream soda", "cola", "soda", "fizzy", "carbonated"]),
+    ("Carbonated Drinks", ["cream soda", "orange soda", "cola", "soda", "fizzy", "carbonated"]),
     ("Beers", ["beer", "lager", "ale"]),
     ("Ciders", ["cider"]),
     ("Wine - Red", ["red wine", "red blend"]),
@@ -774,6 +774,95 @@ KEYWORD_RULES = [
     # kind of approximation as a few Greens mappings above. Revisit if this
     # turns out to be a large enough group to deserve its own category.
     ("Sports", ["whey", "protein powder", "creatine", "bcaa", "pre workout"]),
+
+    # ---- 18/19 Aug 2026: first full-production "unclassified (store,
+    # chain_category)" report, 129,703 listings. Unlike the collision
+    # reports, these gaps aren't miscategorizations -- they're products the
+    # keyword lists never had a word for at all, found from real example
+    # names now sampled per bucket (see categorize_listings.py's
+    # unclassified_examples). Four buckets turned out to be genuinely
+    # outside the grocery domain (board games, gift wrap, pet grooming,
+    # sauces/condiments, meat alternatives) with no existing category to
+    # fall back on -- new categories added below rather than force-fitting
+    # them somewhere approximate, same reasoning as the existing "Sports"
+    # catch-all comment just above. Two buckets ("Food Cupboard" and
+    # "Health & Beauty", 3271 and 2754 listings) were left mostly untouched
+    # this round -- the report only gave 3 examples each, not enough to
+    # responsibly close gaps that size; categorize_listings.py now samples
+    # up to 8 examples per bucket instead of 3, so the next report should
+    # give enough signal to take a real pass at those two.
+
+    ("Nuts", ["nut"]),  # bare fallback -- "Good Health Unsalted Mixed Nuts" had no specific nut-type word (peanut/almond/cashew/walnut/pistachio) to match on
+    ("Chocolates", ["gianduia"]),  # hazelnut-chocolate praline, e.g. Pernigotti Gemma Gianduia (WebSearch-confirmed)
+    ("Dried Fruit", ["glazed cherries", "glace cherries"]),  # candied cherries, baking/snacking, e.g. "Good Health Glazed Cherries"
+
+    ("Cotton Buds", ["cotton pad", "cottan pad"]),  # distinct phrase from the existing "cotton wool"; "cottan" is a real typo seen in data ("Cotoneve Duo Plus Cottan Pads")
+    ("Cotton Buds", ["septona bio"]),  # Septona is a Greek cotton-pad brand (WebSearch-confirmed); narrow brand+line phrase since "Septona" alone also covers other personal-care lines
+
+    ("Air Fresheners", ["reed diffuser", "reed difuser"]),  # both spellings -- "difuser" is a real typo seen in this project's own data, same pattern as "air freshner"
+    ("Candles", ["scented pillar", "spaas"]),  # "pillar" candle is a real product shape; Spaas (WebSearch-confirmed) is a pillar-candle-only brand, safe as a bare brand word
+
+    ("Toys & Games", ["uno", "board game", "card game"]),  # NEW category -- welbees "Home & Entertainment" (UNO, Mattel Uno Minecraft) has no grocery-domain fit; genuinely a toys/games department
+    ("Gift Sets", ["wine bag"]),  # Stewo (WebSearch-confirmed gift-wrap-only brand) wine gift bags -- extends the existing "gift bag" phrase already in this category, not a new one
+
+    ("Wine - Red", ["shiraz", "merlot"]),  # red wine grape varietals, e.g. "Jacobs Creek Shiraz", "Caravaggio Merlot"
+    ("Wine - White", ["porto"]),  # fortified port wine has no dedicated category here (only Red/Rose/Sparkling/White exist) -- folded into White as the nearest fit, e.g. "Kopke Fine White Porto" (WebSearch-confirmed Port producer); flagged as a judgment call, not a confident "this is definitely a white wine"
+
+    ("Laundry Washing Liquids", ["marsiglia"]),  # Marseille-soap-style Italian laundry detergent term, e.g. "Chanteclair 30 Lavaggi Marsiglia" -- Chanteclair itself (WebSearch-confirmed) spans detergent, softener, AND surface cleaners, so a brand-only rule would be unsafe
+    ("Fabric Softener", ["ammorbidente", "lenor beads", "scent booster"]),  # "ammorbidente" is Italian for fabric softener; Lenor Beads (WebSearch-confirmed) are in-wash scent-booster beads, closest existing category
+    ("Chicken", ["pollo"]),  # Italian for chicken, e.g. "Aia Party Pollo" -- Aia itself (WebSearch-confirmed poultry brand) also sells turkey, so using the descriptive word rather than the brand name
+    ("Cakes", ["almondy"]),  # Almondy (WebSearch-confirmed) is an almond-cake-only Swedish brand, e.g. "Almondy Salted Caramel Crush"
+    ("Sports", ["olimp", "plant protein"]),  # Olimp (WebSearch-confirmed) is a sports-nutrition-only brand; "plant protein" extends the existing whey/creatine/bcaa list
+    ("Legumes", ["bigilla"]),  # Maltese broad-bean dip (WebSearch-confirmed), e.g. "Josefa Bigilla"
+    ("Pork", ["pancetta"]),  # Italian cured pork, e.g. "Carrefour Cubetti Di Pancetta Affumicata"
+    ("Yoghurt", ["jogobella"]),  # Zott's yoghurt-only brand line (WebSearch-confirmed), e.g. "Zott Jogobella Reg Exotic"
+    ("Pasta & Couscous", ["maccheroni"]),  # Italian spelling of macaroni -- the existing "macaroni" (English spelling) keyword doesn't match this, e.g. "Alimenti Maccheroni Beetroot"
+
+    ("Sauces & Condiments", ["worcester sauce", "worcestershire sauce", "pasta sauce", "rikotta sauce"]),  # NEW category -- no sauces/condiments category existed at all; "rikotta" is the real misspelling seen ("Agromonte Cher Tom Rikotta Sauce")
+
+    ("Baby Essentials", ["infacare", "baby bath", "baby powder"]),  # Infacare (WebSearch-confirmed baby-bath-only brand); extends the existing baby wipe/lotion/shampoo list
+
+    ("Bread", ["bun", "brioche", "david's bakery", "dijo", "tortilla wrap", "finger roll"]),  # "David's Bakery" and Dijo (WebSearch-confirmed tortilla-wrap-only brand) are brand rules; the rest are descriptive bread-product terms
+
+    ("Milk", ["vive soy", "oat drink", "drink oat", "soya drink", "drink soya", "soy drink", "drink soy"]),  # Vive Soy (WebSearch-confirmed soya-milk-only brand); the rest cover Alpro-style drinks that never say the word "milk" itself -- both word orders needed, e.g. "Alpro Drink Oat No Sugar" puts "Drink" before "Oat"
+    ("Cooking Creams", ["custard"]),  # e.g. "Alpro Custard Vanilla"
+
+    ("Sugar", ["sweetner"]),  # real typo seen in data ("My Dietor Zero Calorie Sweetner") -- doesn't match the existing "sweetener" via the plural-only s? suffix
+    ("Cereals", ["barley"]),  # e.g. "Alce Nero Organic Soluble Barley"
+    ("Cake Preparations", ["cocoa powder"]),  # baking ingredient, extends the existing "yeast" entry in this category
+
+    ("Fish & Other Animals", ["gammarus"]),  # dried aquarium fish food (WebSearch-confirmed), e.g. "Padovan Gammarus"
+    ("Pet Food", ["m-pets"]),  # WebSearch-confirmed dog-treat-only brand
+    ("Pet Care", ["pet wipes"]),  # NEW category -- pet grooming/hygiene has no home under the food-focused "Pet Food" category. "camon" itself is a Pass-0 rule below (see MULTI_KEYWORD_RULES) so it beats the later "cleansing wipes" Skin Care phrase, which would otherwise win as a Pass-1 phrase over this bare brand word
+
+    ("Meat Alternatives", ["tofu", "beyond smash", "plant based burger", "veggie burger", "veggie stick"]),  # NEW category -- plant-based meat substitutes don't fit any existing food category; "Beyond Smash" (WebSearch-confirmed Beyond Meat product line)
+
+    ("Bathroom & Wc Cleaner", ["trigger shower"]),  # Mr Muscle (WebSearch-confirmed bath/kitchen/drain cleaner brand) shower spray -- using the descriptive term since the brand itself spans multiple cleaner sub-types
+    ("All-purpose Cleaners", ["platinum kitchen"]),  # Mr Muscle kitchen cleaner, same brand-spans-multiple-subtypes reasoning as above
+    ("Floor Cleaners", ["pavimenti"]),  # Italian for "floors", e.g. "Tesoro Mio Pavimenti"
+    ("Dish Washing Liquid", ["wash up"]),  # e.g. "Morning Fresh Wash Up Lemon Fresh" -- doesn't contain the existing "washing up liquid" phrase in full
+
+    ("Sanitary Towels", ["con ali"]),  # Italian "with wings" -- common across winged sanitary pad brands, e.g. "Lines Natura Giorno Con Ali"
+    ("Hand Wash Liquids", ["soap"]),  # bare fallback for bar soap with no other descriptive word, e.g. "Lux Soap Magical Spell", "Pears Soap Mint Extracts Bar" -- imperfect fit (these are bar soap, not liquid) but the closest existing category
+    ("First Aid", ["dressing", "surgical spirit", "surgicalspirit", "foot powder"]),  # "surgicalspirit" (no space) is the real concatenated form seen in the data, kept alongside the spaced version
+    ("Make Up", ["lip balm", "nail duo"]),  # extends the existing lipstick/mascara/foundation/eyeshadow/nail-polish list
+
+    # ---- Same 18/19 Aug 2026 pass, continued: going back through every
+    # remaining example in the original report (not just the 2 mega-buckets
+    # we deferred) rather than waiting on a fresh, bigger-sample report --
+    # requested directly rather than doing another slow report-and-paste
+    # round.
+    ("Chicken", ["nagghy"]),  # Aia's "Nagghy" is a specific chicken/poultry product line (WebSearch-confirmed via "AIA NAGGHY CHICK 1KG - CHICKEN & POULTRY")
+    ("Vegetables", ["freskezza", "beetroot"]),  # Freskezza (WebSearch-confirmed) is a Maltese fresh-salad/prepared-veg-only brand
+    ("Floor Cleaners", ["smac easy wax"]),  # Smac (WebSearch-confirmed) spans floor wax, furniture polish, and limescale remover, so using the specific product phrase rather than the bare brand name
+    ("Clothes", ["sock"]),  # e.g. "Disney Paw Patrol Socks" -- not using the "Tex" brand name alone, since "Tex Mex" seasoning is a real, unrelated food product line
+    ("Disposables", ["tissue", "toilet paper", "toilet tissue", "toilet roll"]),
+    ("Bread", ["party roll"]),  # e.g. "Greens Party Rolls X18" -- these are dinner/bread rolls (confirmed by the "Bakery / Bread / Fresh Bread" chain_category it came from), not a paper product. Using the specific phrase "party roll" rather than bare "roll" since bare "roll" would ambiguously also match "toilet roll" and "kitchen roll" in Disposables
+    ("Skin Care", ["cleansing wipes"]),  # e.g. "Nivea Cleansing Wipes 3in1"
+    ("Fabric Softener", ["asciugatrice"]),  # Italian for "dryer" -- dryer sheets, e.g. "Lenor Fogli Profumati Asciugatrice"
+    ("Sauces & Condiments", ["bruschetta"]),  # tomato-based bruschetta topping mix, e.g. "Fresh By Ela Bruschetta Mix"
+    ("Cake Preparations", ["cocao powder"]),  # real misspelling of "cocoa powder" seen in data ("Alce Nero Organic Cocao Powder") -- the correctly-spelled version was already added above
+    ("Sports", ["protein donut", "protein bar"]),  # e.g. "Body Attack Protein Donut Blueberry"
 ]
 
 
@@ -812,6 +901,16 @@ MULTI_KEYWORD_RULES = [
     # (shampoo, lotion, soap etc. could plausibly have the same issue).
     ("Conditioners", ["conditioner"]),
     ("Candles", ["candle"]),
+    # "Gourmet Gold" -- a real Purina cat-food product line confirmed via
+    # WebSearch (Purina's own UK site lists "GOURMET Gold Savoury Cake" in
+    # tuna/chicken/salmon/beef/lamb flavours, all wet cat food), found via
+    # real data ("Purina Gourmet Gold Savoury Cake Tuna") landing on Cakes
+    # instead, since bare "cake" is a Cakes keyword and this brand's own
+    # product-format name happens to say "Cake". Checked here at the very
+    # top, ahead of the "cod"/"salmon"+"cake" fish-cake fix further down --
+    # Purina's own range includes "Savoury Cake Meat & Fish" and "...
+    # Salmon" variants, which would otherwise also match those rules.
+    ("Cat", ["gourmet gold"]),
     # Everything below here (through the end of this personal-care/
     # household block) is the SAME "unambiguous, product-defining word"
     # pattern as Conditioners/Candles just above, applied broadly for the
@@ -912,6 +1011,30 @@ MULTI_KEYWORD_RULES = [
     ("First Aid", ["plaster"]),
     ("Household Goods", ["thermos"]),
     ("Household Goods", ["flask"]),
+    # "Softener" -- no realistic food meaning (fabric softener is always
+    # scented with a fragrance name, never a food name that also has one),
+    # found via real data ("Milk & Honey Softener 25 Wash") landing on Milk
+    # instead, since the scent name shares words with real dairy products.
+    ("Fabric Softener", ["softener"]),
+    # "Day Cream"/"Night Cream" -- real, unambiguous skincare terms, found
+    # via real data ("Nivea Oil Free Day Cream", "Moroccan Argan Oil Night
+    # Cream") landing on Cooking Creams instead, since bare "cream" is
+    # checked before Face Creams and these products' other words (oil,
+    # argan) are food-sounding ingredient names, not food products.
+    ("Face Creams", ["day cream"]),
+    ("Face Creams", ["night cream"]),
+    # "Dalan D'olive" -- a real Malta-sold personal-care brand (M&Z p.l.c.),
+    # already known from an earlier round to make soap bars, confirmed here
+    # to also make hand/face/body creams and moisturisers under names that
+    # don't otherwise say "cream", "lotion" or "moisturiser" specifically
+    # enough to already be caught (e.g. "Dalan D'olive Intensive Care Cream
+    # Olive") -- found via real data landing on Cooking Creams/Olives.
+    # Third round this specific brand has turned up as a personal-care
+    # product miscategorised as food, so promoted to a brand-level rule
+    # (both the apostrophe and no-apostrophe spellings seen in real data)
+    # rather than another one-off phrase.
+    ("Skin Care", ["dalan d'olive"]),
+    ("Skin Care", ["dalan dolive"]),
     # "whey" -- a sports-nutrition-supplement word with no other realistic
     # meaning in this data (every real example is an Iron Maxx/QNT whey
     # protein product), found losing to whatever flavour word it shared
@@ -966,6 +1089,14 @@ MULTI_KEYWORD_RULES = [
     # tub of cooking cream -- every real example so far.
     ("Cakes", ["cake", "cream"]),
     ("Cereals", ["cereal", "cream"]),
+    # "Biscuit"/"Cookie" + "Milk" -- same shape again: a milk-flavoured
+    # biscuit was landing on Milk via bare "milk" (checked before Biscuits),
+    # found via real data ("Biscuits Milk Fingers", "Baby Biscuits Milk
+    # (6M+)", "Dolfin Magic Milk Straw Cookies"). When a name says
+    # "biscuit"/"cookie" AND "milk" together, the product is the biscuit --
+    # milk is just its flavour -- not a carton of milk.
+    ("Biscuits", ["biscuit", "milk"]),
+    ("Biscuits", ["cookie", "milk"]),
     # "Butter Lettuce"/"Butter Bean" -- both real produce/legume names that
     # happen to contain the word "butter", found via real data ("Butter
     # Lettuce", "Lettuce Butter/boston Nl", "Butter Beans In Sunflower Oil")
@@ -1103,6 +1234,17 @@ MULTI_KEYWORD_RULES = [
     ("Chilled Fish", ["salmon steak"]),
     ("Chilled Fish", ["cod steak"]),
     ("Chilled Fish", ["fish steak"]),
+    # "Cod"/"Salmon" + "Cake" -- same shape as the steak fixes right above: a
+    # breaded fish patty, found via real data ("4 Cod Fsh Cakes", "Bird's
+    # Eye Cod Fish Cakes") landing on Cakes instead, since bare "cake" is
+    # checked before Chilled Fish. Written as co-occurrence (not an adjacent
+    # phrase) because the real examples have another word in between ("Cod
+    # FSH Cakes", "Cod Fish Cakes") -- a fish cake is a fish product, never
+    # a dessert cake. Checked after "Gourmet Gold" above so that brand's own
+    # "Savoury Cake ... Salmon"/"...Meat & Fish" cat-food variants still
+    # correctly go to Cat first.
+    ("Chilled Fish", ["cod", "cake"]),
+    ("Chilled Fish", ["salmon", "cake"]),
     # Bare "chocolate"/"choco" -- the same general-fix pattern already used
     # for "chips" below, extended to the same underlying issue recurring
     # under a different category. Found via real data (17 Aug 2026
@@ -1222,10 +1364,16 @@ MULTI_KEYWORD_RULES = [
     # phrase above because of the misspelling. Same brand, same reasoning,
     # just matching the typo as it actually appears in the source data.
     ("Nuts", ["lamb brnad", "almond"]),
-    # "Lamb Fruits"/"Lamb Raisins" -- the same Lamb Brand product line again,
-    # this time dried fruit ("Lamb Fruits Raisins Golden (zbib) 500g
-    # Pillow"), found landing on the Lamb meat category via bare "lamb".
-    ("Dried Fruit", ["lamb", "raisin"]),
+    # "Lamb Fruits" -- the same Lamb Brand product line again, this time
+    # dried fruit. Originally added narrower (just "lamb"+"raisin", for
+    # "Lamb Fruits Raisins Golden") but real data (19 Aug 2026 report) then
+    # showed the same "Lamb Fruits" product line under two more dried-fruit
+    # types with no "raisin" in the name at all ("Lamb Fruits Prunes
+    # Pitted", "Lamb Fruits Blk Currants") -- the same "recurs with a
+    # different specific word every round" signal already behind the plain
+    # "lamb brand"/"lamb brnad" catch-alls, so this is widened to the
+    # adjacent brand phrase itself rather than adding a fourth fruit word.
+    ("Dried Fruit", ["lamb fruits"]),
     # "Lamb Pepper"/"Lamb Seasoning" -- two more real "Lamb [spice-related
     # word]" products ("Lamb Pepper White Ground", "Lamb Seasoning Onion
     # Powder"), same pattern as "Lamb Himalayan"/"Lamb Rosemary" below.
@@ -1241,6 +1389,16 @@ MULTI_KEYWORD_RULES = [
     # own "mince" keyword afterwards, unaffected.
     ("Lamb", ["lamb mince"]),
     ("Herbs & Spices", ["lamb brand"]),
+    # "Lamb Brnad" catch-all -- same typo, same brand, same reasoning as
+    # "Lamb Brand" right above. Found via real data (19 Aug 2026 report) that
+    # this typo recurs across many DIFFERENT spice words ("Lamb Brnad Herbs
+    # Mint", "Lamb Brnad Mixed Spice", "Lamb Brnad Spices Garam Masala"),
+    # the exact "same collision shape keeps recurring with a new specific
+    # word every round" signal that already justified the plain "lamb
+    # brand" catch-all -- so this gets the same general treatment instead of
+    # another one-off per spice word. Listed after the narrow "lamb
+    # brnad"+"almond" -> Nuts carve-out above, so that one still wins first.
+    ("Herbs & Spices", ["lamb brnad"]),
     # Three more real "Lamb [spice-related word]" products found in the
     # same 17 Aug 2026 collision report, none containing the literal word
     # "brand" so the catch-all right above doesn't cover them: "LAMB SALTS
@@ -1583,6 +1741,29 @@ MULTI_KEYWORD_RULES = [
     # is ALSO present, which is a much stronger, safer signal that the
     # product is a seasoning blend rather than a vegetable.
     ("Herbs & Spices", ["salt", "pepper"]),
+    # "Herbs & Spices" written out as its own product-line name -- found via
+    # real data ("Tiger Brand Herbs & Spices Beef & Pork Seasoning") landing
+    # on Beef instead: bare "beef" is checked before the existing bare
+    # "herb"/"spice" keywords, so a seasoning mix naming its own two meat
+    # flavours was losing to whichever one came first. When a product
+    # literally says "Herbs & Spices" together, it's the seasoning, not the
+    # meat -- checked as its own phrase so it wins outright.
+    ("Herbs & Spices", ["herbs & spices"]),
+    ("Herbs & Spices", ["herbs and spices"]),
+    # "Air Wick" -- a real, air-freshener-only brand (confirmed via
+    # WebSearch: its entire range is diffusers, plug-ins and sprays), found
+    # via real data ("Air Wick Diffusore Oil Base + Refill... Sea Salt")
+    # landing on Herbs & Spices via bare "salt".
+    ("Air Fresheners", ["air wick"]),
+    # "Baylis & Harding" -- a real, toiletries-and-gift-set-only brand
+    # (confirmed via WebSearch: baylisandharding.com's own range is bathing
+    # gift sets, toiletry bags, etc, nothing else), found via real data
+    # ("Baylis & Harding Jojoba Vanilla & Almond Oil Bathing Gift Set")
+    # landing on Oils instead: "almond oil" is itself a phrase (added
+    # earlier this project for real cooking-oil products), so it was tying
+    # with -- and beating -- the existing "gift set" phrase purely by
+    # category list order. This is a cosmetic gift set, never a food oil.
+    ("Gift Sets", ["baylis harding"]),
     # Bare "soup" -- found via real data: "Campbells Cream Of Tomato Soup"
     # was landing on Cooking Creams (bare "cream"), since there was no
     # "soup" keyword anywhere in KEYWORD_RULES at all (Soups only existed
@@ -1622,6 +1803,21 @@ MULTI_KEYWORD_RULES = [
     # the same Pass-0 treatment as "conditioner"/"candle" above -- "grater"
     # is an unambiguous, product-defining word with no food meaning at all.
     ("Household Goods", ["grater"]),
+
+    # 18/19 Aug 2026 unclassified-bucket pass (see the matching dated
+    # comment in KEYWORD_RULES above) -- "alpro" and "dessert" aren't
+    # always adjacent ("Alpro Soya Vanilla Dessert" has two words between
+    # them), so this needs co-occurrence rather than a phrase.
+    ("Cooking Creams", ["alpro", "dessert"]),
+
+    # Pantene makes shampoo, conditioner, AND leave-in treatment -- a
+    # brand-only rule would wrongly force every Pantene product into one
+    # category. Only the listings that explicitly say "Treatment" get
+    # this; "Pantene Hydration Heat & Glow" (no such word) is left
+    # unclassified rather than guessed at.
+    ("Hair Treatment", ["pantene", "treatment"]),
+
+    ("Pet Care", ["camon"]),  # Camon (WebSearch-confirmed pet-grooming-only brand) needs Pass 0 to beat the later "cleansing wipes" Skin Care phrase (Pass 1 phrases always beat Pass 2 bare words, regardless of list order) -- found via this round's own regression sweep on "Camon Talc Cleansing Wipes"
 ]
 
 
@@ -1751,6 +1947,81 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({"Chicken", "Jelly"}),  # chicken in jelly, same shape as Beef/Jelly above
     frozenset({"Jelly", "Turkey"}),  # turkey in jelly, same shape as Beef/Jelly above
     frozenset({"Lamb", "Pasta & Couscous"}),  # Lamb Brand dry couscous products
+
+    # Third extension (19 Aug 2026), from the first real report run against
+    # the full 129,703-listing production database rather than a sample --
+    # same reasoning as the two blocks above, each checked against its real
+    # example(s) and already resolving to a reasonable answer, not a bug.
+    frozenset({"Beef", "Vegetables"}),  # dish combinations, e.g. beef & carrot jar
+    frozenset({"Cereals", "Honey"}),  # e.g. honey loops, honey & nut cereal
+    frozenset({"Herbs & Spices", "Pasta & Couscous"}),  # e.g. tomato & herb couscous
+    frozenset({"Cakes", "Vegetables"}),  # e.g. carrot cake
+    frozenset({"Dried Fruit", "Fruits"}),  # e.g. sultanas, raisin & apple bars
+    frozenset({"Nuts", "Vegetables"}),  # e.g. peanut & onion snacks
+    frozenset({"Bread", "Flour"}),  # e.g. strong white bread flour
+    frozenset({"Herbs & Spices", "Rice"}),  # e.g. tomato & basil rice
+    frozenset({"Cheese", "Pasta & Couscous"}),  # e.g. macaroni cheese
+    frozenset({"Chicken", "Frozen"}),  # frozen chicken products
+    frozenset({"Carbonated Drinks", "Water"}),  # soda water / club soda
+    frozenset({"Beef", "Herbs & Spices"}),  # e.g. beef gravy granules, corned beef
+    frozenset({"Cakes", "Cheese"}),  # e.g. cheddar-flavoured corn cakes
+    frozenset({"Biscuits", "Cereals"}),  # e.g. cereal biscuits, cookie-crisp cereal
+    frozenset({"Canned Seafood", "Oils"}),  # sardines in oil
+    frozenset({"Cheese", "Oils"}),  # e.g. feta in oil
+    frozenset({"Fruits", "Water"}),  # fruit-flavoured water
+    frozenset({"Canned Seafood", "Vegetables"}),  # e.g. sardines in tomato sauce
+    frozenset({"Cakes", "Nuts"}),  # e.g. walnut cake
+    frozenset({"Butter", "Nuts"}),  # nut spreads
+    frozenset({"Biscuits", "Coffee"}),  # e.g. coffee biscuits
+    frozenset({"Flour", "Rice"}),  # rice flour
+    frozenset({"Olive Oil", "Snacks"}),  # e.g. olive-oil-coated rice rolls
+    frozenset({"Lamb", "Rice"}),  # Lamb & Rice dog food
+    frozenset({"Bread", "Vegetables"}),  # e.g. onion baguette
+    frozenset({"Vegetables", "Vinegars"}),  # pickled vegetables in vinegar
+    frozenset({"Beef", "Rice"}),  # dish combinations, e.g. beef biryani
+    frozenset({"Cheese", "Nuts"}),  # e.g. cashew & parmesan dip
+    frozenset({"Beef", "Frozen"}),  # frozen beef products
+    frozenset({"Lamb", "Vegetables"}),  # Lamb-brand and dog-food dish combinations
+    frozenset({"Butter", "Cooking Creams"}),  # e.g. butter-cream icing
+    frozenset({"Eggs", "Rice"}),  # e.g. egg fried rice
+    frozenset({"Chilled Fish", "Frozen"}),  # frozen fish/prawns
+    frozenset({"Cereals", "Dried Fruit"}),  # e.g. raisin & nut muesli
+    frozenset({"Ham", "Herbs & Spices"}),  # dual-ingredient/seasoned deli meat
+    frozenset({"Eggs", "Pasta & Couscous"}),  # egg pasta
+    frozenset({"Gift Sets", "Oils"}),  # bath/toiletry oil gift sets
+    frozenset({"Beef", "Beers"}),  # e.g. beef & ale stew/pie
+    frozenset({"Cheese", "Olives"}),  # e.g. olives & cheese tapas
+    frozenset({"Fruits", "Honey"}),  # e.g. honey & melon
+    frozenset({"Herbs & Spices", "Olives"}),  # e.g. olives with herbs
+    frozenset({"Biscuits", "Dried Fruit"}),  # e.g. raisin biscuits
+    frozenset({"Cheese", "Fruits"}),  # e.g. cheese with apple/banana
+    frozenset({"Ham", "Vegetables"}),  # e.g. ham & tomato
+    frozenset({"Beef", "Ham"}),  # dual-ingredient deli meat
+    frozenset({"Cereals", "Rice"}),  # rice-based cereal/muesli
+    frozenset({"Nuts", "Rice"}),  # e.g. rice & almond drink
+    frozenset({"Herbs & Spices", "Oils"}),  # e.g. feta with herbs in oil (Cheese wins anyway)
+    frozenset({"Chilled Fish", "Legumes"}),  # e.g. tuna with lentils/chickpeas
+    frozenset({"Beef", "Chilled Fish"}),  # dual-protein pet food, same shape as Chicken/Chilled Fish
+    frozenset({"Flour", "Pasta & Couscous"}),  # gluten-free pasta flour
+    frozenset({"Legumes", "Pasta & Couscous"}),  # e.g. lentil couscous/orzo
+    frozenset({"Chicken", "Ham"}),  # dual-ingredient, e.g. chicken & ham
+    frozenset({"Herbs & Spices", "Pork"}),  # seasoned pork/ham products
+    frozenset({"Chicken", "Pasta & Couscous"}),  # e.g. chicken pasta
+    frozenset({"Butter", "Sweet Snacks"}),  # e.g. "butter sweets" toffee
+    frozenset({"Biscuits", "Honey"}),  # e.g. honey almond cookies
+    frozenset({"Cooking Creams", "Spirits - Liquers"}),  # cream liqueurs
+    frozenset({"Frozen", "Fruits"}),  # frozen fruit
+    frozenset({"Cheese", "Honey"}),  # e.g. goat cheese with honey
+    frozenset({"Coffee", "Cooking Creams"}),  # e.g. coffee creamer, Irish cream latte
+    frozenset({"Frozen", "Pork"}),  # frozen pork products
+    frozenset({"Cooking Creams", "Fruits"}),  # e.g. fruit-flavoured cooking/dessert cream
+    frozenset({"Butter", "Milk"}),  # e.g. butter & milk combo packs
+    frozenset({"Oils", "Olives"}),  # e.g. olives in oil
+    frozenset({"Ham", "Jelly"}),  # e.g. chicken ham in jelly (resolves to Chicken via list order)
+    frozenset({"Cooking Creams", "Milk"}),  # e.g. full cream milk, milk cream/panna products
+    frozenset({"Honey", "Milk"}),  # e.g. honey kefir, wheat milk honey drink
+    frozenset({"Herbs & Spices", "Sauces & Condiments"}),  # e.g. bruschetta topping with sea salt (resolves to Herbs & Spices via list order) -- new tie from adding the "bruschetta" keyword on 19 Aug 2026
+    frozenset({"Olives", "Sauces & Condiments"}),  # e.g. bruschetta topping with olives -- same product, same reasoning as above
 }
 
 
