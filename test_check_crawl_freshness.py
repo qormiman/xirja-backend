@@ -47,7 +47,9 @@ sys.modules["psycopg2.errors"] = fake_errors
 os.environ["DATABASE_URL"] = "postgres://fake/fake"  # get_connection() reads this; never actually connects here
 
 sys.path.insert(0, "/tmp/xirja/xirja-backend")
-from check_crawl_freshness import check_freshness, STALE_AFTER_HOURS, MIN_HEALTHY_ITEM_COUNT
+from check_crawl_freshness import (
+    check_freshness, STALE_AFTER_HOURS, STUCK_RUNNING_AFTER_HOURS, MIN_HEALTHY_ITEM_COUNT,
+)
 
 NOW = datetime(2026, 8, 19, 12, 0, 0, tzinfo=timezone.utc)
 
@@ -135,15 +137,27 @@ runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
 del runs["greens_gozo"]
 check("one outlet never crawled", runs, ["greens_gozo"])
 
-# ---- One outlet's last successful crawl is more than 48h old ----
+# ---- One outlet's last successful crawl is more than STALE_AFTER_HOURS
+#      (216h / 9 days) old -- genuinely stale, not just a normal gap
+#      between this project's twice-a-week randomized crawls ----
+runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
+runs["welbees"] = healthy_run(hours_ago=STALE_AFTER_HOURS + 1)
+check(f"one outlet stale ({STALE_AFTER_HOURS + 1}h)", runs, ["welbees"])
+
+# ---- Exactly at the STALE_AFTER_HOURS boundary should NOT be flagged
+#      (only strictly older) ----
+runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
+runs["welbees"] = healthy_run(hours_ago=STALE_AFTER_HOURS - 1)
+check(f"one outlet at {STALE_AFTER_HOURS - 1}h -- still healthy", runs, [])
+
+# ---- 20 Aug 2026 -- a gap of a few days (e.g. 72h) is now NORMAL, not
+# stale, now that every chain crawls only twice a week instead of nightly
+# -- this is the exact scenario STALE_AFTER_HOURS was raised to stop
+# flagging. Guards against ever accidentally reverting to the old tight
+# threshold. ----
 runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
 runs["welbees"] = healthy_run(hours_ago=72)
-check("one outlet stale (72h)", runs, ["welbees"])
-
-# ---- Exactly at the 48h boundary should NOT be flagged (only strictly older) ----
-runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
-runs["welbees"] = healthy_run(hours_ago=47)
-check("one outlet at 47h -- still healthy", runs, [])
+check("one outlet at 72h (a normal gap between twice-weekly crawls) -- still healthy", runs, [])
 
 # ---- One outlet "succeeded" but found almost nothing -- silent breakage ----
 runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
@@ -173,11 +187,15 @@ runs["welbees"] = {"status": "failed", "started_at": NOW - timedelta(hours=6, mi
 check("one outlet's latest run failed -- not this script's job", runs, [])
 
 # ---- A run stuck in 'running' for a long time (killed/timed out without
-#      ever reaching its own finally block) ----
+#      ever reaching its own finally block). Uses STUCK_RUNNING_AFTER_HOURS
+#      (48h), which is deliberately SEPARATE from and much smaller than
+#      STALE_AFTER_HOURS (216h) -- a stuck run is a bug regardless of how
+#      often crawls happen, so this threshold didn't move when the other
+#      one was raised for the new twice-weekly schedule. ----
 runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
-runs["greens_swieqi"] = {"status": "running", "started_at": NOW - timedelta(hours=50),
+runs["greens_swieqi"] = {"status": "running", "started_at": NOW - timedelta(hours=STUCK_RUNNING_AFTER_HOURS + 2),
                           "finished_at": None, "item_count": None, "error_message": None}
-check("one outlet stuck in 'running' for 50h", runs, ["greens_swieqi"])
+check(f"one outlet stuck in 'running' for {STUCK_RUNNING_AFTER_HOURS + 2}h", runs, ["greens_swieqi"])
 
 # ---- A run that's still 'running' but recently started -- not stale yet ----
 runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
@@ -185,9 +203,20 @@ runs["greens_swieqi"] = {"status": "running", "started_at": NOW - timedelta(minu
                           "finished_at": None, "item_count": None, "error_message": None}
 check("one outlet 'running' for only 20 minutes -- still healthy", runs, [])
 
+# ---- A run stuck in 'running' for LONGER than STUCK_RUNNING_AFTER_HOURS
+#      but SHORTER than STALE_AFTER_HOURS -- proves the two thresholds are
+#      genuinely independent (this must still be flagged; if the code ever
+#      accidentally used STALE_AFTER_HOURS here instead, this case would
+#      wrongly come back healthy) ----
+runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
+runs["greens_swieqi"] = {"status": "running", "started_at": NOW - timedelta(hours=100),
+                          "finished_at": None, "item_count": None, "error_message": None}
+check("one outlet stuck 'running' for 100h (> stuck threshold, < stale threshold)",
+      runs, ["greens_swieqi"])
+
 # ---- Multiple outlets flagged at once ----
 runs = {o["id"]: healthy_run(hours_ago=6) for o in OUTLETS}
-runs["welbees"] = healthy_run(hours_ago=72)
+runs["welbees"] = healthy_run(hours_ago=STALE_AFTER_HOURS + 1)
 runs["pavipama"] = healthy_run(hours_ago=6, item_count=0)
 del runs["greens_gozo"]
 check("three outlets flagged at once, different reasons",
