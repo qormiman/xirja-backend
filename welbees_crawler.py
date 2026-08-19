@@ -364,7 +364,52 @@ def fetch_page(browser_page, category_code, slug, page):
         # the last real page of a category) will always hit this timeout
         # too, and that's a normal, expected outcome, not a failure.
         pass
-    return browser_page.content()
+    body = browser_page.content()
+    _print_first_page_diagnostics(browser_page, url, body)
+    return body
+
+
+# 20 Aug 2026 -- diagnostics, added after TWO rounds of guessing at why
+# every category came back with "0 products" while raising no error at all.
+# The two candidate explanations (Welbee's markup having changed, vs.
+# Welbee's serving this automated browser a real-looking but product-free
+# page) look IDENTICAL from the outside -- both are just "0 products" --
+# and they need opposite fixes, so guessing between them costs a full
+# run each time. This prints enough of what the browser actually received,
+# ONCE per run, to tell them apart definitively from the workflow log:
+#   - if the page title/snippet looks like a normal Welbee's shop page and
+#     the old product marker is simply absent, their markup changed and the
+#     patterns in this file need updating;
+#   - if it looks like a challenge/"checking your browser"/access-denied
+#     page, or is suspiciously tiny, then this is still being blocked, just
+#     more politely than an outright 403.
+# Deliberately capped and printed only once so a real run's log stays
+# readable. Safe to delete this whole block once Welbee's is working again.
+_diagnostics_printed = False
+
+
+def _print_first_page_diagnostics(browser_page, url, body):
+    global _diagnostics_printed
+    if _diagnostics_printed:
+        return
+    _diagnostics_printed = True
+    try:
+        title = browser_page.title()
+    except Exception:
+        title = "(couldn't read title)"
+    marker_present = PRODUCT_MARKER in body
+    loose_marker = "product-main-holder" in body
+    print("  " + "-" * 68)
+    print("  DIAGNOSTICS (first page of this run only -- see the comment above")
+    print("  _print_first_page_diagnostics in welbees_crawler.py for why):")
+    print(f"    url:                       {url}")
+    print(f"    page title:                {title!r}")
+    print(f"    html length:               {len(body)} characters")
+    print(f"    exact product marker found: {marker_present}")
+    print(f"    loose 'product-main-holder' found: {loose_marker}")
+    print(f"    first 1500 characters of what the browser actually received:")
+    print("    " + repr(body[:1500]))
+    print("  " + "-" * 68)
 
 
 def fetch_page_bounded(browser_page, category_code, slug, page):
@@ -622,7 +667,9 @@ def safe_recover_connection(conn, outlet_id):
 # ----------------------------------------------------------------------------
 
 def crawl_welbees(conn):
+    global _diagnostics_printed
     fallback_unit_counts.clear()  # fresh tally for this run, not left over from any previous call
+    _diagnostics_printed = False  # same idea -- diagnostics print once per RUN, not once per process
 
     cur = conn.cursor()
     cur.execute(
