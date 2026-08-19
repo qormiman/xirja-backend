@@ -20,8 +20,9 @@ How this is different from Greens and PAVI PAMA, and why:
   output for two different categories, Bakery and Drinks, not by guessing
   from a summarised/fetched version of the page). So instead of parsing JSON,
   this crawler:
-    1. Downloads a category page's raw HTML with a plain HTTP request (same
-       as PAVI PAMA: no login, no headless browser needed).
+    1. Loads a category page and reads its rendered HTML (see "How this
+       evolved" below for why this now goes through a real, invisible
+       browser rather than a plain HTTP request).
     2. Splits that HTML on the exact repeating marker that starts every
        product card (`<div class="select-none product-main-holder"
        data-product-code="`), so each resulting chunk is one product's own
@@ -88,6 +89,45 @@ How this is different from Greens and PAVI PAMA, and why:
   still failing after that is recorded plainly as a "partial" result, never
   silently treated as complete.
 
+How this evolved (worth knowing if something breaks later):
+  Version 1 fetched each category page with a plain HTTP request (same
+  approach as PAVI PAMA), no browser involved -- and this worked fine for a
+  while.
+
+  Then, on 18-19 Aug 2026, every single one of Welbee's 17 categories
+  started failing with "HTTP Error 403: Forbidden", on the very first
+  request of a run, with nothing else about the crawler having changed.
+  Ruled out step by step:
+    - Not an IP block: a general-purpose page fetcher (running from a
+      different network entirely) loaded the same URL with no problem, and
+      so did a real person's own browser.
+    - Not the specific wording of the User-Agent: rewriting it to look like
+      an ordinary Chrome browser (dropping this crawler's old
+      self-identifying "XirjaCrawler/0.1 (+contact: ...)" tag) made no
+      difference -- still blocked, on the first attempt, every time.
+    - What's left: welbees.mt (or a security service in front of it) is
+      almost certainly checking something about *how* the connection itself
+      is made -- the kind of thing a real browser does automatically and a
+      plain scripted request can't fake just by setting headers.
+
+  Version 2 (this one) fixes that the same way this project's own Greens
+  crawler already had to: instead of a plain request, this briefly opens a
+  real, invisible (headless) browser (via Playwright, same tool and same
+  approach as greens_crawler.py) and asks IT to load each category page,
+  then reads off the rendered HTML. Slower than a plain request (a real
+  page load per category page, rather than a lightweight fetch), but this
+  is exactly what a real browser visiting the site does, so there's nothing
+  left to detect as "not a browser."
+
+  One browser is opened once per run (not once per page) and reused for
+  every category and page, then closed at the end -- opening a fresh one
+  per page would work too but would be needlessly slow. If this Playwright
+  fix stops working in the future, the next things to try, in order, would
+  be: (1) checking whether welbees.mt started requiring something the
+  headless browser doesn't supply either (e.g. a manual "I'm not a robot"
+  click, which would need a different, more invasive approach entirely), or
+  (2) asking Welbee's directly whether they'd allowlist this crawler.
+
 Before you rely on this:
   Every field pattern here was built from two real, hand-pasted page
   sources, not guessed and not taken from an automated fetch -- but this has
@@ -98,8 +138,10 @@ Before you rely on this:
 
 How to run it:
   See SETUP.md. In short: set the DATABASE_URL environment variable to your
-  Neon connection string, then run `python welbees_crawler.py`. No browser
-  install needed for this one (same as PAVI PAMA).
+  Neon connection string, install Playwright's headless Chromium once
+  (`playwright install --with-deps chromium` -- the GitHub Actions workflow
+  already does this for you, same line as the Greens crawler), then run
+  `python welbees_crawler.py`.
 """
 
 import html
@@ -108,12 +150,11 @@ import re
 import sys
 import time
 import threading
-import urllib.request
-import urllib.error
 from datetime import datetime, timezone
 
 import psycopg2
 import psycopg2.extras
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # ----------------------------------------------------------------------------
 # Configuration
@@ -126,16 +167,13 @@ SITE_ROOT = "https://welbees.mt"
 # 19 Aug 2026 -- this used to end with a self-identifying
 # "XirjaCrawler/0.1 (+contact: ...)" tag, the same convention used for the
 # other two crawlers, so Welbee's server logs could tell this apart from an
-# ordinary shopper if anyone looked. That's exactly what makes a
-# User-Agent easy to specifically block, though, and every one of Welbee's
-# 17 categories started failing with HTTP 403 on the same day with nothing
-# else about this crawler having changed -- the likely explanation is that
-# Welbee's (or a bot-protection layer in front of their site) started
-# blocking on that identifiable tag. Dropped it here so this now presents
-# as a plain, ordinary browser identity, same as the Greens and PAVI PAMA
-# crawlers already do. If this doesn't clear the 403s, the next suspects
-# are a general bot-protection layer (e.g. Cloudflare) that blocks on
-# things besides the UA string, or an IP-based block.
+# ordinary shopper if anyone looked. Dropped that tag (it's exactly the kind
+# of thing that's easy to specifically block), but that turned out not to be
+# the real problem -- see "How this evolved" in the module docstring for the
+# full story of what was actually going on and how it was tracked down. This
+# is now just the plain browser identity handed to the real, invisible
+# browser this crawler drives (see fetch_page below), same as
+# greens_crawler.py already does.
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
@@ -278,37 +316,45 @@ def run_with_timeout(fn, timeout_seconds, *args, **kwargs):
 # Fetching category pages
 # ----------------------------------------------------------------------------
 
-def fetch_page(category_code, slug, page):
-    """Downloads one page of one category's product listing as raw HTML.
-    Page 1 uses the plain category URL (exactly what a real browser loads);
-    later pages add "?page=N" to that same URL -- both confirmed to be real,
-    working URLs from the two page-source pastes checked by hand."""
+def fetch_page(browser_page, category_code, slug, page):
+    """Loads one page of one category's product listing through a real,
+    invisible (headless) browser (see "How this evolved" in the module
+    docstring for why a plain HTTP request stopped working) and returns its
+    rendered HTML. Page 1 uses the plain category URL (exactly what a real
+    browser loads); later pages add "?page=N" to that same URL -- both
+    confirmed to be real, working URLs from the two page-source pastes
+    checked by hand.
+
+    `browser_page` is a single Playwright page object, opened once per run
+    by crawl_welbees and reused here for every category/page -- not a new
+    browser per call, which would work but be needlessly slow."""
     url = f"{SITE_ROOT}/shop/category/{category_code}/{slug}"
     if page > 1:
         url += f"?page={page}"
-    headers = {
-        "User-Agent": USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        # 19 Aug 2026 -- added alongside the User-Agent change above, since a
-        # request with only a User-Agent and Accept header (and nothing else
-        # a real browser normally sends) can itself look automated to some
-        # bot-protection systems.
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        body = resp.read().decode("utf-8", errors="replace")
-    return body
+    browser_page.goto(url, wait_until="domcontentloaded", timeout=REQUEST_HARD_TIMEOUT_SECONDS * 1000)
+    return browser_page.content()
 
 
-def fetch_page_bounded(category_code, slug, page):
+def fetch_page_bounded(browser_page, category_code, slug, page):
+    """Same name/shape as this project's other crawlers' fetch_page_bounded
+    functions (a TimeoutError on a stuck request), but the actual timeout
+    enforcement here comes from Playwright's own `timeout` argument to
+    goto() above, not the run_with_timeout() thread-based approach used
+    elsewhere in this file for the database calls. That's deliberate. A
+    Playwright browser/page can only safely be driven from the thread that
+    created it, so wrapping this in run_with_timeout's background thread
+    would risk silent, hard-to-debug breakage rather than just a slow
+    request. Playwright's own timeout doesn't have the "gap between bytes"
+    weakness a plain socket timeout has -- it's a genuine wall-clock limit
+    on the whole navigation -- so nothing is lost by relying on it here
+    instead."""
     try:
-        return run_with_timeout(fetch_page, REQUEST_HARD_TIMEOUT_SECONDS, category_code, slug, page)
-    except TimeoutError:
+        return fetch_page(browser_page, category_code, slug, page)
+    except PlaywrightTimeoutError as exc:
         raise TimeoutError(
             f"Request for category {category_code} page {page} did not finish "
             f"within {REQUEST_HARD_TIMEOUT_SECONDS}s"
-        )
+        ) from exc
 
 
 # ----------------------------------------------------------------------------
@@ -561,188 +607,202 @@ def crawl_welbees(conn):
     status = "success"
 
     try:
-        if ONLY_CATEGORIES_RAW:
-            print(f"  RESTRICTED RUN: only crawling categories matching "
-                  f"{ONLY_CATEGORIES_RAW!r} ({len(ACTIVE_CATEGORIES)} of {len(CATEGORIES)} "
-                  f"categories) -- not a full crawl.")
+      with sync_playwright() as p:
+        # One browser, opened once for the whole run and reused for every
+        # category and page below -- see fetch_page's docstring for why.
+        # --no-sandbox: the same flag greens_crawler.py already needs to run
+        # inside GitHub Actions' container.
+        browser = p.chromium.launch(args=["--no-sandbox"])
+        context = browser.new_context(user_agent=USER_AGENT)
+        browser_page = context.new_page()
+        try:
+            if ONLY_CATEGORIES_RAW:
+                print(f"  RESTRICTED RUN: only crawling categories matching "
+                      f"{ONLY_CATEGORIES_RAW!r} ({len(ACTIVE_CATEGORIES)} of {len(CATEGORIES)} "
+                      f"categories) -- not a full crawl.")
 
-        # ---- First pass: walk every category once, page by page, until a
-        # page comes back with zero products. Anything that fails is noted
-        # down and skipped immediately -- never blocks the rest. ----
-        #
-        # A page that comes back IDENTICAL to the one before it also ends
-        # the category, same as an empty one -- found for real on a live
-        # run: welbees.mt silently ignored the ?page=N part of the URL for
-        # at least one category, so every "page" after the first kept
-        # serving the same products, and the crawler had no way to notice
-        # short of grinding all the way to the MAX_PAGES_PER_CATEGORY safety
-        # cap (2+ hours on a single category). Comparing each page's set of
-        # product codes to the previous page's catches this immediately
-        # (typically by page 2) without needing to know exactly why the
-        # site repeated itself.
-        for category_code, slug, label in ACTIVE_CATEGORIES:
-            page = 1
-            previous_codes = None
-            while True:
+                # ---- First pass: walk every category once, page by page, until a
+            # page comes back with zero products. Anything that fails is noted
+            # down and skipped immediately -- never blocks the rest. ----
+            #
+            # A page that comes back IDENTICAL to the one before it also ends
+            # the category, same as an empty one -- found for real on a live
+            # run: welbees.mt silently ignored the ?page=N part of the URL for
+            # at least one category, so every "page" after the first kept
+            # serving the same products, and the crawler had no way to notice
+            # short of grinding all the way to the MAX_PAGES_PER_CATEGORY safety
+            # cap (2+ hours on a single category). Comparing each page's set of
+            # product codes to the previous page's catches this immediately
+            # (typically by page 2) without needing to know exactly why the
+            # site repeated itself.
+            for category_code, slug, label in ACTIVE_CATEGORIES:
+                page = 1
+                previous_codes = None
+                while True:
+                    try:
+                        html = fetch_page_bounded(browser_page, category_code, slug, page)
+                    except Exception as exc:
+                        print(f"  {category_code} ({label}) page {page}: FAILED first attempt "
+                              f"({type(exc).__name__}: {exc}) -- will retry after the full scan")
+                        pending_retries.append({"category_code": category_code, "slug": slug,
+                                                 "label": label, "page": page})
+                        break
+
+                    products = parse_products(html, label)
+                    current_codes = product_code_set(products)
+                    if products and current_codes == previous_codes:
+                        print(f"  {category_code} ({label}) page {page}: identical product list to "
+                              f"the previous page -- the site isn't giving us anything new here (it "
+                              f"may be ignoring the page number in the URL). Treating this category "
+                              f"as finished rather than continuing toward the "
+                              f"{MAX_PAGES_PER_CATEGORY}-page safety cap.")
+                        break
+
+                    try:
+                        saved, total = run_with_timeout(
+                            save_parsed_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, products
+                        )
+                    except Exception as exc:
+                        print(f"  {category_code} ({label}) page {page}: FAILED saving to the database "
+                              f"({type(exc).__name__}: {exc}) -- will retry after the full scan")
+                        pending_retries.append({"category_code": category_code, "slug": slug,
+                                                 "label": label, "page": page})
+                        conn = safe_recover_connection(conn, OUTLET_ID)
+                        cur = conn.cursor()
+                        break
+
+                    item_count += saved
+                    print(f"  {category_code} ({label}) page {page}: {total} products")
+
+                    if total == 0:
+                        break  # empty page -- this category is done
+                    if page >= MAX_PAGES_PER_CATEGORY:
+                        print(f"  {category_code} ({label}): hit the {MAX_PAGES_PER_CATEGORY}-page "
+                              f"safety cap -- this almost certainly means a pagination bug, not a "
+                              f"real category. Marking as failed for this category and moving on.")
+                        pending_retries.append({"category_code": category_code, "slug": slug,
+                                                 "label": label, "page": page + 1})
+                        break
+                    previous_codes = current_codes
+                    page += 1
+                    time.sleep(REQUEST_DELAY_SECONDS)
+
+            # ---- Second pass: retry everything that failed, exactly once. ----
+            for entry in pending_retries:
+                category_code, slug, label, page = (
+                    entry["category_code"], entry["slug"], entry["label"], entry["page"]
+                )
+                # Pause before every retry, not just the ones that happen to
+                # fall a while after their original failure -- a page that
+                # fails right at the end of the first pass would otherwise get
+                # retried almost immediately, with no time for a struggling
+                # site to recover. See RETRY_DELAY_SECONDS above.
+                time.sleep(RETRY_DELAY_SECONDS)
                 try:
-                    html = fetch_page_bounded(category_code, slug, page)
+                    html = fetch_page_bounded(browser_page, category_code, slug, page)
                 except Exception as exc:
-                    print(f"  {category_code} ({label}) page {page}: FAILED first attempt "
-                          f"({type(exc).__name__}: {exc}) -- will retry after the full scan")
-                    pending_retries.append({"category_code": category_code, "slug": slug,
-                                             "label": label, "page": page})
-                    break
+                    print(f"  {category_code} ({label}) page {page}: still failed on retry "
+                          f"({type(exc).__name__}: {exc}) -- giving up on this one")
+                    still_failed.append(entry)
+                    continue
 
                 products = parse_products(html, label)
-                current_codes = product_code_set(products)
-                if products and current_codes == previous_codes:
-                    print(f"  {category_code} ({label}) page {page}: identical product list to "
-                          f"the previous page -- the site isn't giving us anything new here (it "
-                          f"may be ignoring the page number in the URL). Treating this category "
-                          f"as finished rather than continuing toward the "
-                          f"{MAX_PAGES_PER_CATEGORY}-page safety cap.")
-                    break
-
                 try:
                     saved, total = run_with_timeout(
                         save_parsed_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, products
                     )
                 except Exception as exc:
-                    print(f"  {category_code} ({label}) page {page}: FAILED saving to the database "
-                          f"({type(exc).__name__}: {exc}) -- will retry after the full scan")
-                    pending_retries.append({"category_code": category_code, "slug": slug,
-                                             "label": label, "page": page})
+                    print(f"  {category_code} ({label}) page {page}: still failed saving on retry "
+                          f"({type(exc).__name__}: {exc}) -- giving up on this one")
+                    still_failed.append(entry)
                     conn = safe_recover_connection(conn, OUTLET_ID)
                     cur = conn.cursor()
-                    break
+                    continue
 
                 item_count += saved
-                print(f"  {category_code} ({label}) page {page}: {total} products")
+                print(f"  {category_code} ({label}) page {page}: RECOVERED on retry, {total} products")
 
-                if total == 0:
-                    break  # empty page -- this category is done
-                if page >= MAX_PAGES_PER_CATEGORY:
-                    print(f"  {category_code} ({label}): hit the {MAX_PAGES_PER_CATEGORY}-page "
-                          f"safety cap -- this almost certainly means a pagination bug, not a "
-                          f"real category. Marking as failed for this category and moving on.")
-                    pending_retries.append({"category_code": category_code, "slug": slug,
-                                             "label": label, "page": page + 1})
-                    break
-                previous_codes = current_codes
-                page += 1
-                time.sleep(REQUEST_DELAY_SECONDS)
-
-        # ---- Second pass: retry everything that failed, exactly once. ----
-        for entry in pending_retries:
-            category_code, slug, label, page = (
-                entry["category_code"], entry["slug"], entry["label"], entry["page"]
-            )
-            # Pause before every retry, not just the ones that happen to
-            # fall a while after their original failure -- a page that
-            # fails right at the end of the first pass would otherwise get
-            # retried almost immediately, with no time for a struggling
-            # site to recover. See RETRY_DELAY_SECONDS above.
-            time.sleep(RETRY_DELAY_SECONDS)
-            try:
-                html = fetch_page_bounded(category_code, slug, page)
-            except Exception as exc:
-                print(f"  {category_code} ({label}) page {page}: still failed on retry "
-                      f"({type(exc).__name__}: {exc}) -- giving up on this one")
-                still_failed.append(entry)
-                continue
-
-            products = parse_products(html, label)
-            try:
-                saved, total = run_with_timeout(
-                    save_parsed_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, products
-                )
-            except Exception as exc:
-                print(f"  {category_code} ({label}) page {page}: still failed saving on retry "
-                      f"({type(exc).__name__}: {exc}) -- giving up on this one")
-                still_failed.append(entry)
-                conn = safe_recover_connection(conn, OUTLET_ID)
-                cur = conn.cursor()
-                continue
-
-            item_count += saved
-            print(f"  {category_code} ({label}) page {page}: RECOVERED on retry, {total} products")
-
-            # If the retry succeeded and there's more to this category, keep
-            # going from here -- same as the first pass would have, including
-            # the same repeated-page detection (see the first pass above for
-            # why that matters).
-            previous_codes = product_code_set(products)
-            next_page = page + 1
-            while total > 0:
-                if next_page > page + MAX_PAGES_PER_CATEGORY:
-                    print(f"  {category_code} ({label}): hit the safety cap continuing after "
-                          f"retry -- stopping here.")
-                    still_failed.append({"category_code": category_code, "slug": slug,
-                                          "label": label, "page": next_page})
-                    break
-                time.sleep(REQUEST_DELAY_SECONDS)
-                try:
-                    html = fetch_page_bounded(category_code, slug, next_page)
-                except Exception as exc:
-                    # A page hit while continuing on after an earlier
-                    # successful retry used to get NO retry at all here --
-                    # unlike a page that fails during the first pass, which
-                    # gets one after the full scan finishes. Found via a
-                    # real run (17 Aug 2026) where several categories lost
-                    # several pages of real products this exact way (e.g.
-                    # Household got all the way to page 33 before losing
-                    # page 34 with no second attempt). Giving it the same
-                    # one-retry treatment, after a short pause, closes that
-                    # gap.
-                    print(f"  {category_code} ({label}) page {next_page}: failed "
-                          f"({type(exc).__name__}: {exc}) -- waiting {RETRY_DELAY_SECONDS}s "
-                          f"and trying once more")
-                    time.sleep(RETRY_DELAY_SECONDS)
-                    try:
-                        html = fetch_page_bounded(category_code, slug, next_page)
-                    except Exception as exc2:
-                        print(f"  {category_code} ({label}) page {next_page}: still failed on "
-                              f"retry ({type(exc2).__name__}: {exc2}) -- stopping here")
+                # If the retry succeeded and there's more to this category, keep
+                # going from here -- same as the first pass would have, including
+                # the same repeated-page detection (see the first pass above for
+                # why that matters).
+                previous_codes = product_code_set(products)
+                next_page = page + 1
+                while total > 0:
+                    if next_page > page + MAX_PAGES_PER_CATEGORY:
+                        print(f"  {category_code} ({label}): hit the safety cap continuing after "
+                              f"retry -- stopping here.")
                         still_failed.append({"category_code": category_code, "slug": slug,
                                               "label": label, "page": next_page})
                         break
+                    time.sleep(REQUEST_DELAY_SECONDS)
+                    try:
+                        html = fetch_page_bounded(browser_page, category_code, slug, next_page)
+                    except Exception as exc:
+                        # A page hit while continuing on after an earlier
+                        # successful retry used to get NO retry at all here --
+                        # unlike a page that fails during the first pass, which
+                        # gets one after the full scan finishes. Found via a
+                        # real run (17 Aug 2026) where several categories lost
+                        # several pages of real products this exact way (e.g.
+                        # Household got all the way to page 33 before losing
+                        # page 34 with no second attempt). Giving it the same
+                        # one-retry treatment, after a short pause, closes that
+                        # gap.
+                        print(f"  {category_code} ({label}) page {next_page}: failed "
+                              f"({type(exc).__name__}: {exc}) -- waiting {RETRY_DELAY_SECONDS}s "
+                              f"and trying once more")
+                        time.sleep(RETRY_DELAY_SECONDS)
+                        try:
+                            html = fetch_page_bounded(browser_page, category_code, slug, next_page)
+                        except Exception as exc2:
+                            print(f"  {category_code} ({label}) page {next_page}: still failed on "
+                                  f"retry ({type(exc2).__name__}: {exc2}) -- stopping here")
+                            still_failed.append({"category_code": category_code, "slug": slug,
+                                                  "label": label, "page": next_page})
+                            break
 
-                try:
-                    next_products = parse_products(html, label)
-                    current_codes = product_code_set(next_products)
-                    if next_products and current_codes == previous_codes:
-                        print(f"  {category_code} ({label}) page {next_page}: identical product "
-                              f"list to the previous page -- treating this category as finished.")
+                    try:
+                        next_products = parse_products(html, label)
+                        current_codes = product_code_set(next_products)
+                        if next_products and current_codes == previous_codes:
+                            print(f"  {category_code} ({label}) page {next_page}: identical product "
+                                  f"list to the previous page -- treating this category as finished.")
+                            break
+                        saved, total = run_with_timeout(
+                            save_parsed_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, next_products
+                        )
+                    except Exception as exc:
+                        print(f"  {category_code} ({label}) page {next_page}: failed saving while "
+                              f"continuing after retry ({type(exc).__name__}: {exc}) -- stopping here")
+                        still_failed.append({"category_code": category_code, "slug": slug,
+                                              "label": label, "page": next_page})
+                        # Same connection-recovery step used after a save
+                        # failure everywhere else in this file -- without it, a
+                        # broken transaction here could cause every following
+                        # retry entry to fail too, even once the site itself is
+                        # fine again.
+                        conn = safe_recover_connection(conn, OUTLET_ID)
+                        cur = conn.cursor()
                         break
-                    saved, total = run_with_timeout(
-                        save_parsed_page, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn, OUTLET_ID, next_products
-                    )
-                except Exception as exc:
-                    print(f"  {category_code} ({label}) page {next_page}: failed saving while "
-                          f"continuing after retry ({type(exc).__name__}: {exc}) -- stopping here")
-                    still_failed.append({"category_code": category_code, "slug": slug,
-                                          "label": label, "page": next_page})
-                    # Same connection-recovery step used after a save
-                    # failure everywhere else in this file -- without it, a
-                    # broken transaction here could cause every following
-                    # retry entry to fail too, even once the site itself is
-                    # fine again.
-                    conn = safe_recover_connection(conn, OUTLET_ID)
-                    cur = conn.cursor()
-                    break
-                item_count += saved
-                print(f"  {category_code} ({label}) page {next_page}: {total} products")
-                if total == 0:
-                    break
-                previous_codes = current_codes
-                next_page += 1
+                    item_count += saved
+                    print(f"  {category_code} ({label}) page {next_page}: {total} products")
+                    if total == 0:
+                        break
+                    previous_codes = current_codes
+                    next_page += 1
 
-        if still_failed:
-            listing = "; ".join(f"{e['category_code']} ({e['label']}) p{e['page']}" for e in still_failed[:25])
-            more = "" if len(still_failed) <= 25 else f" (+{len(still_failed) - 25} more)"
-            error_message = f"{len(still_failed)} page(s) failed even after retry: {listing}{more}"
-            status = "partial"
+            if still_failed:
+                listing = "; ".join(f"{e['category_code']} ({e['label']}) p{e['page']}" for e in still_failed[:25])
+                more = "" if len(still_failed) <= 25 else f" (+{len(still_failed) - 25} more)"
+                error_message = f"{len(still_failed)} page(s) failed even after retry: {listing}{more}"
+                status = "partial"
 
+        finally:
+            # Always close the browser, even if something above raised --
+            # otherwise a failed run could leave a headless Chromium process
+            # running until the job's own hard ceiling kills it.
+            browser.close()
     except Exception as exc:  # noqa: BLE001 -- log ANY failure and move on
         status = "failed"
         error_message = f"{type(exc).__name__}: {exc}"
