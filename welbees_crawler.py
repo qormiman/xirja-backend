@@ -195,6 +195,19 @@ REQUEST_DELAY_SECONDS = 5
 # reasonable first response.
 REQUEST_HARD_TIMEOUT_SECONDS = 60
 
+# 20 Aug 2026 -- how long to wait, after a page's initial HTML has loaded,
+# for at least one real product card to actually appear before reading the
+# page -- see fetch_page's docstring for why this is needed now. Chosen
+# generously above what a normal page's own JavaScript should ever need to
+# finish filling in products, same "generous headroom, not a tight guess"
+# approach as REQUEST_HARD_TIMEOUT_SECONDS above. Kept as its own separate
+# constant (rather than reusing REQUEST_HARD_TIMEOUT_SECONDS) because a
+# genuinely empty page (the last page of a category) will always hit this
+# full timeout before giving up -- with 300 pages a run possible, keeping
+# this shorter than the full request timeout matters for how long a run
+# takes overall.
+PRODUCT_WAIT_TIMEOUT_SECONDS = 12
+
 # How long to pause before retrying a page that just failed -- gives a site
 # that's temporarily slow or dropping connections a moment to recover
 # before hitting it again, rather than retrying instantly into the same
@@ -327,11 +340,30 @@ def fetch_page(browser_page, category_code, slug, page):
 
     `browser_page` is a single Playwright page object, opened once per run
     by crawl_welbees and reused here for every category/page -- not a new
-    browser per call, which would work but be needlessly slow."""
+    browser per call, which would work but be needlessly slow.
+
+    20 Aug 2026 -- a first version of this (goto, then read the page
+    immediately) got past the earlier 403 blocking, but came back with 0
+    products on every single category -- the page itself loaded, but
+    apparently before Welbee's own JavaScript had finished filling in the
+    product listing. This now explicitly waits for at least one real
+    product card to actually appear in the page before reading it, up to
+    PRODUCT_WAIT_TIMEOUT_SECONDS -- and if that timeout is reached, this
+    doesn't treat it as an error; it just returns whatever's there
+    (correctly handled as "0 products" by the normal end-of-category logic
+    already used everywhere else in this file, same as a genuinely empty
+    last page)."""
     url = f"{SITE_ROOT}/shop/category/{category_code}/{slug}"
     if page > 1:
         url += f"?page={page}"
     browser_page.goto(url, wait_until="domcontentloaded", timeout=REQUEST_HARD_TIMEOUT_SECONDS * 1000)
+    try:
+        browser_page.wait_for_selector(".product-main-holder", timeout=PRODUCT_WAIT_TIMEOUT_SECONDS * 1000)
+    except PlaywrightTimeoutError:
+        # Deliberately not re-raised -- a page that's genuinely empty (past
+        # the last real page of a category) will always hit this timeout
+        # too, and that's a normal, expected outcome, not a failure.
+        pass
     return browser_page.content()
 
 
@@ -614,6 +646,20 @@ def crawl_welbees(conn):
         # inside GitHub Actions' container.
         browser = p.chromium.launch(args=["--no-sandbox"])
         context = browser.new_context(user_agent=USER_AGENT)
+        # 20 Aug 2026 -- Playwright's browser identifies itself as automated
+        # to any page it loads via a real, standard browser property
+        # (navigator.webdriver = true), which is exactly the kind of thing
+        # a site's anti-bot protection can check for -- possibly explaining
+        # why an earlier version of this fix got past the 403 blocking but
+        # then received a normal-looking page with no real products on it.
+        # This runs before Welbee's own page scripts do, on every page this
+        # context loads, and simply makes that property read as false, the
+        # same way a real browser's would -- a small, well-known, widely
+        # documented adjustment (not a new dependency, not spoofing
+        # anything beyond this one property).
+        context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });"
+        )
         browser_page = context.new_page()
         try:
             if ONLY_CATEGORIES_RAW:
