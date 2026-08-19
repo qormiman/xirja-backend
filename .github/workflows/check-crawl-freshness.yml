@@ -1,0 +1,59 @@
+# ============================================================================
+# Runs check_crawl_freshness.py on a schedule -- this is the piece that
+# closes the last real gap in Xirja's failure alerting. The crawl and
+# categorize workflows already email you when a job CRASHES; this one
+# catches the sneakier case where a crawler runs "successfully" every night
+# but quietly stops finding real prices (site layout changed, got blocked,
+# etc), which wouldn't raise a Python exception at all.
+#
+# Read-only: this only ever reads the crawl_run and outlet tables, never
+# touches any of the three sites, never writes anything.
+#
+# Two ways this runs:
+#   1. Automatically, once a day (see "schedule" below) -- a few hours
+#      after the nightly crawls (23:00 UTC) and the categorize job, so by
+#      the time this checks, that night's crawl_run rows already exist.
+#   2. Manually, whenever you want, by clicking "Run workflow" on the
+#      Actions tab.
+#
+# Same trick as categorize_listings.py (added 18 Aug 2026): the script
+# deliberately exits non-zero whenever it finds a problem, even though
+# nothing about the healthcheck itself failed -- that's what makes this run
+# show up as "failed" (red X) and triggers GitHub's automatic
+# failure-notification email. So a red X here means "a chain's prices may
+# be going stale", not "this workflow is broken" -- read the run's log for
+# which outlet and why.
+# ============================================================================
+
+name: Crawl freshness healthcheck
+
+on:
+  schedule:
+    # Runs at 06:00 UTC every day -- after the nightly crawls (23:00 UTC)
+    # and after the categorize job's own 04:00 UTC slot, so both have had
+    # time to finish and write their crawl_run / shopping_category updates
+    # before this checks anything.
+    - cron: '0 6 * * *'
+
+  workflow_dispatch: {}
+
+jobs:
+  healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check crawl freshness
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PYTHONUNBUFFERED: "1"
+        run: python check_crawl_freshness.py
