@@ -29,13 +29,22 @@
 name: Crawl Welbee's prices
 
 on:
-  schedule:
-    # Runs at 23:00 UTC every night -- 1 AM Malta time right now (summer /
-    # CEST, UTC+2), same time as the Greens and PAVI PAMA crawls. Drifts to
-    # 12 AM Malta time once clocks fall back in late October (see
-    # crawl-greens.yml for why this is an accepted trade-off rather than
-    # something to fix).
-    - cron: '0 23 * * *'
+  # 20 Aug 2026 -- the nightly schedule is DISABLED, deliberately. Welbee's
+  # put their site behind Cloudflare with a rule that blocks traffic from
+  # cloud datacenters, which includes GitHub's own computers -- confirmed
+  # definitively by the crawler's first-page diagnostics (a "Attention
+  # Required! | Cloudflare" page instead of real products), while the same
+  # page loads fine from a normal home connection. No code change can fix
+  # that from here. The Welbee's crawl now runs nightly from a home
+  # computer instead (see the local-run scripts delivered with this
+  # change). The manual "Run workflow" button below is kept on purpose: if
+  # Welbee's ever unblocks or allowlists this, one manual run will confirm
+  # it (the crawler now fails with a clear Cloudflare message rather than
+  # recording a fake success), and this schedule can then simply be
+  # un-commented to move the crawl back to GitHub.
+  #
+  # schedule:
+  #   - cron: '0 23 * * *'
 
   # Adds a "Run workflow" button on the Actions tab, so you can trigger a
   # run by hand at any time -- this is how you'll do the first test run.
