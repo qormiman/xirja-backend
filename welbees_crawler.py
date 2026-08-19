@@ -472,17 +472,31 @@ def fetch_page_bounded(browser_page, category_code, slug, page):
 
 PRODUCT_MARKER = '<div class="select-none product-main-holder" data-product-code="'
 
+# 20 Aug 2026 -- every price pattern now accepts the euro sign written
+# EITHER way: as the raw-HTML code "&euro;" OR as the literal "€"
+# character. Why both: the site's raw source writes "&euro;", and that's
+# what these patterns were originally built against (and what they saw for
+# as long as this crawler fetched raw HTML). But the crawler now reads the
+# page out of a real browser (see "How this evolved" in the module
+# docstring), and a browser hands back its RENDERED version of the page --
+# in which "&euro;" has already been turned into the actual euro
+# character. The first real local run proved this the hard way: ~4,000
+# products found across all 17 categories, ZERO prices matched, so
+# item_count came out 0 with no error anywhere. Accepting both spellings
+# makes the patterns correct regardless of which way the page arrives.
+_EURO = r'(?:&euro;|€)'
+
 PRICE_RE = re.compile(
     r'<div class="font-body text-18 font-medium text-tertiary block align-middle">'
-    r'&euro;([\d.,]+)</div>'
+    + _EURO + r'([\d.,]+)</div>'
 )
 RRP_RE = re.compile(
     r'<s class="font-body text-12 font-regular text-grey-dark/60 leading-normal block align-middle">'
-    r'RRP &euro;([\d.,]+)</s>'
+    r'RRP ' + _EURO + r'([\d.,]+)</s>'
 )
 PER_UNIT_RE = re.compile(
     r'<div class="font-body text-14 font-regular text-grey-dark leading-normal">'
-    r'&euro;([\d.,]+)/(\w+)</div>'
+    + _EURO + r'([\d.,]+)/(\w+)</div>'
 )
 NAME_RE = re.compile(
     r'<h6 class="font-heading text-14 leading-none font-regular text-grey-dark">'
@@ -655,10 +669,23 @@ def product_code_set(products):
     return frozenset(p["chain_product_code"] for p in products)
 
 
+# 20 Aug 2026 -- printed (once per run) if a page full of real products
+# yields not a single readable price. That exact situation happened for
+# real -- ~4,000 products across every category, zero prices matched, no
+# error anywhere, run recorded as "success" with item_count=0 -- because
+# the browser-rendered page writes the euro sign differently than the raw
+# HTML the price patterns were built from (see the _EURO comment above the
+# patterns). The patterns are fixed, but if the site ever changes its
+# markup in some new way, this warning makes it impossible for "found
+# everything, saved nothing" to slip through quietly again.
+_no_price_warning_printed = False
+
+
 def store_products(cur, outlet_id, products):
     """Save an already-parsed page's worth of products. Returns (saved,
     total) -- 'saved' only counts ones with a usable price, same as
     before."""
+    global _no_price_warning_printed
     saved = 0
     for product in products:
         if product["price"] is None:
@@ -668,6 +695,13 @@ def store_products(cur, outlet_id, products):
         listing_id = upsert_listing(cur, outlet_id, product)
         insert_price_observation(cur, listing_id, product)
         saved += 1
+    if products and saved == 0 and not _no_price_warning_printed:
+        _no_price_warning_printed = True
+        print(f"  WARNING: this page had {len(products)} product(s) but not ONE had a "
+              f"readable price -- so nothing from it was saved. If this line appears, "
+              f"the site has probably changed how it writes prices and the price "
+              f"patterns in welbees_crawler.py need updating. (Printed once per run; "
+              f"later pages may be affected too.)", file=sys.stderr)
     return saved, len(products)
 
 
@@ -696,9 +730,10 @@ def safe_recover_connection(conn, outlet_id):
 # ----------------------------------------------------------------------------
 
 def crawl_welbees(conn):
-    global _diagnostics_printed
+    global _diagnostics_printed, _no_price_warning_printed
     fallback_unit_counts.clear()  # fresh tally for this run, not left over from any previous call
     _diagnostics_printed = False  # same idea -- diagnostics print once per RUN, not once per process
+    _no_price_warning_printed = False
 
     cur = conn.cursor()
     cur.execute(
@@ -934,17 +969,41 @@ def crawl_welbees(conn):
         note = f"[RESTRICTED RUN -- only categories: {ONLY_CATEGORIES_RAW}]"
         error_message = f"{note} {error_message}" if error_message else note
 
-    def finish_crawl_run():
-        cur.execute(
+    def finish_crawl_run(use_cur, use_conn):
+        use_cur.execute(
             "UPDATE crawl_run SET finished_at = %s, status = %s, item_count = %s, error_message = %s WHERE id = %s",
             (datetime.now(timezone.utc), status, item_count, error_message, run_id),
         )
-        conn.commit()
+        use_conn.commit()
 
     try:
-        run_with_timeout(finish_crawl_run, DB_WRITE_HARD_TIMEOUT_SECONDS)
+        run_with_timeout(finish_crawl_run, DB_WRITE_HARD_TIMEOUT_SECONDS, cur, conn)
     except Exception as exc:
-        print(f"  Couldn't record the final crawl_run status ({type(exc).__name__}: {exc})", file=sys.stderr)
+        # 20 Aug 2026 -- this used to just give up here, which happened for
+        # real on the first local run: a multi-hour crawl's connection died
+        # right at this final step ("connection abort"), leaving the
+        # crawl_run row stuck as 'running' forever even though the crawl
+        # itself finished fine. A stuck-'running' row eventually makes the
+        # daily freshness healthcheck cry wolf about a crawl that actually
+        # worked. So: try ONE more time on a completely fresh connection --
+        # a connection that died over a long run says nothing about whether
+        # a brand-new one will work for one quick update.
+        print(f"  Couldn't record the final crawl_run status ({type(exc).__name__}: {exc}) "
+              f"-- retrying once on a fresh database connection", file=sys.stderr)
+        try:
+            fresh_conn = get_connection()
+            try:
+                fresh_cur = fresh_conn.cursor()
+                run_with_timeout(finish_crawl_run, DB_WRITE_HARD_TIMEOUT_SECONDS, fresh_cur, fresh_conn)
+                fresh_cur.close()
+                print(f"  Recorded the final crawl_run status on the retry.")
+            finally:
+                fresh_conn.close()
+        except Exception as exc2:
+            print(f"  Still couldn't record the final crawl_run status even on a fresh "
+                  f"connection ({type(exc2).__name__}: {exc2}) -- the crawl itself still "
+                  f"finished as reported below; only this run's database bookkeeping row "
+                  f"is left showing 'running'.", file=sys.stderr)
 
     try:
         cur.close()
