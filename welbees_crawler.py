@@ -121,12 +121,24 @@ How this evolved (worth knowing if something breaks later):
 
   One browser is opened once per run (not once per page) and reused for
   every category and page, then closed at the end -- opening a fresh one
-  per page would work too but would be needlessly slow. If this Playwright
-  fix stops working in the future, the next things to try, in order, would
-  be: (1) checking whether welbees.mt started requiring something the
-  headless browser doesn't supply either (e.g. a manual "I'm not a robot"
-  click, which would need a different, more invasive approach entirely), or
-  (2) asking Welbee's directly whether they'd allowlist this crawler.
+  per page would work too but would be needlessly slow.
+
+  Version 3's real lesson (20 Aug 2026): the headless browser alone did NOT
+  fix it either -- runs from GitHub's computers started getting a
+  Cloudflare "Attention Required" block page (confirmed by this file's own
+  first-page diagnostics), while the exact same page loaded fine from a
+  normal home connection and from other networks. So the block is based on
+  WHERE the request comes from: Welbee's put Cloudflare in front of their
+  site with a rule that blocks traffic from cloud datacenters (like
+  GitHub's runners). No code change can fix that from inside GitHub.
+  Because of this, the scheduled GitHub run was disabled and this crawler
+  now runs nightly from a home computer instead (see the local-run scripts
+  and instructions delivered alongside this change). The Playwright
+  browser is kept even for home runs -- it's what a real visit looks like,
+  and it keeps this robust if Welbee's tightens things further. If even a
+  home run starts hitting the Cloudflare error this file now raises, the
+  remaining path is asking Welbee's directly for permission/allowlisting
+  or a data feed.
 
 Before you rely on this:
   Every field pattern here was built from two real, hand-pasted page
@@ -366,6 +378,23 @@ def fetch_page(browser_page, category_code, slug, page):
         pass
     body = browser_page.content()
     _print_first_page_diagnostics(browser_page, url, body)
+    # 20 Aug 2026 -- recognise a Cloudflare block/challenge page for what it
+    # is and FAIL PLAINLY, instead of parsing it, finding no products on it,
+    # and recording a run as "success" with item_count=0 (which is what
+    # actually happened on the night this was added -- the run that finally
+    # revealed, via the diagnostics above, that welbees.mt now sits behind
+    # Cloudflare and blocks requests from cloud datacenters like GitHub's).
+    # A run that hits this is not a code problem: it means the crawl is
+    # being made from a network Cloudflare blocks, and needs to run from
+    # somewhere else (e.g. a home connection) instead.
+    if "| Cloudflare</title>" in body or "Just a moment..." in body or 'id="cf-wrapper"' in body:
+        raise RuntimeError(
+            "welbees.mt served a Cloudflare block/challenge page instead of the real "
+            "page -- this network is being blocked by Welbee's security service. "
+            "No retry from this same network will help; the crawl needs to run from "
+            "a network Cloudflare doesn't block (see 'How this evolved' in the "
+            "module docstring)."
+        )
     return body
 
 
