@@ -67,10 +67,36 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # 20 Aug 2026 -- this step kept HANGING (15+ minutes, twice in a row,
+      # then again after a cancel-and-retry). The cause is visible in the
+      # log: GitHub's Ubuntu runners are configured to fetch system packages
+      # from a Microsoft-run mirror (azure.archive.ubuntu.com), and that
+      # mirror was refusing connections -- you can see apt retry the same
+      # four "Ign:" lines over and over before eventually falling back to
+      # the public archive.ubuntu.com. Nothing to do with this crawler or
+      # with Playwright; it just happens to be the first step that needs
+      # apt at all.
+      #
+      # Rather than keep re-running and hoping for a healthy runner, this
+      # points apt straight at the public Ubuntu archive first, skipping
+      # the flaky Azure mirror entirely. "|| true" so that if GitHub ever
+      # changes where this file lives, this step quietly does nothing
+      # instead of failing the whole run.
+      - name: Use the public Ubuntu package mirror (avoids a flaky GitHub one)
+        run: |
+          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt || true
+
       - name: Install the headless browser Playwright needs
         # Same as the Greens workflow's own copy of this step -- downloads a
         # real (invisible) copy of Chromium for the crawler to drive, takes
         # a minute or so, nothing to do on your end.
+        #
+        # timeout-minutes: if this somehow still gets stuck, the step now
+        # gives up after 10 minutes and fails loudly, instead of sitting
+        # there burning up to GitHub's full 6-hour job ceiling while you
+        # watch it. A failure here is a "re-run it" situation, not a code
+        # problem.
+        timeout-minutes: 10
         run: playwright install --with-deps chromium
 
       - name: Run the Welbee's crawler
