@@ -43,19 +43,34 @@ How to run it:
   runnable from the GitHub Actions "Crawl freshness healthcheck" workflow,
   which runs it once a day.
 
-Exit code:
-  Deliberately exits non-zero (after printing the full report) if ANY
-  outlet is flagged -- same pattern as categorize_listings.py's "exit
-  non-zero so GitHub emails a failure notification" trick, added
-  18 Aug 2026. A red X here means "a chain's prices may be going stale",
-  not "this script is broken".
+Exit code and notifications:
+  Always exits 0 (the GitHub Actions run stays green) -- this script did
+  its job correctly whether or not it found a problem, so its run status
+  shouldn't say otherwise. Up to 20 Aug 2026 it deliberately exited
+  non-zero instead, purely to trigger GitHub's automatic
+  failure-notification email; that made a run showing "a chain's prices
+  may be going stale" look identical to a genuinely broken workflow.
+  Notification now happens instead via github_issue_notify.py: if any
+  outlet is flagged, this opens (or updates, if one's already open) a
+  GitHub Issue titled STALE_ISSUE_TITLE -- GitHub emails you the same way
+  it does for any new issue or comment. Once every outlet is healthy
+  again, that issue is closed automatically. See github_issue_notify.py's
+  own docstring for the full reasoning.
 """
-import sys
 from datetime import datetime, timedelta, timezone
 
 import psycopg2.extras
 
 from product_matcher import get_connection
+from github_issue_notify import flag as flag_issue, resolve as resolve_issue
+
+# 20 Aug 2026 -- stable title used to dedup GitHub issues across runs, see
+# github_issue_notify.py's own docstring for why this needs to be an exact,
+# unchanging string rather than something with a count or outlet list baked
+# in (that would never match a later run's different numbers, and a new
+# issue would open every single time instead of updating the one already
+# open).
+STALE_ISSUE_TITLE = "Crawl freshness healthcheck: found problem(s)"
 
 # 20 Aug 2026 -- raised from 48h to 216h (9 days), and split into two
 # SEPARATE numbers, after all three chains moved from crawling every night
@@ -176,6 +191,10 @@ def main():
     if not problems:
         print(f"All outlets have a healthy crawl_run within the last {STALE_AFTER_HOURS}h, "
               f"with a real item count. Nothing to report.")
+        # If an earlier run flagged a problem that's since cleared up (a
+        # crawl that looked stale has since run successfully, etc), close
+        # that issue automatically rather than leaving it open forever.
+        resolve_issue(STALE_ISSUE_TITLE, "This run found every outlet healthy -- looks resolved.")
         return
 
     print(f"{len(problems)} outlet(s) failed the freshness check:\n")
@@ -183,9 +202,20 @@ def main():
         print(f"  {outlet_name} ({store_id} / {outlet_id})")
         print(f"    {reason}\n")
 
-    print("Exiting non-zero so this run shows as \"failed\" and GitHub emails a notification "
-          "-- see the reasons above for what to check.", file=sys.stderr)
-    sys.exit(1)
+    # 20 Aug 2026 -- changed from "exit non-zero so the run shows as
+    # failed" to this. Reasoning: the healthcheck itself always ran
+    # successfully here -- nothing about the script is broken -- so a red
+    # X was misleading. This still reaches a human the same way as before
+    # (a GitHub notification email), just via an issue instead of a
+    # failed run -- see github_issue_notify.py's own docstring for the
+    # full reasoning and how it avoids opening a duplicate issue every
+    # single run. The run now exits 0 (green) either way.
+    body_lines = "\n".join(f"- {outlet_name} ({store_id} / {outlet_id}): {reason}"
+                            for outlet_id, store_id, outlet_name, reason in problems)
+    flag_issue(
+        STALE_ISSUE_TITLE,
+        f"{len(problems)} outlet(s) failed the freshness check this run:\n\n{body_lines}",
+    )
 
 
 if __name__ == "__main__":

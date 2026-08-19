@@ -61,6 +61,14 @@ from product_matcher import (
     run_with_timeout,
 )
 from category_taxonomy import classify_listing, matching_categories_by_name, KNOWN_ACCEPTED_COLLISIONS
+from github_issue_notify import flag as flag_issue, resolve as resolve_issue
+
+# 20 Aug 2026 -- stable title used to dedup GitHub issues across runs, see
+# github_issue_notify.py's own docstring for why this needs to be an exact,
+# unchanging string rather than something with a count baked in (a title
+# with "12 listings" in it would never match next run's "14 listings" and
+# a new issue would open every single time).
+UNCLASSIFIED_ISSUE_TITLE = "Categorize listings: unclassified items need new keyword rules"
 
 
 def fetch_listings(cur):
@@ -392,24 +400,41 @@ def main():
                 print(f"    {count:>5}  {category_a} / {category_b}")
 
         if total_unclassified > 0:
-            # 18 Aug 2026 -- deliberately exit non-zero here even though
-            # nothing actually went wrong: this makes the GitHub Actions run
-            # show up as "failed", which is what makes GitHub send its
-            # automatic failure-notification email (same email as the GitHub
-            # account) -- no new secrets, no new integration, just reusing
-            # the notification GitHub already sends for free. Requested
-            # 18 Aug 2026 so unclassified items get flagged automatically
-            # instead of only being noticed the next time someone happens to
-            # read a run's log. Everything above this point (the categorize
-            # step itself, the full unclassified-listings.txt export) has
-            # already completed and been written by the time this exits, so
-            # nothing is lost or skipped -- this only changes the run's
-            # final status, not its behaviour.
-            print(f"\nExiting non-zero so this run shows as \"failed\" and GitHub emails a "
-                  f"notification -- {total_unclassified} listing(s) still need keyword rules; "
-                  f"see the report above and the unclassified_listings.txt artifact.",
-                  file=sys.stderr)
-            sys.exit(1)
+            # 20 Aug 2026 -- changed from "exit non-zero so the run shows
+            # as failed" to this. Reasoning: categorizing itself always
+            # succeeded here -- nothing actually went wrong -- so a red X
+            # was misleading (it looked like the workflow was broken, not
+            # like "some listings need new keyword rules"). This still
+            # gets a human's attention the same way as before (a GitHub
+            # notification email), just via an issue instead of a failed
+            # run -- see github_issue_notify.py's own docstring for the
+            # full reasoning and how it avoids opening a duplicate issue
+            # every single run. The run now exits 0 (green) either way;
+            # everything above this point (the categorize step itself, the
+            # full unclassified-listings.txt export) has already completed
+            # and been written regardless.
+            top_ranked = sorted(summary["unclassified_tally"].items(), key=lambda kv: kv[1], reverse=True)[:10]
+            top_lines = "\n".join(f"- {count} x {store_id} / {chain_category!r}"
+                                   for (store_id, chain_category), count in top_ranked)
+            flag_issue(
+                UNCLASSIFIED_ISSUE_TITLE,
+                f"{total_unclassified} listing(s) are still unclassified after this run.\n\n"
+                f"Top (store, chain_category) groups by how many listings they affect:\n{top_lines}\n\n"
+                f"See this run's log for the full report (every group, with example product "
+                f"names), and the unclassified_listings.txt artifact on the run for the complete "
+                f"list of distinct product names -- that's what makes it possible to close a "
+                f"whole group in one pass by adding keywords to category_taxonomy.py's "
+                f"KEYWORD_RULES.",
+            )
+        else:
+            # Nothing unclassified this run -- if an issue from an earlier
+            # run is still open, this closes it automatically so it
+            # doesn't sit open forever after the gap's already been
+            # closed by adding keyword rules.
+            resolve_issue(
+                UNCLASSIFIED_ISSUE_TITLE,
+                "This run found 0 unclassified listings -- looks resolved.",
+            )
     except Exception as exc:  # noqa: BLE001 -- surface any failure plainly, then exit non-zero
         # Real bug found on 24 Aug 2026: if the connection is already dead
         # (e.g. the OperationalError above, on its second/final attempt),
