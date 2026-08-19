@@ -2,9 +2,16 @@
 # Runs the Welbee's crawler on a schedule, using GitHub's own computers --
 # nothing needs to stay running on your own machine.
 #
-# Simpler than the Greens workflow, same as PAVI PAMA: Welbee's needs no
-# login and no headless browser step, so this just installs Python packages
-# and runs the script.
+# 19 Aug 2026 -- this used to be simpler than the Greens workflow (no login,
+# no headless browser step, just install Python packages and run the
+# script), same as PAVI PAMA. That stopped working: welbees.mt started
+# returning "403 Forbidden" on every plain request, most likely because it
+# (or a security layer in front of it) can tell a plain scripted request
+# apart from a real browser. welbees_crawler.py now drives a real, invisible
+# (headless) browser instead -- same fix, same tool (Playwright), same extra
+# install step the Greens workflow already needed for its own reasons -- see
+# the "How this evolved" section of welbees_crawler.py's own docstring for
+# the full story.
 #
 # Two ways this runs:
 #   1. Automatically, every night (see the "schedule" below) -- same time as
@@ -59,6 +66,12 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Install the headless browser Playwright needs
+        # Same as the Greens workflow's own copy of this step -- downloads a
+        # real (invisible) copy of Chromium for the crawler to drive, takes
+        # a minute or so, nothing to do on your end.
+        run: playwright install --with-deps chromium
 
       - name: Run the Welbee's crawler
         env:
