@@ -17,17 +17,20 @@ What this does, in plain terms:
   flags anything that looks wrong:
     - no crawl_run has EVER been recorded for this outlet
     - the most recent crawl_run finished more than STALE_AFTER_HOURS ago
-      (default 48, matching the original spec's own number)
+      (216h / 9 days -- deliberately generous now that every chain crawls
+      only twice a week on a randomized schedule rather than nightly; see
+      the comment above STALE_AFTER_HOURS for the reasoning)
     - the most recent crawl_run "succeeded" (status success/partial) but
       wrote a suspiciously low item_count -- MIN_HEALTHY_ITEM_COUNT is
       deliberately conservative (10) rather than tuned to each chain's
       usual size, since the point here is only to catch "basically found
       nothing", not to police exact volumes
     - the most recent crawl_run is still sitting in status='running' from
-      more than STALE_AFTER_HOURS ago -- almost certainly means the job
-      got killed/timed out without ever reaching its own finally block
-      (crawl_run rows start as 'running' and are only ever updated to
-      success/partial/failed at the very end of a crawl -- see e.g.
+      more than STUCK_RUNNING_AFTER_HOURS ago (48h -- unrelated to how
+      often crawls happen, see its own comment) -- almost certainly means
+      the job got killed/timed out without ever reaching its own finally
+      block (crawl_run rows start as 'running' and are only ever updated
+      to success/partial/failed at the very end of a crawl -- see e.g.
       welbees_crawler.py's finish_crawl_run())
 
   It's read-only: this only ever reads crawl_run and outlet, never writes
@@ -54,7 +57,33 @@ import psycopg2.extras
 
 from product_matcher import get_connection
 
-STALE_AFTER_HOURS = 48
+# 20 Aug 2026 -- raised from 48h to 216h (9 days), and split into two
+# SEPARATE numbers, after all three chains moved from crawling every night
+# to a randomized twice-a-week schedule (2 random days/times a week,
+# re-picked fresh every week -- see plan_crawl_schedule.py /
+# plan_welbees_schedule.ps1). 48h was tuned around nightly crawls; with
+# only 2 crawls a week, a perfectly normal gap between two real crawls can
+# occasionally run close to a week and a half, purely from the randomness
+# itself (e.g. one week's 2nd pick lands early, the next week's 1st pick
+# lands late) -- worked out the true worst case as up to ~11 days apart
+# with unlucky-but-legitimate draws two weeks running. 216h leaves a bit of
+# margin above that, so this still only fires for a GENUINE multi-week gap
+# (e.g. the randomized scheduler itself broke, or 2+ real crawls in a row
+# failed), not routine randomness. There's a small residual chance of a
+# false alarm in a truly unlucky pair of weeks -- an occasional harmless
+# email, not a real problem -- rather than a guarantee either way; if that
+# turns out to happen in practice, this number is the one thing to loosen
+# further.
+STALE_AFTER_HOURS = 216
+
+# Deliberately kept SEPARATE from STALE_AFTER_HOURS above, and NOT raised
+# along with it: this one is about how long a single crawl run should ever
+# take before something's clearly wrong (stuck, killed, never reaching its
+# own finally block) -- that has nothing to do with how OFTEN crawls
+# happen, whether nightly or twice a week, so the original reasoning still
+# applies unchanged.
+STUCK_RUNNING_AFTER_HOURS = 48
+
 MIN_HEALTHY_ITEM_COUNT = 10
 
 
@@ -66,6 +95,7 @@ def check_freshness(cur, now=None):
     if now is None:
         now = datetime.now(timezone.utc)
     stale_cutoff = now - timedelta(hours=STALE_AFTER_HOURS)
+    running_stuck_cutoff = now - timedelta(hours=STUCK_RUNNING_AFTER_HOURS)
 
     cur.execute("SELECT id, store_id, name FROM outlet ORDER BY id")
     outlets = cur.fetchall()
@@ -97,7 +127,7 @@ def check_freshness(cur, now=None):
         item_count = latest["item_count"]
 
         if status == "running":
-            if started_at is not None and started_at < stale_cutoff:
+            if started_at is not None and started_at < running_stuck_cutoff:
                 age_hours = (now - started_at).total_seconds() / 3600
                 problems.append((outlet_id, store_id, outlet_name,
                                   f"latest crawl_run has been stuck in status='running' for "
