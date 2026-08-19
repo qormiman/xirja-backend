@@ -276,6 +276,24 @@ def parse_products(payload):
             print(f"    (note: unrecognised unit {unit_raw!r} on {item.get('description')!r} "
                   f"-- storing the product, just without a per-unit price)")
 
+        # 18 Aug 2026 -- investigated the long-flagged "PAVI PAMA name
+        # truncation" quirk: it's real, but it's not us. A real captured page
+        # (category 0007/BUTCHER) showed several names landing right around
+        # 50-52 characters with visible abbreviation/misspelling to fit --
+        # e.g. "CHEF CHOICE FROZEN CHCKEN BREAST STEAM RSTED STRIP" (missing
+        # the I in "CHCKEN", "RSTED" for "ROASTED") and "...CHICIKEN..." --
+        # this is PAVI PAMA's own inventory system truncating/abbreviating
+        # product names at entry time, before their API ever sends us
+        # anything. Confirmed via their own API response that "description"
+        # is the only name field available -- no longer/fuller field exists
+        # to prefer instead. So: nothing to fix here, this dict already
+        # stores their description exactly as sent (see chain_product_name's
+        # own "unedited" comment in schema.sql). Doesn't affect
+        # categorization since PAVI PAMA is classified by its own category
+        # codes (see PAVI_CATEGORY_MAP in category_taxonomy.py), not by
+        # reading keywords out of the name -- a mangled "CHCKEN" still
+        # correctly lands under Chicken. The only real effect is cosmetic,
+        # if this name is ever shown as-is in the app.
         products.append({
             "chain_product_code": item.get("id"),
             "chain_product_name": item.get("description"),
