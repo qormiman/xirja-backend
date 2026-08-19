@@ -1,0 +1,79 @@
+# ============================================================================
+# Checks, every 15 minutes, whether it's time for one of Greens' or PAVI
+# PAMA's randomly-planned crawl moments (picked weekly by
+# plan-crawl-schedule.yml) -- and if so, starts that chain's real crawl
+# workflow, the same as clicking "Run workflow" by hand.
+#
+# Why this exists at all: GitHub's own scheduling only understands fixed,
+# repeating times (cron), not "run at this one specific, different-every-
+# week moment". This workflow is what actually watches the clock for those
+# one-off random moments and pulls the trigger when one arrives.
+#
+# On almost every single run (roughly 92 of the 96 checks a day, per
+# chain) nothing is due, and this quietly does nothing -- that's the
+# normal, expected outcome, not a problem. Only right around one of the
+# week's 2 planned moments per chain does it actually trigger a crawl.
+#
+# Cost note: checking every 15 minutes is roughly 96 extra, very short
+# (a few seconds each) workflow runs a day, on top of the 2 real crawls a
+# week this exists to trigger. Cheap in practice, but worth knowing it's
+# there if you're ever looking at GitHub Actions usage and wondering what
+# all the small runs are.
+#
+# IMPORTANT ONE-TIME SETUP: same as plan-crawl-schedule.yml -- this needs
+# "Read and write permissions" enabled for GITHUB_TOKEN (Settings ->
+# Actions -> General -> "Workflow permissions"), so it can both record
+# which planned runs it has already triggered, and start the crawl
+# workflows.
+# ============================================================================
+
+name: Check & trigger randomized crawl schedule
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # to record which planned runs have already been triggered
+  actions: write     # to start the crawl workflows via workflow_dispatch
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      # max-parallel: 1 -- same reasoning as the planner: avoids two
+      # simultaneous commits racing each other.
+      max-parallel: 1
+      matrix:
+        include:
+          - chain: greens
+            workflow_file: crawl-greens.yml
+          - chain: pavipama
+            workflow_file: crawl-pavipama.yml
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check ${{ matrix.chain }}'s schedule and trigger if due
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python check_and_trigger_crawl.py ${{ matrix.chain }} ${{ matrix.workflow_file }}
+
+      - name: Save any schedule changes back to the repository
+        run: |
+          if [ -n "$(git status --porcelain .github/schedule/${{ matrix.chain }}_schedule.json 2>/dev/null)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .github/schedule/${{ matrix.chain }}_schedule.json
+            git commit -m "Mark ${{ matrix.chain }}'s crawl trigger as handled"
+            git pull --rebase
+            git push
+          else
+            echo "No schedule changes to save (nothing was due this check)."
+          fi

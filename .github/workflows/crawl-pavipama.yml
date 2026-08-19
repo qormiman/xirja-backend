@@ -21,12 +21,16 @@
 name: Crawl PAVI PAMA prices
 
 on:
-  schedule:
-    # Runs at 23:00 UTC every night -- 1 AM Malta time right now (summer /
-    # CEST, UTC+2), same time as the Greens crawl. Drifts to 12 AM Malta
-    # time once clocks fall back in late October (see crawl-greens.yml for
-    # why this is an accepted trade-off rather than something to fix).
-    - cron: '0 23 * * *'
+  # 20 Aug 2026 -- the fixed nightly cron below is DISABLED on purpose,
+  # same reasoning and same mechanism as crawl-greens.yml: this crawl is
+  # now started by poll-crawl-schedule.yml, which triggers it via
+  # "workflow_dispatch" at 2 randomly-chosen moments a week (picked fresh
+  # every week by plan-crawl-schedule.yml) instead of the same fixed time
+  # every night. See those two workflows' own comments for the full
+  # explanation.
+  #
+  # schedule:
+  #   - cron: '0 23 * * *'
 
   # Adds a "Run workflow" button on the Actions tab, so you can trigger a
   # run by hand at any time -- this is how you'll do the first test run.

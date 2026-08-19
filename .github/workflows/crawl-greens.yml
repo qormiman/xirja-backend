@@ -36,15 +36,23 @@
 name: Crawl Greens prices
 
 on:
-  schedule:
-    # Runs at 23:00 UTC every night -- 1 AM Malta time right now (summer /
-    # CEST, UTC+2). GitHub's scheduler only understands UTC and has no idea
-    # Malta observes daylight saving, so this drifts to 12 AM Malta time
-    # once clocks fall back in late October, until CEST resumes in spring --
-    # a deliberate, accepted trade-off for keeping this to one simple line
-    # rather than juggling two schedules. Cron format is "minute hour day
-    # month weekday"; this means "0 minutes past 23:00, every day".
-    - cron: '0 23 * * *'
+  # 20 Aug 2026 -- the fixed nightly cron below is DISABLED on purpose.
+  # This crawl is now started automatically by a different mechanism:
+  # poll-crawl-schedule.yml checks, every 15 minutes, a schedule of 2
+  # random days/times a week (picked fresh every week by
+  # plan-crawl-schedule.yml) and triggers this workflow via the same
+  # "workflow_dispatch" button below at exactly those randomly-chosen
+  # moments. See those two workflows' own comments for the full
+  # explanation -- in short, crawling at the exact same time every night
+  # is an easy pattern to notice, and a schedule that's genuinely
+  # different every week has no fixed pattern at all.
+  #
+  # The manual "Run workflow" button is kept fully working below -- both
+  # for you to trigger a run by hand any time, and because it's the exact
+  # same mechanism the randomized scheduler itself uses.
+  #
+  # schedule:
+  #   - cron: '0 23 * * *'
 
   # Adds a "Run workflow" button on the Actions tab, so you can trigger a
   # run by hand at any time -- this is how you'll do the first test run.

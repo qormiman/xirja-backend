@@ -1,0 +1,81 @@
+# ============================================================================
+# Weekly "planner" for Greens' and PAVI PAMA's randomized crawl schedule.
+# Picks 2 new random days/times for the week ahead for EACH chain, and
+# writes them into a small schedule file in this repo -- a separate
+# workflow (poll-crawl-schedule.yml) checks that file every 15 minutes and
+# starts the actual crawl when one of those moments arrives.
+#
+# Why randomized instead of a fixed nightly time: crawling at the exact
+# same moment every single night is an easy pattern for a site to notice.
+# A schedule that's genuinely different every week -- different days,
+# different times -- has no fixed pattern to notice at all. (Welbee's has
+# its own separate version of this same idea, running from a home computer
+# instead of here, for the same reason -- see that crawler's local setup
+# files.)
+#
+# Runs once a week automatically (see "schedule" below), or any time by
+# hand via "Run workflow" if you want to force an early re-roll (e.g. after
+# first setting this up, to see it work immediately rather than waiting for
+# Monday).
+#
+# IMPORTANT ONE-TIME SETUP: this workflow commits a small file back into
+# the repository, which needs "Read and write permissions" enabled for
+# GITHUB_TOKEN. In your repo: Settings -> Actions -> General -> "Workflow
+# permissions" -> select "Read and write permissions" -> Save. Without
+# this, the commit step below will fail with a permissions error.
+# ============================================================================
+
+name: Plan Greens & PAVI PAMA crawl schedule
+
+on:
+  schedule:
+    # Every Monday at 00:15 UTC -- picks that week's 2 random crawl times
+    # for each chain. The exact day/time THIS runs at doesn't itself need
+    # to be unpredictable (it's not the thing being hidden from Welbee's or
+    # anyone else); Monday, early, was picked simply so a fresh week's plan
+    # is always ready well before the earliest randomly-picked crawl moment
+    # could plausibly arrive.
+    - cron: '15 0 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to commit the schedule file back to the repo
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    strategy:
+      # max-parallel: 1 -- both chains commit to the same repo one after
+      # the other rather than at the same time, so there's no risk of two
+      # simultaneous pushes racing each other.
+      max-parallel: 1
+      matrix:
+        chain: [greens, pavipama]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Pick this week's 2 random crawl times for ${{ matrix.chain }}
+        run: python plan_crawl_schedule.py ${{ matrix.chain }}
+
+      - name: Save the new schedule back to the repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/schedule/${{ matrix.chain }}_schedule.json
+          # New random times every run means there should always be a real
+          # change to commit -- but checking first (rather than letting
+          # `git commit` fail outright) means a freak identical-by-chance
+          # week doesn't turn into a red X for no real reason.
+          if [ -n "$(git status --porcelain .github/schedule/${{ matrix.chain }}_schedule.json)" ]; then
+            git commit -m "Plan ${{ matrix.chain }}'s crawl schedule for the week of $(date -u +%Y-%m-%d)"
+            git pull --rebase
+            git push
+          else
+            echo "No change to commit (this week's plan was identical to what's already there)."
+          fi
