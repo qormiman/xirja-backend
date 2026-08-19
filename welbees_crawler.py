@@ -123,13 +123,22 @@ STORE_ID = "welbees"
 OUTLET_ID = "welbees"
 SITE_ROOT = "https://welbees.mt"
 
-# A normal-looking browser identity, with an honest, contactable extra bit
-# tacked on -- same convention as the other two crawlers, so Welbee's server
-# logs can tell this apart from an ordinary shopper if they look.
+# 19 Aug 2026 -- this used to end with a self-identifying
+# "XirjaCrawler/0.1 (+contact: ...)" tag, the same convention used for the
+# other two crawlers, so Welbee's server logs could tell this apart from an
+# ordinary shopper if anyone looked. That's exactly what makes a
+# User-Agent easy to specifically block, though, and every one of Welbee's
+# 17 categories started failing with HTTP 403 on the same day with nothing
+# else about this crawler having changed -- the likely explanation is that
+# Welbee's (or a bot-protection layer in front of their site) started
+# blocking on that identifiable tag. Dropped it here so this now presents
+# as a plain, ordinary browser identity, same as the Greens and PAVI PAMA
+# crawlers already do. If this doesn't clear the 403s, the next suspects
+# are a general bot-protection layer (e.g. Cloudflare) that blocks on
+# things besides the UA string, or an IP-based block.
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 "
-    "XirjaCrawler/0.1 (+contact: ranier.chircop@gmail.com; polite, low-volume, once-daily crawl)"
+    "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 )
 
 # No robots.txt exists for this site to give us a specific number, so this
@@ -280,6 +289,11 @@ def fetch_page(category_code, slug, page):
     headers = {
         "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        # 19 Aug 2026 -- added alongside the User-Agent change above, since a
+        # request with only a User-Agent and Accept header (and nothing else
+        # a real browser normally sends) can itself look automated to some
+        # bot-protection systems.
+        "Accept-Language": "en-US,en;q=0.9",
     }
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=30) as resp:
