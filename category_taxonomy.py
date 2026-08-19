@@ -1960,6 +1960,16 @@ KEYWORD_RULES = [
     ("Stationery", ["tiggi & bird", "shoppig list"]),  # a branded notepad
     ("Hair Styling", ["lisgel"]),  # "Lisgel Wet -- Lucidante Effetto Bagnato" is an Italian wet-look hair styling gel
     ("Shaving Creams", ["swiss disp extreme activ"]),  # disposable razors (Wilkinson Sword-style multipack) -- closest existing category, this taxonomy has no separate Razors bucket
+
+    # 20 Aug 2026 -- the last unclassified listing in production:
+    # "Glutenfreebiss Mixed Party Items" (greens' Gluten Free aisle).
+    # Glutenfreebiss is a Maltese gluten-free producer (WebSearch-confirmed:
+    # glutenfreebiss.com, Qormi) whose range includes savoury party
+    # pastries, and "Party Food" already exists as a category (PAVI's
+    # "Party Items" aisle maps to it). Keyword is the product phrase, not
+    # the brand -- the brand also makes bread/pasta/pastizzi, which belong
+    # in their own categories.
+    ("Party Food", ["mixed party items"]),
 ]
 
 
