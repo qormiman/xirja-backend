@@ -1970,6 +1970,24 @@ KEYWORD_RULES = [
     # the brand -- the brand also makes bread/pasta/pastizzi, which belong
     # in their own categories.
     ("Party Food", ["mixed party items"]),
+
+    # 20 Aug 2026 -- first real batch of Welbee's-only unclassified
+    # listings, surfaced once Welbee's local crawl actually started
+    # writing real products to the database (previously blocked/empty --
+    # see welbees_crawler.py's own "How this evolved" section).
+    ("Electrical", ["gigaset"]),  # WebSearch-confirmed: Gigaset only makes cordless landline phones/telecom equipment, e.g. "Gigaset Cordless Duo Black Phone"
+    ("Fresh Pastry", ["pinsa base"]),  # a raw/prepared Roman-style pizza base, e.g. "Di Marco Pinsa Base" -- same category as the existing "pinsa romana"/"pinsa margherita" rules above
+    ("Cakes", ["pandori"]),  # WebSearch-confirmed: Bauli's own name for its mini pandoro-style breakfast pastry (e.g. "Bauli Pandorì Classic"), same category as the existing "pandoro" rule
+
+    # "Fresh By Ela Breakfast Mix" (welbees / Fruit & Veg Counter). Couldn't
+    # be identified via WebSearch or WebFetch (Welbee's page returned a
+    # 403 that one time), so Ranier sent a photo instead -- clearly a
+    # sealed pouch of almonds, cashews, walnuts, cranberries, raisins and
+    # other dried fruit, i.e. a nuts-and-dried-fruit trail mix. Same
+    # category as the existing "trail mix" keyword above (Nuts). Keyword
+    # is "breakfast mix", not "breakfast", so it can't accidentally catch
+    # an unrelated breakfast cereal/porridge product down the line.
+    ("Nuts", ["breakfast mix"]),
 ]
 
 
