@@ -16,13 +16,18 @@
 #   2. Manually, whenever you want, by clicking "Run workflow" on the
 #      Actions tab.
 #
-# Same trick as categorize_listings.py (added 18 Aug 2026): the script
-# deliberately exits non-zero whenever it finds a problem, even though
-# nothing about the healthcheck itself failed -- that's what makes this run
-# show up as "failed" (red X) and triggers GitHub's automatic
-# failure-notification email. So a red X here means "a chain's prices may
-# be going stale", not "this workflow is broken" -- read the run's log for
-# which outlet and why.
+# 20 Aug 2026 -- this run always shows green now, even when a problem is
+# found: the healthcheck itself always runs successfully, so a red
+# "failed" X was misleading (it looked like the workflow was broken, not
+# like "a chain's prices may be going stale"). Up to 18 Aug 2026 this
+# deliberately exited non-zero just to trigger GitHub's automatic
+# failure-notification email; that's now done instead via a GitHub Issue
+# that check_crawl_freshness.py opens (or updates) using the `gh` CLI when
+# there's something to flag, and closes automatically once every outlet's
+# healthy again -- same email inbox, no red X. See github_issue_notify.py's
+# own docstring for the full reasoning. `permissions: issues: write` and
+# the GH_TOKEN below are what let the script actually create/comment/close
+# issues in this repo.
 # ============================================================================
 
 name: Crawl freshness healthcheck
@@ -36,6 +41,10 @@ on:
     - cron: '0 6 * * *'
 
   workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   healthcheck:
@@ -56,4 +65,9 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PYTHONUNBUFFERED: "1"
+          # Lets the script use the `gh` CLI to open/update/close a
+          # GitHub Issue when there's something to flag -- see
+          # github_issue_notify.py. GITHUB_TOKEN is provided automatically
+          # by GitHub Actions for every run, no secret to set up.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python check_crawl_freshness.py

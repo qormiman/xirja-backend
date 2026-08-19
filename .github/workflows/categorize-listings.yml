@@ -22,16 +22,18 @@
 #      Actions tab -- useful right before a categorization review, so
 #      the report you're looking at is as fresh as possible.
 #
-# 18 Aug 2026 -- categorize_listings.py now deliberately exits non-zero
-# whenever ANY listing is still unclassified at the end of a run, even
-# though nothing actually went wrong -- categorizing itself always
-# succeeds and writes its results either way. This is on purpose: it's
-# what makes this run show up as "failed" (red X) on the Actions tab and
-# in GitHub's own automatic failure-notification email, which is the
-# simplest way to get notified without setting up a new integration. So:
-# a red X here means "some listings need new keyword rules", not "this
-# workflow is broken" -- check the run's log (or the unclassified-listings
-# artifact below) for what's still open, same as any other run.
+# 20 Aug 2026 -- this run always shows green now, even when some listings
+# are still unclassified: categorizing itself always succeeds and writes
+# its results either way, so a red "failed" X was misleading (it looked
+# like the workflow was broken, not like "some listings need new keyword
+# rules"). Up to 18 Aug 2026 this deliberately exited non-zero just to
+# trigger GitHub's automatic failure-notification email; that's now done
+# instead via a GitHub Issue that categorize_listings.py opens (or
+# updates) using the `gh` CLI when there's something to flag, and closes
+# automatically once nothing's unclassified -- same email inbox, no red
+# X. See github_issue_notify.py's own docstring for the full reasoning.
+# `permissions: issues: write` and the GH_TOKEN below are what let the
+# script actually create/comment/close issues in this repo.
 # ============================================================================
 
 name: Categorize listings
@@ -48,6 +50,10 @@ on:
     - cron: '0 4 */3 * *'
 
   workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   categorize:
@@ -68,6 +74,11 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PYTHONUNBUFFERED: "1"
+          # Lets the script use the `gh` CLI to open/update/close a
+          # GitHub Issue when there's something to flag -- see
+          # github_issue_notify.py. GITHUB_TOKEN is provided automatically
+          # by GitHub Actions for every run, no secret to set up.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python categorize_listings.py
 
       # The printed report only shows 8 example names per unclassified
