@@ -988,10 +988,29 @@ KEYWORD_RULES = [
     ("Herbs & Spices", [
         "cumin", "turmeric", "nutmeg", "clove", "curry powder", "chilli powder",
         "garlic powder", "onion powder", "mixed herb", "bay leaf", "bay leave",
-        "cardamom", "coriander", "peppercorn", "saffron", "vanilla",
+        "cardamom", "coriander", "peppercorn", "saffron",
         "allspice", "sage", "tarragon", "marjoram", "fennel seed",
         "mustard seed", "seasoning", "schwartz",
+        # "vanilla" itself removed from this bare-word list 21 Aug 2026 --
+        # from the collisions report, this was the single biggest driver of
+        # the Biscuits/Herbs & Spices (96), Cakes/Herbs & Spices (51),
+        # Coffee/Herbs & Spices (49), Cereals/Herbs & Spices (47) and
+        # Herbs & Spices/Yoghurt (57) pairs -- ~300 listings in total, all
+        # the same shape: a vanilla-FLAVOURED wafer/muffin/cappuccino/
+        # cereal-bar/yoghurt tying bare "vanilla" against the product's own
+        # real type, and landing on Herbs & Spices roughly half the time
+        # purely by list-order luck (e.g. "Rayner's Vanilla Muffins" and
+        # "YOFU Greek Style-Vanilla" both wrongly did; "CAKE VANILLA 50G"
+        # happened to land correctly). There's no real ambiguity here the
+        # way there is for a genuinely dual-category product -- a vanilla
+        # muffin is a muffin, full stop, nobody looks for it in the spice
+        # aisle. Replaced below with specific phrases for the cases that
+        # actually ARE spice-aisle vanilla (pods, extract, beans) --
+        # phrases already beat every other bare word in this file by
+        # design, so those still resolve correctly without reintroducing
+        # this same collision.
     ]),  # deliberately NOT "sea salt"/"table salt" -- as phrases they beat "crispbread" and "rice cracker" on snacks that merely mention sea salt; the bare word "salt" above already catches actual salt
+    ("Herbs & Spices", ["vanilla pod", "vanilla extract", "vanilla bean", "pure vanilla"]),
     ("Sugar", ["icing sugar", "caster", "demerara", "muscovado", "brown sugar", "granulated", "stevia", "canderel", "golden syrup"]),
     ("Flour", ["cornflour", "corn flour", "cornstarch", "corn starch", "semolina", "self raising", "plain flour", "bread flour", "wholemeal flour"]),
     ("Cake Preparations", ["baking powder", "bicarbonate", "cake mix", "icing", "fondant", "sprinkle", "marzipan", "gelatine", "gelatin", "food colouring", "food coloring", "dr oetker", "betty crocker", "vanilla essence"]),
@@ -1218,7 +1237,15 @@ KEYWORD_RULES = [
     # ========================================================================
 
     # ---- Wine, by grape and style. The bottles often name nothing else. ----
-    ("Wine - Red", ["appassimento", "nero d avola", "cabernet", "malbec", "merlot", "chianti", "primitivo", "montepulciano", "valpolicella", "zinfandel", "syrah", "sangiovese", "tempranillo", "rioja", "barolo", "nebbiolo", "negroamaro"]),
+    # "cabernet sauvignon" is listed here as its own phrase (not just relying
+    # on bare "cabernet" below) so it wins outright over the bare "sauvignon"
+    # keyword in the White list right after this -- found from the
+    # "category collisions" report (21 Aug 2026): "Cabernet Sauvignon" is
+    # ALWAYS a red wine (Sauvignon is the second half of ITS name, not a
+    # separate Sauvignon Blanc), but bare "cabernet" and bare "sauvignon"
+    # were tying as equally-strong single words, with the actual winner
+    # decided only by unrelated list order, not by which one is correct.
+    ("Wine - Red", ["cabernet sauvignon", "appassimento", "nero d avola", "cabernet", "malbec", "merlot", "chianti", "primitivo", "montepulciano", "valpolicella", "zinfandel", "syrah", "sangiovese", "tempranillo", "rioja", "barolo", "nebbiolo", "negroamaro"]),
     ("Wine - White", ["chardonnay", "sauvignon", "pinot", "riesling", "moscato", "vermentino", "catarratto", "gewurztraminer", "grillo", "verdicchio", "soave", "gavi"]),
     ("Wine - Sparkling", ["prosecco", "spumante", "cava", "franciacorta"]),
     ("Beers", ["shandy"]),
@@ -1988,6 +2015,69 @@ KEYWORD_RULES = [
     # is "breakfast mix", not "breakfast", so it can't accidentally catch
     # an unrelated breakfast cereal/porridge product down the line.
     ("Nuts", ["breakfast mix"]),
+
+    # 21 Aug 2026 -- second batch of Welbee's-only unclassified listings,
+    # from the first "Categorize listings" run after real Welbee's data
+    # had been flowing for a couple of days.
+    #
+    # "O.b. Extra Protection Normal (16p)" / "O.b. Extra Protection Super
+    # (16p)" -- O.b. (Johnson & Johnson) is a tampon brand, but the name
+    # alone doesn't contain the word "tampon" anywhere, so the existing
+    # bare "tampon" keyword above never had a chance to match. Deliberately
+    # NOT just "o.b." on its own as the keyword: cleaned down to bare
+    # letters "o" and "b" (see clean_for_matching -- the periods become
+    # spaces), a 1-letter/1-letter pair is too short and too generic to be
+    # safe as a standalone keyword. Using the fuller "o.b. extra
+    # protection" phrase (matches after cleaning, since the keyword goes
+    # through the same cleaning as the product text) keeps this specific
+    # and safe.
+    ("Intimate Care", ["o.b. extra protection"]),
+
+    # "Falanghina del Sannio Il Poggio 2022 (750ml)" -- Falanghina is a
+    # white wine grape from Campania, Italy (WebSearch-confirmed), same
+    # idea as the existing chardonnay/sauvignon/etc grape-variety keywords
+    # already in this category.
+    ("Wine - White", ["falanghina"]),
+
+    # "Ashoka Instant Bombay Biryani (280grms)" -- an instant/boxed biryani
+    # kit. Judgment call, flagged as such: biryani is fundamentally a rice
+    # dish, and this project already treats "risotto" (an equally
+    # rice-based, name-doesn't-say-rice dish) as belonging to Rice rather
+    # than Ready Meals -- this follows that same precedent for
+    # consistency, rather than splitting seasoned-rice-dish products
+    # across two categories depending on which dish they happen to be.
+    ("Rice", ["biryani"]),
+
+    # "Nairn's Flatbread Original Crackers (gf) (150grms)" -- this ALREADY
+    # says "Crackers" in the name, but there's deliberately no bare
+    # "cracker" keyword anywhere in this file (only compound phrases like
+    # "prawn cracker", "rice cracker") -- almost certainly because a
+    # supermarket also sells actual Christmas crackers (the pull-apart
+    # party favour, not food), which would wrongly land in this category
+    # too if "cracker" alone were a keyword and there's no separate
+    # Christmas/Party aisle mapping to catch it first (true for Welbee's,
+    # which has no aisle-mapping table at all). Using the brand name
+    # instead sidesteps that risk entirely: Nairn's (WebSearch-confirmed)
+    # makes ONLY oatcakes/oat crackers/oat biscuits -- no unrelated
+    # product lines, so the brand name alone is safe here in a way "plain
+    # cracker" is not.
+    ("Crackers, Crispbread & Breadsticks", ["nairn's"]),
+
+    # 21 Aug 2026 -- from continuing the collisions-report triage into the
+    # "Fruits / X" pairs (Sports, Oils, Tea, Spirits, Bread, Carbonated
+    # Drinks, Ciders -- ~490 listings combined). Same root shape as the
+    # vanilla fix above, but a DIFFERENT repair: a bare fruit-flavour word
+    # (mango, berry, peach, coconut, orange...) can't just be removed the
+    # way "vanilla" was -- real fresh fruit is a huge, legitimate part of
+    # this category, and Welbee's in particular has no aisle-mapping table
+    # at all, so it depends entirely on these bare words to classify real
+    # produce correctly. Instead, these two phrases give the REAL product
+    # type (found from this round's actual colliding examples) something
+    # more specific than bare "oil" to win on -- phrases already beat
+    # every bare word in this file by design, so no other category's
+    # bare-word matching needed to change at all.
+    ("Oils", ["coconut oil"]),  # "Alibaba Coconut Oil" was tying bare "oil" (Oils) against bare "coconut" (Fruits)
+    ("Skin Care", ["tanning oil", "tanning lotion", "bronzing"]),  # "Malibu Sun Bronzing Tanning Oil Spray Coconut" was tying bare "oil" (Oils) against bare "coconut" (Fruits) -- neither of which is actually right; it's a suncare product
 ]
 
 
@@ -3050,6 +3140,101 @@ MULTI_KEYWORD_RULES = [
     ("Sanitary Towels", ["every day", "up"]),           # "Frio Ice Cubes Bags" -- both words are pluralised mid-phrase, so no contiguous phrase can match it      # "CAR CLOTH SUPER WATER ABSORBENT" -- absorbency is a cloth's selling point too, so a cloth that says "absorbent" stays a cloth  # "Dove Bath Seta Preziosa" -- bare "bath" is far too generic on its own (bath salts, bath towel, bath mat, bathroom cleaner), so it only counts alongside the brand  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
     ("Pasta & Couscous", ["pasta natura"]),
     ("Perfume", ["impulse"]),  # keeps the earlier round's deliberate Impulse=Perfume decision intact now that "body spray" is a Deodorants phrase (Pass 1 phrases beat Pass 2 bare words, so Impulse needs Pass 0 to hold its place)  # gluten-free pasta brand whose product names say what the pasta is MADE of ("Corn Flour", "Rice") -- needs Pass 0 so those ingredient words don't win  # "Surf Tropical Liquid" -- Surf is a laundry brand, but the bare word "surf" is much too generic to claim on its own, so it only counts when "liquid" is also present
+
+    # 21 Aug 2026 -- from triaging the "category collisions" report's two
+    # biggest pairs (Sauces & Condiments/Vegetables, 522 listings; Cheese/
+    # Sauces & Condiments, 205 listings). Root cause: several words in the
+    # Sauces & Condiments bare-word list (see the big block starting
+    # "Bare 'sauce' is the single highest-value word..." earlier in this
+    # file) were TYING against an ordinary ingredient word from a
+    # DIFFERENT product's actual base category -- "Waitrose Caramelised
+    # Red Onion Chutney" tied "chutney" (Sauces & Condiments) against
+    # "onion" (Vegetables) and landed on Vegetables purely because of
+    # where the two tuples happen to sit in this file, not because that's
+    # the right answer. A chutney, pesto, relish, etc. is unambiguously a
+    # condiment REGARDLESS of what vegetable/cheese/fruit it's flavoured
+    # with or made from -- there's no real dual-category ambiguity here
+    # the way there is for, say, a fruit-flavoured yoghurt (see
+    # KNOWN_ACCEPTED_COLLISIONS below for those). Single words here (same
+    # established pattern as e.g. ("Coffee", ["saquella"]) above) so they
+    # win outright via Pass 0, no matter which other category's word also
+    # appears in the name.
+    #
+    # Deliberately NOT every word from that block: "mustard" is left out
+    # on purpose -- "mustard seed" is its own existing PHRASE rule (Pass
+    # 1) mapped to Herbs & Spices, and a Pass 0 bare "mustard" override
+    # would fire before that phrase ever got checked, wrongly reclassifying
+    # "Colemans Mustard Seeds" as a condiment. "passata" and "polpa" are
+    # also left out -- the one real example seen so far ("Cirio Passata
+    # Verace Sieved Tomatoes") already resolves correctly today, so
+    # there's no evidence yet that they need this same override. And
+    # "ketchup"/"gherkin" are NOT repeated here -- turns out this exact
+    # override already exists for both, further up this same list (search
+    # for "was landing on Vegetables"/"was landing on Vinegars") -- same
+    # bug, same fix, just found independently on an earlier date.
+    ("Sauces & Condiments", ["sauce"]),
+    ("Sauces & Condiments", ["chutney"]),
+    ("Sauces & Condiments", ["pesto"]),
+    ("Sauces & Condiments", ["relish"]),
+    ("Sauces & Condiments", ["marinade"]),
+    ("Sauces & Condiments", ["horseradish"]),
+    ("Sauces & Condiments", ["teriyaki"]),
+    ("Sauces & Condiments", ["sriracha"]),
+    ("Sauces & Condiments", ["hoisin"]),
+    ("Sauces & Condiments", ["piccalilli"]),
+    ("Sauces & Condiments", ["aioli"]),
+    ("Sauces & Condiments", ["mayonnaise"]),
+    ("Sauces & Condiments", ["mayo"]),
+    ("Sauces & Condiments", ["gravy"]),
+    ("Sauces & Condiments", ["salsa"]),
+    ("Sauces & Condiments", ["pickle"]),
+    ("Sauces & Condiments", ["dip"]),  # "Cranberry Dip" was landing on Dried Fruit -- same shape as the rest of this block, found from the same report. NOT promoting "curd" from the same original tuple though -- "Milochka Curd Cheese" is a real, correctly-classified Cheese product, so curd genuinely is ambiguous in a way dip isn't.
+
+    # Also from the 21 Aug 2026 collisions triage: "Ca Vittoria Appassimento
+    # Rosso Vino Passito" ties bare "appassimento" (Wine - Red -- a
+    # winemaking TECHNIQUE, used for both red and white/dessert wines)
+    # against bare "passito" (Wine - White -- a STYLE, also used for both
+    # colours), even though the bottle's own name says "Rosso" (Italian for
+    # red) right there. "rosso" itself already exists as a colour keyword,
+    # but only inside SCOPED_KEYWORD_RULES (Welbee's "Drinks" aisle only,
+    # and only checked as a last resort AFTER classify_by_name has already
+    # failed) -- since appassimento/passito already give classify_by_name
+    # an (ambiguous) answer, that scoped fallback never even runs. Added
+    # here as its own global override, unlike the rest of that scoped
+    # colour block ("bianco" especially): checked and confirmed "rosso"
+    # doesn't appear anywhere else in this file for an unrelated product
+    # (unlike "bianco", which really is Omino Bianco/Mulino Bianco/etc, and
+    # unlike bare "red", which would catch far too much -- Red Bull, red
+    # onions, red peppers -- to ever be safe unscoped). Not extending this
+    # same treatment to "bianco"/"rouge"/"tinto"/"red" today -- flagged as
+    # a possible follow-up if they turn out to cause the same problem in a
+    # future report, not assumed safe without the same check.
+    ("Wine - Red", ["rosso"]),
+
+    # 21 Aug 2026 -- the "Fruits / X" collision pattern (~490 listings across
+    # 7 pairs: Sports, Oils, Tea, Spirits - Liquers, Bread, Carbonated
+    # Drinks, Ciders). In almost every example, a bare fruit-flavour word
+    # (mango, berry, peach, coconut, orange, grapefruit...) in Fruits was
+    # tying, at the SAME tier, against a bare brand-name word that already
+    # correctly identifies the product's real category -- e.g. "Kopparberg
+    # Mixed Fruit Cider" ties bare "kopparberg" (Ciders) against bare
+    # "mixed fruit" / "fruit" (Fruits). Unlike the earlier bare-"oil" case,
+    # none of these brand words appear anywhere else in the file for an
+    # unrelated product (checked individually below), so promoting each to
+    # a tier-0 override is safe: it can't misfire on some other product the
+    # way bare "oil" would have. Two of the seven pairs (Oils, and part of
+    # Sports/Tea's flavoured-drink shape) needed a phrase-tier fix instead
+    # -- see the new "coconut oil" / "tanning oil" entries near the end of
+    # KEYWORD_RULES above -- because "oil" itself can't safely go tier-0
+    # (would jump ahead of the existing "olive oil"/"baby oil" phrases).
+    ("Ciders", ["kopparberg"]),  # e.g. "Kopparberg Mixed Fruit Cider" was tying against bare "fruit"
+    ("Sports", ["powerade"]),  # e.g. "Powerade Mountain Blast" / fruit-flavour variants were tying against Fruits
+    ("Sports", ["gatorade"]),  # same sports-drink brand, same tuple as powerade -- "Gatorade Orange" was tying bare "orange" (Fruits) the identical way
+    ("Tea", ["lipton"]),  # e.g. "Lipton Peach Ice Tea" was tying bare "peach" (Fruits)
+    ("Tea", ["clipper"]),  # e.g. "Clipper Mango & Ginger" was tying bare "mango" (Fruits)
+    ("Spirits - Liquers", ["bacardi"]),  # e.g. "Bacardi Mango" / "Bacardi Raspberry" were tying against Fruits
+    ("Carbonated Drinks", ["schweppes"]),  # e.g. "Schweppes Grapefruit" was tying bare "grapefruit" (Fruits)
+    ("Body Lotions", ["vaseline"]),  # e.g. "Vaseline Cocoa Butter" type variants were tying against Fruits
 ]
 
 
