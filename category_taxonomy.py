@@ -2688,6 +2688,14 @@ MULTI_KEYWORD_RULES = [
     # Paprika Flav Corn Snack & Peanut" (no "roast"/"roasted" word) isn't
     # covered by this -- left as a lower-confidence case, since that one's
     # arguably a corn snack either way.
+    # "Ritter Sport Roasted Peanuts 100g" (no "chocolate" in the name,
+    # unlike its sibling "Ritter Sport Roasted Peanuts Chocolate") was
+    # about to fall into the "peanut"+"roast" Nuts rule just below --
+    # checked first so the brand (Ritter Sport makes chocolate bars only,
+    # WebSearch-confirmed) wins regardless of which nut/roast word is in
+    # the name. See the fuller "ritter" note further down in this file for
+    # the original bare-word promotion this rule complements.
+    ("Chocolates", ["ritter"]),
     ("Nuts", ["peanut", "roast"]),
     ("Nuts", ["peanut", "roasted"]),
     # A well-known Indian dish name -- found via real data ("Butter
@@ -3491,6 +3499,48 @@ MULTI_KEYWORD_RULES = [
     # bare word its product line name collides with.
     ("Stationery", ["staedtler"]),
 
+    # 21 Aug 2026 -- Fruits/Sweet Snacks residual (167, down from 179).
+    # Real data (SQL query, ~179 rows) showed all but one of the genuine
+    # tier-ties already resolve correctly after the earlier round of fixes
+    # (Debron, Orbit, Sun Lolly, V-Gum, Wrigley's products). The one real
+    # bug: "Fini Jelly Bananas" resolves to Fruits (via bare "banana"),
+    # while "Fini Jelly Beans" already correctly resolves to Sweet Snacks
+    # -- because "jelly bean" is a registered tier1 phrase but "jelly
+    # banana" isn't, so "Bananas" falls through to a three-way bare-word
+    # tie between Fruits/banana, Jelly/jelly, and Sweet Snacks/fini, which
+    # "banana" was winning on file position. Fini is a confectionery-only
+    # brand (checked: registered nowhere else in this file), so promoting
+    # it to a tier0 override fixes this and any future Fini product with a
+    # fruit name in it, without needing a phrase for every flavour.
+    ("Sweet Snacks", ["fini"]),
+
+    # 21 Aug 2026 -- Sauces & Condiments/Vegetables (86, down from 124).
+    # Real data (SQL query, ~650 rows) showed only 13 genuine tier-ties,
+    # 10 of which were the same pattern repeated: an already-registered
+    # bare Sauces & Condiments word (grinder, hummus/humus, ragu,
+    # bruschetta, aromat) losing to a bare Vegetables word (pepper,
+    # tomato, garlic, mushroom) on file position -- e.g. "Eurosalt Primero
+    # Black Pepper Grinder" and "Star Gran Ragu With Mushrooms" landing in
+    # Vegetables. All five promoted words are registered nowhere except
+    # Sauces & Condiments in this file, so promoting them to tier0 fixes
+    # every current and future product using them, regardless of which
+    # vegetable word also appears in the name.
+    ("Sauces & Condiments", ["grinder"]),
+    ("Sauces & Condiments", ["hummus"]),
+    ("Sauces & Condiments", ["humus"]),
+    ("Sauces & Condiments", ["ragu"]),
+    ("Sauces & Condiments", ["bruschetta"]),
+    ("Sauces & Condiments", ["aromat"]),
+
+    # 21 Aug 2026 -- Fruits/Sports (71, down from 86). Real data (SQL
+    # query, ~450 rows) showed only 2 genuine tier-ties, both Nutrend
+    # products ("Nutrend Orange Fire", "Nutrend Abe Fruit Punch") losing
+    # to bare "orange"/"fruit" on file position. Nutrend is a sports-
+    # nutrition-only brand (checked: registered nowhere else in this
+    # file), so promoting it to tier0 fixes both and any future Nutrend
+    # product with a fruit-flavour name.
+    ("Sports", ["nutrend"]),
+
     # 21 Aug 2026 -- Bread/Fruits collision (58 listings). SQL query for
     # bread/croissant/bun words + fruit-flavour words (~140 rows) showed
     # most of that result set was noise from the broad WHERE clause
@@ -3646,6 +3696,42 @@ MULTI_KEYWORD_RULES = [
     ("Tea", ["fruit infusion"]),
     ("Tea", ["fruits infusion"]),
     ("Tea", ["immunitea"]),
+
+    # 21 Aug 2026 -- Chocolates/Nuts, second pass (56, new real data). Real
+    # data (SQL query, ~650 rows) showed 36 genuine ties, split across a
+    # few root causes:
+    # "ritter" is already a registered bare Chocolates keyword (Ritter
+    # Sport is a chocolate-bar brand), but sits too far down the file to
+    # beat bare "hazelnut"/"almond" (Nuts) or even the "orange"/"raisin"
+    # fruit phrases -- e.g. "Ritter Sport Whole Hazelnuts" was landing on
+    # Nuts, "Ritter Dark Almond & Orange" on Fruits, and "Ritter Raisin &
+    # Hazelnut" on Dried Fruit. Promoting the brand fixes every Ritter Sport
+    # variant in the sample at once. Checked -- "ritter" has no other use
+    # anywhere else in this file. (The actual rule is checked earlier in
+    # this list, right before the "peanut"+"roast" Nuts rule, so it also
+    # wins for "Ritter Sport Roasted Peanuts" with no "chocolate" in the
+    # name -- see that rule for why.)
+    # "Condorelli Torroncini Morbidi Pistacchio" -- "torroncini" is already
+    # a registered bare Chocolates keyword (soft nougat coated in
+    # chocolate), but sits after the bare "pistacchio" (Nuts) rule.
+    # Checked -- "torroncini" has no other use anywhere else in this file.
+    ("Chocolates", ["torroncini"]),
+    # "Pellito Truffle Cashews" / generic "Truffle Cashews" -- bare
+    # "truffle" can't be promoted on its own (it's also used for savoury
+    # truffle-the-fungus products elsewhere, see the comment above the
+    # Healthy Leaf rules), but "truffle" co-occurring with "cashew" is
+    # unambiguously the chocolate-truffle-style-cashew snack, not a
+    # savoury dish -- so scoped to the pair instead of the bare word.
+    ("Chocolates", ["truffle", "cashew"]),
+    # "Reese's Dipped Peanuts" -- bare "reese" is already a registered
+    # Chocolates keyword but loses to bare "peanut" (Nuts). NOT promoting
+    # bare "reese" on its own -- that would wrongly pull every "Reese's
+    # Peanut Butter Cups" variant away from the correct Peanut Butter
+    # category (those already resolve correctly via the "peanut butter"
+    # phrase, which only wins because "reese" alone doesn't out-rank it).
+    # Scoped to "reese" + "dipped" instead, which only matches the
+    # chocolate-dipped-peanuts variant.
+    ("Chocolates", ["reese", "dipped"]),
 ]
 
 
