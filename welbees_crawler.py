@@ -238,7 +238,15 @@ RETRY_DELAY_SECONDS = 15
 # room above that while still catching a genuine pagination bug.
 MAX_PAGES_PER_CATEGORY = 300
 
-DB_WRITE_HARD_TIMEOUT_SECONDS = 30
+# 20 Aug 2026 -- raised from 30s to 60s after the first real run from a home
+# connection (this crawler previously only ran on GitHub's own fast,
+# stable, data-center-to-data-center link). That run hit two page-save
+# timeouts out of roughly 700 pages -- rare, but a home connection's path
+# to the database is longer and less consistent than GitHub's was, so a
+# little more slack is a reasonable, low-risk adjustment rather than a
+# guess. The existing retry logic already recovered from one of the two;
+# this just gives it a better chance of not needing to.
+DB_WRITE_HARD_TIMEOUT_SECONDS = 60
 DB_RECOVERY_TIMEOUT_SECONDS = 15
 
 # The full 17-category list, taken from Welbee's own category menu and
@@ -669,23 +677,39 @@ def product_code_set(products):
     return frozenset(p["chain_product_code"] for p in products)
 
 
-# 20 Aug 2026 -- printed (once per run) if a page full of real products
-# yields not a single readable price. That exact situation happened for
-# real -- ~4,000 products across every category, zero prices matched, no
-# error anywhere, run recorded as "success" with item_count=0 -- because
-# the browser-rendered page writes the euro sign differently than the raw
-# HTML the price patterns were built from (see the _EURO comment above the
+# 20 Aug 2026 -- printed if a page full of real products yields not a
+# single readable price. That exact situation happened for real -- ~4,000
+# products across every category, zero prices matched, no error anywhere,
+# run recorded as "success" with item_count=0 -- because the
+# browser-rendered page writes the euro sign differently than the raw HTML
+# the price patterns were built from (see the _EURO comment above the
 # patterns). The patterns are fixed, but if the site ever changes its
-# markup in some new way, this warning makes it impossible for "found
-# everything, saved nothing" to slip through quietly again.
-_no_price_warning_printed = False
+# markup in some new way (for a whole category, or just one odd page),
+# this warning makes it impossible for "found everything, saved nothing"
+# to slip through quietly again.
+#
+# 21 Aug 2026 -- changed from a single run-wide "print once, then go
+# silent" flag to a per-category tally. Real data caught the gap: two
+# consecutive live runs both showed "D-5432 (Butcher Counter) page 1: ...
+# not ONE had a readable price", with pages 2 and 3 of that same category
+# saving normally right after -- so this genuinely is an isolated,
+# reproducible gap (Butcher Counter's page 1 specifically), not a
+# site-wide breakage. But the OLD code's "printed once per run" comment
+# was honest that it could only ever prove the FIRST such page -- if a
+# second, unrelated category had also silently lost a page, there was no
+# way to tell from the log. This still prints immediately the first time
+# each category hits it (so tailing the log live still shows it
+# happening), and now ALSO keeps a full tally, printed as a summary at
+# the end of the run (see the bottom of crawl_welbees(), same pattern as
+# the existing per-unit-suffix tally) -- so a second, different affected
+# category is never invisible again.
+zero_price_page_tally = {}
 
 
 def store_products(cur, outlet_id, products):
     """Save an already-parsed page's worth of products. Returns (saved,
     total) -- 'saved' only counts ones with a usable price, same as
     before."""
-    global _no_price_warning_printed
     saved = 0
     for product in products:
         if product["price"] is None:
@@ -695,13 +719,21 @@ def store_products(cur, outlet_id, products):
         listing_id = upsert_listing(cur, outlet_id, product)
         insert_price_observation(cur, listing_id, product)
         saved += 1
-    if products and saved == 0 and not _no_price_warning_printed:
-        _no_price_warning_printed = True
-        print(f"  WARNING: this page had {len(products)} product(s) but not ONE had a "
-              f"readable price -- so nothing from it was saved. If this line appears, "
-              f"the site has probably changed how it writes prices and the price "
-              f"patterns in welbees_crawler.py need updating. (Printed once per run; "
-              f"later pages may be affected too.)", file=sys.stderr)
+    if products and saved == 0:
+        # category_label is the same for every product on this page (it's
+        # set once per fetch_page() call, see parse_products), so reading
+        # it off the first product is safe and avoids needing a new
+        # parameter threaded through every call site.
+        category_label = products[0]["chain_category"]
+        zero_price_page_tally[category_label] = zero_price_page_tally.get(category_label, 0) + 1
+        if zero_price_page_tally[category_label] == 1:
+            print(f"  WARNING: {category_label} -- this page had {len(products)} product(s) "
+                  f"but not ONE had a readable price -- so nothing from it was saved. If this "
+                  f"line appears, the site has probably changed how it writes prices for this "
+                  f"category and the price patterns in welbees_crawler.py need updating. "
+                  f"(Printed once per category per run; see the end-of-run summary for the "
+                  f"full tally across every category, including any further pages of this "
+                  f"same category.)", file=sys.stderr)
     return saved, len(products)
 
 
@@ -730,10 +762,10 @@ def safe_recover_connection(conn, outlet_id):
 # ----------------------------------------------------------------------------
 
 def crawl_welbees(conn):
-    global _diagnostics_printed, _no_price_warning_printed
+    global _diagnostics_printed
     fallback_unit_counts.clear()  # fresh tally for this run, not left over from any previous call
+    zero_price_page_tally.clear()  # same idea -- fresh per run, see its own comment above
     _diagnostics_printed = False  # same idea -- diagnostics print once per RUN, not once per process
-    _no_price_warning_printed = False
 
     cur = conn.cursor()
     cur.execute(
@@ -1016,6 +1048,15 @@ def crawl_welbees(conn):
             for suffix, count in sorted(fallback_unit_counts.items())
         )
         print(f"  Per-unit suffixes treated as \"per piece\" pricing this run: {tally}")
+
+    if zero_price_page_tally:
+        tally = ", ".join(
+            f"{category}: {count} page(s)"
+            for category, count in sorted(zero_price_page_tally.items())
+        )
+        print(f"  Categories with at least one zero-price page this run (nothing was saved "
+              f"from those pages -- worth a look if any of these keep recurring run after "
+              f"run): {tally}")
 
     print(f"Finished Welbee's: status={status}, item_count={item_count}")
     return status == "success"
