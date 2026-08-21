@@ -449,6 +449,31 @@ def _print_first_page_diagnostics(browser_page, url, body):
     print("  " + "-" * 68)
 
 
+# 21 Aug 2026 -- see the comment above its one call site in parse_products
+# for the full story. Capped and printed only once per run, same reasoning
+# as _print_first_page_diagnostics above: one real example is enough to
+# diagnose a markup mismatch, and a run where every single page has this
+# problem shouldn't flood the log with the same snippet hundreds of times.
+_price_miss_diagnostics_printed = False
+
+
+def _print_price_miss_diagnostics(category_label, product_code, chunk_html):
+    global _price_miss_diagnostics_printed
+    if _price_miss_diagnostics_printed:
+        return
+    _price_miss_diagnostics_printed = True
+    print("  " + "-" * 68)
+    print("  PRICE-MISS DIAGNOSTICS (first product that failed to match PRICE_RE")
+    print("  this run only -- see the comment above this call in parse_products")
+    print("  for why):")
+    print(f"    category:    {category_label}")
+    print(f"    product code: {product_code!r}")
+    print(f"    first 1500 characters of this product's own HTML chunk (everything")
+    print(f"    between its marker and the next one):")
+    print("    " + repr(chunk_html[:1500]))
+    print("  " + "-" * 68)
+
+
 def fetch_page_bounded(browser_page, category_code, slug, page):
     """Same name/shape as this project's other crawlers' fetch_page_bounded
     functions (a TimeoutError on a stuck request), but the actual timeout
@@ -548,6 +573,20 @@ def parse_products(page_html, category_label):
 
         price_m = PRICE_RE.search(rest)
         price = _parse_amount(price_m.group(1)) if price_m else None
+        if price_m is None:
+            # 21 Aug 2026 -- a real, reproducible gap surfaced by the
+            # zero_price_page_tally warning above: Butcher Counter's page 1
+            # consistently has zero readable prices, two runs running, while
+            # the rest of the site is fine -- meaning PRICE_RE doesn't match
+            # SOMETHING about how this category writes its prices (possibly
+            # "priced per kg" markup, common for a butcher counter, using
+            # different HTML than the rest of the site). Rather than guess
+            # blindly, this prints the raw HTML around the first such miss
+            # (once per run, same capped/printed-once idea as
+            # _print_first_page_diagnostics above) straight into the log --
+            # so the very next run's log is itself the diagnostic, with no
+            # need to separately open the site or inspect it by hand.
+            _print_price_miss_diagnostics(category_label, code, rest)
 
         rrp_m = RRP_RE.search(rest)
         rrp = _parse_amount(rrp_m.group(1)) if rrp_m else None
@@ -762,10 +801,11 @@ def safe_recover_connection(conn, outlet_id):
 # ----------------------------------------------------------------------------
 
 def crawl_welbees(conn):
-    global _diagnostics_printed
+    global _diagnostics_printed, _price_miss_diagnostics_printed
     fallback_unit_counts.clear()  # fresh tally for this run, not left over from any previous call
     zero_price_page_tally.clear()  # same idea -- fresh per run, see its own comment above
     _diagnostics_printed = False  # same idea -- diagnostics print once per RUN, not once per process
+    _price_miss_diagnostics_printed = False
 
     cur = conn.cursor()
     cur.execute(
