@@ -811,6 +811,7 @@ KEYWORD_RULES = [
 
     ("Laundry Washing Liquids", ["marsiglia"]),  # Marseille-soap-style Italian laundry detergent term, e.g. "Chanteclair 30 Lavaggi Marsiglia" -- Chanteclair itself (WebSearch-confirmed) spans detergent, softener, AND surface cleaners, so a brand-only rule would be unsafe
     ("Fabric Softener", ["ammorbidente", "lenor beads", "scent booster"]),  # "ammorbidente" is Italian for fabric softener; Lenor Beads (WebSearch-confirmed) are in-wash scent-booster beads, closest existing category
+    ("Fabric Softener", ["lenor"]),  # 21 Aug 2026 -- "Lenor Ultra Orchid & Vanilla 126w (2.65l)" was unclassified: Lenor is exclusively a P&G fabric-care brand (already used above in narrower phrases), so the bare brand name is safe to add outright and covers the rest of the Lenor range too
     ("Chicken", ["pollo"]),  # Italian for chicken, e.g. "Aia Party Pollo" -- Aia itself (WebSearch-confirmed poultry brand) also sells turkey, so using the descriptive word rather than the brand name
     ("Cakes", ["almondy"]),  # Almondy (WebSearch-confirmed) is an almond-cake-only Swedish brand, e.g. "Almondy Salted Caramel Crush"
     ("Sports", ["olimp", "plant protein"]),  # Olimp (WebSearch-confirmed) is a sports-nutrition-only brand; "plant protein" extends the existing whey/creatine/bcaa list
@@ -823,7 +824,7 @@ KEYWORD_RULES = [
 
     ("Baby Essentials", ["infacare", "baby bath", "baby powder"]),  # Infacare (WebSearch-confirmed baby-bath-only brand); extends the existing baby wipe/lotion/shampoo list
 
-    ("Bread", ["bun", "brioche", "david's bakery", "dijo", "tortilla wrap", "finger roll"]),  # "David's Bakery" and Dijo (WebSearch-confirmed tortilla-wrap-only brand) are brand rules; the rest are descriptive bread-product terms
+    ("Bread", ["bun", "brioche", "david's bakery", "dijo", "tortilla wrap", "finger roll", "fruit loaf"]),  # "David's Bakery" and Dijo (WebSearch-confirmed tortilla-wrap-only brand) are brand rules; the rest are descriptive bread-product terms. "fruit loaf" added 21 Aug 2026 -- e.g. "Jesper's Fruit Loaf" had no Bread keyword at all (bare "loaf" isn't registered), so it fell through to Fruits by default
 
     ("Milk", ["vive soy", "oat drink", "drink oat", "soya drink", "drink soya", "soy drink", "drink soy"]),  # Vive Soy (WebSearch-confirmed soya-milk-only brand); the rest cover Alpro-style drinks that never say the word "milk" itself -- both word orders needed, e.g. "Alpro Drink Oat No Sugar" puts "Drink" before "Oat"
     ("Cooking Creams", ["custard"]),  # e.g. "Alpro Custard Vanilla"
@@ -872,7 +873,7 @@ KEYWORD_RULES = [
     # original 4 large catch-all buckets remain as genuinely large chunks
     # (Food Cupboard, Health & Beauty, Household, Home & Entertainment).
     ("Chocolates", ["kinder", "cioccolato"]),  # "Kinder" (Ferrero, WebSearch-confirmed confectionery-only) was flagged in this project's own status notes as a known hard case -- a well-known brand with no generic food word attached; "cioccolato" is Italian for chocolate
-    ("Pasta & Couscous", ["rummo", "tagliatelle"]),  # Rummo (WebSearch-confirmed pasta-only Italian brand); "tagliatelle" is a pasta shape with no brand needed
+    ("Pasta & Couscous", ["rummo", "tagliatelle", "troccoli"]),  # Rummo (WebSearch-confirmed pasta-only Italian brand); "tagliatelle"/"troccoli" are pasta shapes with no brand needed. "troccoli" added 21 Aug 2026, user-confirmed -- this file also has a separate "Fresh Pasta" category, but it has no real keyword coverage of its own, so following the same precedent already set by "tagliatelle" rather than wiring up a whole new category branch for one product
     ("Tea", ["rooibos"]),  # herbal tea type, e.g. "Twining's Pure Rooibos" -- Twinings itself needs no rule since "rooibos" alone is enough
     ("Sauces & Condiments", ["caper"]),  # e.g. "3 Leaves Capers" (WebSearch-confirmed real Maltese-market brand) -- capers have no closer existing category
 
@@ -885,7 +886,18 @@ KEYWORD_RULES = [
     ("Adult Nappies", ["incont"]),  # real abbreviation seen in data ("Carrefour Assorb. Incont. Mini") -- the existing "incontinence" keyword doesn't match a shortened form like this
 
     ("Laundry Tablets", ["dixan"]),  # Dixan (WebSearch-confirmed Henkel detergent-only brand); "Discs" here means predosed detergent capsules, not a softener
-    ("All-purpose Cleaners", ["scrub daddy"]),  # WebSearch-confirmed cleaning-paste-only brand ("PowerPaste")
+    # 21 Aug 2026 -- this bare "scrub daddy" entry was a straight-up
+    # duplicate with the "scrub daddy" entry under Household Goods below
+    # (same exact phrase, two categories), which meant EVERY Scrub Daddy
+    # product always landed here first, including their sponges/cloths/
+    # dusters/BBQ scourers -- not a real keyword tie, just an accidental
+    # copy. Real data (via SQL query) showed Scrub Daddy's range is
+    # overwhelmingly physical cleaning TOOLS (Household Goods), with only
+    # two genuine chemical cleaning products: "Power Paste" and "Multi
+    # Surface Spray". Replaced the bare brand match with those two
+    # specific phrases, and left the Household Goods entry below as the
+    # catch-all for the rest of the range.
+    ("All-purpose Cleaners", ["daddy power paste", "multi surface spray"]),  # "daddy power paste" (not "scrub daddy power paste") to also match the real "Scrub Daddy  Daddy Power Paste" listing style, which repeats "Daddy" with a double space before it
     ("Dishwasher Tablets", ["dishwasher capsule"]),  # extends the existing "dishwasher tablet"/"dishwasher pod" phrases -- Astonish (WebSearch-confirmed cleaning-only brand) uses "Capsules" specifically
 
     ("Household Goods", ["lunchbox", "plastic bin", "rolling pin", "tala", "go travel", "scrub daddy"]),  # "lunchbox" (one word) is the real spacing variant seen in data -- the existing "lunch box" (two words) doesn't match it; Tala (WebSearch-confirmed kitchenware-only brand) and Go Travel (WebSearch-confirmed travel-accessories-only brand, e.g. padlocks) are brand rules
@@ -1011,6 +1023,26 @@ KEYWORD_RULES = [
         # this same collision.
     ]),  # deliberately NOT "sea salt"/"table salt" -- as phrases they beat "crispbread" and "rice cracker" on snacks that merely mention sea salt; the bare word "salt" above already catches actual salt
     ("Herbs & Spices", ["vanilla pod", "vanilla extract", "vanilla bean", "pure vanilla"]),
+    # 21 Aug 2026 -- a real run against live data surfaced 3 more baking-
+    # aisle vanilla products the phrases above didn't catch, because the
+    # word order in the real product name is reversed from the phrase, or
+    # the source itself has a typo:
+    #   "Ruf Vanilla Powder (3 x38grms)" -- needs "vanilla powder". Checked
+    #   this can't collide with a protein-powder product before adding it:
+    #   real supplement names put the flavour word AFTER "powder" (e.g.
+    #   "... Protein Powder Vanilla"), never "vanilla powder" as an
+    #   adjacent phrase, so this stays baking-specific in practice.
+    #   "Tropical Sun Mini Essence Vanilla (28ml)" -- the label says
+    #   "Essence Vanilla", not "Vanilla Essence" (which already exists
+    #   under Cake Preparations) -- added as its own reversed-order phrase
+    #   rather than assuming every future product will use the same word
+    #   order as the last one.
+    #   "Pearce Duff's Vanilla Falvour (35grms)" -- the product's own name
+    #   has a typo ("Falvour" for "Flavour"), so the correctly-spelled
+    #   phrase would never match it. Same "keep the literal typo as its
+    #   own keyword" pattern already used elsewhere in this file (see e.g.
+    #   "fabric conditoner", "prositcutto cotto").
+    ("Herbs & Spices", ["vanilla powder", "essence vanilla", "vanilla falvour"]),
     ("Sugar", ["icing sugar", "caster", "demerara", "muscovado", "brown sugar", "granulated", "stevia", "canderel", "golden syrup"]),
     ("Flour", ["cornflour", "corn flour", "cornstarch", "corn starch", "semolina", "self raising", "plain flour", "bread flour", "wholemeal flour"]),
     ("Cake Preparations", ["baking powder", "bicarbonate", "cake mix", "icing", "fondant", "sprinkle", "marzipan", "gelatine", "gelatin", "food colouring", "food coloring", "dr oetker", "betty crocker", "vanilla essence"]),
@@ -1024,6 +1056,18 @@ KEYWORD_RULES = [
     ("Carbonated Drinks", ["pepsi", "sprite", "7up", "seven up", "fanta", "kinnie", "lemonade", "tonic water", "ginger ale", "root beer", "schweppes", "soda water", "cherryade", "cream soda"]),
     ("Energy Drinks", ["red bull", "monster energy", "lucozade", "energy drink", "isotonic", "rockstar"]),
     ("Juices", ["nectar", "smoothie", "innocent"]),
+    # 21 Aug 2026 -- found while investigating the Sauces & Condiments/
+    # Vegetables report (not part of that report itself -- this pair
+    # never ties with anything, so it was invisible to the collision
+    # detector, but real product names confirmed it's wrong today):
+    # "Succo E/& Polpa" ("juice & pulp") fruit-nectar drinks -- e.g.
+    # "Deco' Succo Polpa Pesca", "Simpl Succo & Polpa Albicocca" -- were
+    # landing on Sauces & Condiments via bare "polpa", even though bare
+    # "succo" (Juices) already exists too; both are bare/tier-2 so it was
+    # just list-order luck, same shape as everything else in this file.
+    # Two phrases needed since "&" and "e" ("and") both appear in real
+    # labels and clean differently (the "&" strips out entirely).
+    ("Juices", ["succo e polpa", "succo polpa"]),
     ("Dilutables", ["squash", "cordial", "robinsons"]),
 
     # ---- Health & Beauty: deodorant, wash, hair ----
@@ -1245,7 +1289,7 @@ KEYWORD_RULES = [
     # separate Sauvignon Blanc), but bare "cabernet" and bare "sauvignon"
     # were tying as equally-strong single words, with the actual winner
     # decided only by unrelated list order, not by which one is correct.
-    ("Wine - Red", ["cabernet sauvignon", "appassimento", "nero d avola", "cabernet", "malbec", "merlot", "chianti", "primitivo", "montepulciano", "valpolicella", "zinfandel", "syrah", "sangiovese", "tempranillo", "rioja", "barolo", "nebbiolo", "negroamaro"]),
+    ("Wine - Red", ["cabernet sauvignon", "appassimento", "nero d avola", "cabernet", "malbec", "merlot", "chianti", "primitivo", "montepulciano", "valpolicella", "zinfandel", "syrah", "sangiovese", "tempranillo", "rioja", "barolo", "nebbiolo", "negroamaro", "carbarnet"]),  # "carbarnet" -- the literal typo found on a real label ("Borgofulvia Carbarnet"), same "keep the typo as its own keyword" pattern used elsewhere in this file, since the correctly-spelled "cabernet" a few words earlier can't match a misspelled name
     ("Wine - White", ["chardonnay", "sauvignon", "pinot", "riesling", "moscato", "vermentino", "catarratto", "gewurztraminer", "grillo", "verdicchio", "soave", "gavi"]),
     ("Wine - Sparkling", ["prosecco", "spumante", "cava", "franciacorta"]),
     ("Beers", ["shandy"]),
@@ -1293,6 +1337,11 @@ KEYWORD_RULES = [
     ("Yoghurt", ["yofu", "liegeois", "skyr"]),
     ("Cooking Creams", ["alpro cuisine", "panna da cucina"]),
     ("Chilled Fish", ["surimi", "chele di"]),
+    # 21 Aug 2026 -- same investigation as "succo e/& polpa" above:
+    # "Smeralda Polpa Di Granchio" (crab meat) and "La Ciurma Polpa Di
+    # Riccio Di Mare" (sea urchin roe) were also landing on Sauces &
+    # Condiments via bare "polpa", for the identical reason.
+    ("Chilled Fish", ["polpa di granchio", "polpa di riccio di mare"]),
 
     # ---- Fruit & veg counter ----
     ("Fruits", ["berry", "berries", "avocado", "coconut", "mango", "papaya", "pomegranate", "kiwi", "melon", "pineapple"]),
@@ -1387,6 +1436,18 @@ KEYWORD_RULES = [
     ("Sweet Snacks", ["caramelle", "liquirizia", "morbide"]),
     ("Cakes", ["pandoro", "panettone", "colomba", "krapfen", "merendine"]),
     ("Chocolates", ["cioccolatini", "baci", "perugina", "novi", "venchi", "ritter", "cote d or", "mignonette", "cacao", "reese", "milky way", "crunchie"]),
+    # 21 Aug 2026 -- Chocolates/Nuts collision report (83 listings) deep
+    # dive. Turned out bare "truffle" itself is NOT safely fixable here --
+    # real data showed the word is dominated (well over 100 listings) by
+    # SAVOURY truffle-the-fungus products (truffle cheese, truffle oil,
+    # truffle-flavoured crisps, truffle salami...) across a dozen
+    # different categories, so promoting it would have broken far more
+    # than it fixed, the same "genuinely ambiguous word" shape as "polpa"
+    # earlier today. Fixed narrowly instead, only the real chocolate-
+    # truffle-confectionery cases that were losing to a nut name:
+    ("Chocolates", ["healthy leaf"]),  # a real chocolate-truffle-ball brand in this data (all 3 known SKUs are "...Truffles"), e.g. "Healthy Leaf Salted Peanut Truffles"
+    ("Chocolates", ["salted peanut truffles"]),  # covers the same Healthy Leaf product when the brand name itself is truncated in the source data (seen as "SALTED PEANUT TRUFFLES")
+    ("Chocolates", ["cacao almond dark"]),  # "85% Cacao Almond Dark Stevia" -- standard dark-chocolate-bar labelling (X% Cacao), was tying bare "cacao" against bare "almond"
     ("Biscuits", ["bahlsen", "loacker", "quadratini", "pavesini", "gocciole", "pan di stelle", "oro saiwa", "speculoos", "lotus", "biscotto"]),
     ("Chips", ["patatine", "pomstick", "lorenz", "san carlo", "fonzies", "chipster"]),
     ("Coffee", ["kimbo", "borbone", "segafredo", "nespresso", "lungo", "ristretto", "espresso napoletano"]),
@@ -1570,6 +1631,28 @@ KEYWORD_RULES = [
     # ---- Chilled Food ----
     ("Cheese", ["elite deli", "vonk", "emborg", "president", "philadelphia", "babybel", "brie", "edam", "gouda", "emmental", "provolone", "burratina", "gbejna", "gbejniet", "gibniet", "grano padano", "grana padano", "coombe castle", "garcia baquero", "paysan breton", "solo italia", "fior di vita", "la vache"]),
     ("Yoghurt", ["fage", "fruyo", "zottis", "zott"]),
+    # 21 Aug 2026 -- 3 more unclassified items confirmed with the user
+    # rather than guessed:
+    ("Yoghurt", ["stuffer"]),  # user confirmed "Stuffer Protei Dessert Vanilla" is a gluten-free protein yoghurt, not a supplement or kitchen-equipment brand
+    ("Yoghurt", ["danette"]),  # Danone's chilled pudding line, e.g. "Danone Danette Mars" -- user confirmed Yoghurt is the closest existing bucket (this file has no separate Desserts category)
+    ("Cold Cuts", ["coppa classic"]),  # user confirmed "Carrefour Coppa Classic" is a cured-meat product, not a dessert cup -- kept as this specific phrase rather than bare "coppa", since bare "coppa" is also generic Italian for "dessert cup" and would be unsafe unscoped
+    # 21 Aug 2026 -- 5 more, also confirmed with the user rather than
+    # guessed (Bakoma, Pascual, Berchtesgadener Land all also sell other
+    # dairy/juice product lines, so each is scoped as narrowly as the real
+    # example allows rather than added as a bare brand word):
+    ("Yoghurt", ["bakoma mikus"]),  # user confirmed yoghurt; "Mikus" is Bakoma's specific kids'-yoghurt line, so scoped to that rather than bare "bakoma" (a broad Polish dairy brand)
+    ("Yoghurt", ["pascual vanilla"]),  # user confirmed yoghurt; kept as this exact phrase rather than bare "pascual" (also sells juice/milk under the same brand)
+    ("Yoghurt", ["squeeze & go"]),  # user confirmed this is a shelf-stable dairy-dessert pouch for kids -- closest existing bucket is Yoghurt, same as the Danette precedent above
+    ("Yoghurt", ["berchtesgadener"]),  # user confirmed yoghurt; the brand name itself ("Berchtesgadener Land") is specific enough to be safe unscoped
+    ("Milk", ["alpro mini"]),  # user confirmed "Alpro Mini Vanilla Soya" is a single-serve plant-milk carton, not a yoghurt-alternative -- scoped to the "Mini" single-serve line rather than bare "alpro" (which also covers Alpro's cooking creams, yoghurt alternatives, etc. elsewhere in this file)
+    # "So..? Radianc Trio Set Vanilla" -- user confirmed this gift set
+    # actually contains a mix of body mist, shower cream, and body scrub,
+    # so no single existing category is fully correct. Filed under Skin
+    # Care (2 of the 3 items -- shower cream, body scrub -- are Skin Care
+    # territory here) rather than Perfume (1 of 3, body mist); flagged as
+    # a genuine judgment call, not a confident single answer, in case a
+    # dedicated "Gift Sets" bucket ever makes more sense.
+    ("Skin Care", ["radianc trio set"]),
     ("Sausages", ["aia wudy", "scarlino"]),
 
     # ---- Healthy Section ----
@@ -1835,7 +1918,7 @@ KEYWORD_RULES = [
     # of any aisle so far, mostly one-off imported snack/confectionery brands.
     ("Sweet Snacks", ["flares with hearts", "magdalena", "waffle cones", "large cones", "twister mallows", "ufo crunvhy", "ufo crunchy", "coating", "ufo's bag", "hellema ufo's", "gecchele", "bbq mallows", "tortica original", "kunefe", "midi farci", "ibulli crema", "crunchy dipped", "mix dolci", "pez assorted", "polo original", "polo sugar free", "trefin", "vivil", "flip top", "fliptop", "zero ice blue clean breath", "cinnmon flip top", "slush puppie", "pic nic break"]),
     ("Chocolates", ["mars best of minis", "mars classic", "mars miniatures", "mars minis", "mars multipack", "mars xtra", "kimifinne", "moo freesas", "moo mini original", "cremino", "tunnock's", "prepacked english creamy", "hyper classicwith cocoa", "cacoa puro", "baileys bar"]),
-    ("Biscuits", ["ringo biscocioc", "ringo vaniglia", "buiscuits with vitamis", "sushki steinhauer", "lemon puff"]),
+    ("Biscuits", ["ringo biscocioc", "ringo vaniglia", "ringo vanilla", "buiscuits with vitamis", "sushki steinhauer", "lemon puff"]),  # "ringo vanilla" added 21 Aug 2026 -- "Pavesi Ringo Vanilla" was unclassified because the label used the English "Vanilla" rather than the Italian "Vaniglia" already covered above; NOT adding bare "pavesi" itself, since that brand also has its own separate "gran pavesi" cracker line elsewhere in this file
     ("Coffee", ["hot chocolatta"]),
     ("Sauces & Condiments", ["carnation caramel", "caramel topping", "sweet and sour", "mayonnise", "sweet barbecue sticky", "chunky burger", "strong & northern", "kapunata", "mincemeat", "concentrato di pomodoro", "preserved sorrel", "béchamel", "bechamel", "gran mix express", "mayolite"]),
     ("Stock Cubes", ["star classico", "cubes delicato"]),
@@ -1851,6 +1934,35 @@ KEYWORD_RULES = [
     ("Bread", ["pitta pockets"]),
     ("Tea", ["peppermint herbal", "maraviglia", "pg tips", "pukka elderberry", "pukka tumeric gold", "melatonina & melissa"]),
     ("Sports", ["kluth"]),
+    # 21 Aug 2026 -- a real run surfaced 12 unclassified vanilla-flavoured
+    # protein/supplement products (welbees "Healthy Section" and greens'
+    # diet/dietary and lactose-free buckets) that don't match any existing
+    # keyword at all -- these went unclassified rather than colliding,
+    # since removing bare "vanilla" (see the Herbs & Spices comment above)
+    # took away the one word that used to catch them, even wrongly.
+    # Fixed the same low-risk way as the earlier "olimp"/"kluth" brand
+    # additions: each of these is a sports-nutrition-only brand name with
+    # no other real-world grocery meaning, so a bare-word match is safe.
+    ("Sports", ["qnt"]),  # QNT (Quality Nutrition Team) -- e.g. "Qnt Metapure Zc Vanilla", "Qnt Protein Joy Vanilla"
+    ("Sports", ["biotechusa"]),  # e.g. "BioTechUSA Protein Power - Vanilla"
+    ("Sports", ["nutrend"]),  # e.g. "Nutrend Delicious Bar Vanilla & Caramel"
+    ("Sports", ["purition"]),  # e.g. "Purition Whole Food Nutrition Vegan Vanilla 500g"
+    ("Sports", ["body attack"]),  # e.g. "Body Attack Diet Shake Vanilla" -- kept as a phrase, not promoted further, since it's already 2 words and only ever seen as a full brand name in this file
+    # "Go On!" -- checked and deliberately NOT added as a bare/short
+    # brand keyword the way the others above were: "go on" is also
+    # ordinary English and too easy to collide with an unrelated
+    # product's own tagline or description text. Narrowed to the exact
+    # phrase from the one real example seen so far instead -- safe, but
+    # won't automatically cover other "Go On!" products; revisit if more
+    # show up unclassified.
+    ("Sports", ["go on vanilla bar"]),
+    # "Stuffer" was originally flagged here as NOT safe to add without
+    # confirmation (also an ordinary English word for kitchen equipment,
+    # e.g. a "sausage stuffer"). User confirmed "Stuffer Protei Dessert
+    # Vanilla" is actually a gluten-free protein yoghurt, not a Sports
+    # product or kitchen tool -- added under Yoghurt instead, see the
+    # "danette"/"coppa classic"/"radianc trio set" block further down
+    # (all 4 confirmed with the user the same day).
     ("Milk", ["koko dairy free"]),
     ("Sausages", ["american hotdogs jar"]),
     ("Pasta & Couscous", ["tagliolini"]),
@@ -1910,6 +2022,7 @@ KEYWORD_RULES = [
     ('Shaving Creams', ['replenishing post shave balm', 'style freeze power gel']),
     ('Clothes', ['maternity feeding bra']),
     ('Skin Care', ['massage gel exotic escape']),
+    ('Skin Care', ['moisturising massage gel']),  # 21 Aug 2026 -- "Control Sweet Vanilla Moisturising Massage Gel" was unclassified; same product type as the "massage gel exotic escape" line just above, so following that same precedent rather than guessing this is an Intimate Care product (Control is an intimate-care/condom brand, but this specific line is a general moisturising gel, not condom-adjacent)
     ('Cold Cuts', ['gran mixed', 'sensation sliced bacon', 'sweet bacon in cubes', 'peperoni', "n'duja", 'salamino casereccio', 'smoked bacon sliced in cubes', 'bresi', 'antipasti mediterranean']),
     ('Sports', ['coldpress vitamins']),
     ('Cheese', ['gibnarolls', 'pekorin semi mature', 'hanini creamy light', 'blue ceese', 'spreadable-blue', 'spreadable blue']),
@@ -2731,6 +2844,25 @@ MULTI_KEYWORD_RULES = [
     # brands), found via real data ("Catty Chicken & Sardines In Jelly")
     # landing on Chicken instead.
     ("Cat", ["catty"]),
+    # "gatto" -- Italian for "cat", no other realistic grocery meaning
+    # (unlike "cane"/"dog" below, which needs to be scoped -- see there).
+    # Found via real data ("Deco' Gatto Pate' Pollo", "Miglior Gatto"'s
+    # own unabbreviated cousin "MIG GATTO PATE POLLO/TACC") landing on
+    # Chicken instead, 21 Aug 2026 collision-report deep dive.
+    ("Cat", ["gatto"]),
+    # "After Dark" -- WebSearch-confirmed (schesir.com/en/collections/
+    # after-dark-cat) to be Schesir's own cat-food-only sub-line, matching
+    # products in this data that don't say "Schesir" in the same field
+    # (e.g. "AFTER DARK PATE CHICKEN 80G").
+    ("Cat", ["after dark"]),
+    ("Cat", ["schesirafter"]),  # "Schesirafter Dark Pate Chicken With Egg 80g" -- a real data typo (missing the space between "Schesir" and "After"), same "keep the literal typo as its own keyword" pattern used elsewhere in this file
+    # "Princess" -- WebSearch-confirmed (petfoodmalta.com/filters/
+    # product_cat/princess) to be a real Maltese cat-food brand from Pet
+    # Nutrition House -- the cat-line counterpart to "Prince" (dog food,
+    # see below). Combined with "pate" rather than added bare, since bare
+    # "princess" already has an unrelated real use elsewhere in this file
+    # (a "princess bust" toy).
+    ("Cat", ["princess", "pate"]),
     ("Cat", ["cat"]),
     # "Monin" -- a real, well-known syrup brand confirmed via WebSearch
     # (Monin makes flavoured syrups exclusively, sold worldwide for coffee
@@ -2756,6 +2888,40 @@ MULTI_KEYWORD_RULES = [
     # "Dogero", "Puppy" etc, which still match the rules around this one.
     ("Sausages", ["hot dog"]),
     ("Dog", ["dog"]),
+    # "Prince" -- WebSearch-confirmed (petfoodmalta.com/filters/
+    # product_cat/prince, explicitly titled "Prince Dog Food in Malta")
+    # to be a real Maltese dog-food brand from Pet Nutrition House, the
+    # dog-line counterpart to "Princess" (cat food, added above). Combined
+    # with "pate" rather than added bare, since bare "prince" already has
+    # an unrelated real use elsewhere in this file (a "Prince 15cm" plush
+    # toy).
+    ("Dog", ["prince", "pate"]),
+    # "Cane" -- Italian for "dog", but genuinely risky as a bare word
+    # (also ordinary English for a walking stick, and "cane sugar" is a
+    # real existing Sugar keyword) -- combined with "pate" instead, since
+    # no real product would ever say both. Fixes "Deco' Cane Pate With
+    # Chicken & Lamb" and similar, found the same way as "gatto" above.
+    ("Dog", ["cane", "pate"]),
+    # 21 Aug 2026 -- the Chicken/Cold Cuts collision report deep dive
+    # (84 listings) turned out to be almost entirely pet food, fixed
+    # above. The genuine human-food remainder was "wurstel"/"mortadella"
+    # (bare Cold Cuts words) losing to bare "chicken"/"pollo" the same
+    # list-order-luck way as every other collision this session -- e.g.
+    # "WURSTEL CHICKEN AND TURKEY", "Rovagnati Snello Mortadella Di
+    # Pollo". Both words are unambiguous deli-meat product types (a
+    # wurstel/mortadella is what it is regardless of which meat is in
+    # it), so promoting them is safe -- placed here, AFTER every Cat/Dog
+    # rule above, so a pet-food wurstel/pate product with a real species
+    # signal still resolves to Cat/Dog first, the same "specific before
+    # general" ordering the Pet Food category below already relies on.
+    ("Cold Cuts", ["wurstel"]),
+    ("Cold Cuts", ["mortadella"]),
+    # "Goodfella's" -- WebSearch-confirmed to be a frozen-pizza-only
+    # brand (Nomad Foods; goodfellaspizzas.com). Found via real data
+    # ("Goodfella's Deep Pan Baked Chicken Pepperoni & Ham") landing on
+    # Chicken instead, via the same bare "chicken" vs bare "pepperoni"
+    # (Cold Cuts) tie.
+    ("Pizza", ["goodfella"]),
     # New "Pet Food" category (18 Aug 2026) -- for real pet products whose
     # name gives no way to tell cat from dog, even after everything above.
     # Checked in order, so real evidence: Welbee's own site has exactly one
@@ -3235,6 +3401,96 @@ MULTI_KEYWORD_RULES = [
     ("Spirits - Liquers", ["bacardi"]),  # e.g. "Bacardi Mango" / "Bacardi Raspberry" were tying against Fruits
     ("Carbonated Drinks", ["schweppes"]),  # e.g. "Schweppes Grapefruit" was tying bare "grapefruit" (Fruits)
     ("Body Lotions", ["vaseline"]),  # e.g. "Vaseline Cocoa Butter" type variants were tying against Fruits
+
+    # 21 Aug 2026 -- the Fruits/Sweet Snacks collision (240 listings, the
+    # single largest pair in the latest report). Same root shape as every
+    # other Fruits/X collision above: a bare fruit-flavour word
+    # (raspberry, strawberry, "fruit" itself...) ties, at the same tier,
+    # against a word that already correctly identifies the product as a
+    # sweet/candy -- e.g. "Vivil Creme Life Sf Raspberry" ties bare
+    # "vivil" (a sugar-free-candy-only brand) against bare "raspberry";
+    # "Cavendish & Harvey Fruit Candies" ties bare "fruit" against bare
+    # "candies". All of the words promoted below already existed as plain
+    # bare Sweet Snacks keywords elsewhere in this file with no other use
+    # anywhere else (checked individually, same as the earlier brand
+    # checks) -- pure confectionery words with no real competing grocery
+    # meaning, so promoting them is safe the same way the drink-brand
+    # words above were.
+    ("Sweet Snacks", ["candy"]),
+    ("Sweet Snacks", ["candies"]),
+    ("Sweet Snacks", ["sweets"]),
+    ("Sweet Snacks", ["toffee"]),
+    ("Sweet Snacks", ["fudge"]),
+    ("Sweet Snacks", ["lollipop"]),
+    ("Sweet Snacks", ["gummy"]),
+    ("Sweet Snacks", ["gummies"]),
+    ("Sweet Snacks", ["vivil"]),  # e.g. "Vivil Creme Life Sf Raspberry" -- Vivil (German sugar-free candy brand) doesn't contain any of the generic candy words above, so needs its own override
+
+    # 21 Aug 2026 -- the Sauces & Condiments/Vegetables pair (141
+    # listings). User pulled the real underlying product names via a SQL
+    # query rather than relying on the report's 3 examples, which showed
+    # this genuinely is NOT one single bug: bare "polpa"/"passata" tying
+    # against bare "tomato" is real and fixable (13 of the 141 -- "Mayor
+    # Tomato Polpa Fina", "Greens Tomato Passata", etc.) -- but bare
+    # "polpa" itself is genuinely ambiguous Italian (it just means
+    # "pulp/flesh"): the SAME word also appears on fruit-nectar drinks
+    # ("Deco' Succo Polpa Pesca" -- peach nectar) and seafood ("Smeralda
+    # Polpa Di Granchio" -- crab meat), which is exactly why "polpa" was
+    # deliberately NOT promoted to a blanket tier-0 override earlier
+    # today -- doing so would have made those wrong instead of just
+    # occasionally wrong. Fixed narrowly instead: only when "polpa" or
+    # "passata" appears TOGETHER WITH "tomato" (English-language labels;
+    # the Italian "pomodoro" ones already resolve correctly today since
+    # "pomodoro" isn't itself a Vegetables keyword) does this override
+    # fire -- so it can't touch the nectar or seafood products at all.
+    ("Sauces & Condiments", ["passata", "tomato"]),
+    ("Sauces & Condiments", ["polpa", "tomato"]),
+
+    # 21 Aug 2026 -- Make Up/Stationery collision report (64 listings).
+    # Real data (via SQL query) showed most of the 64 already resolve
+    # correctly by list-order luck (e.g. all the "Bellaoggi...Matita
+    # Contorno Occhi" eyeliner pencils already land on Make Up) -- the
+    # actual bug was narrower: bare "sharpener"/"felt tip" (Stationery)
+    # beating "wet n wild" and "catrice" specifically, both already
+    # registered Make Up brands, because Wet n Wild and Catrice both also
+    # sell cosmetic pencil sharpeners and felt-tip-applicator eyeliners
+    # as real makeup products. Promoted both brands to an unconditional
+    # override -- safe, since neither has any other real meaning in this
+    # data (confirmed: "catrice" was already a bare Make Up keyword with
+    # no conflicting use found elsewhere in this file).
+    ("Make Up", ["wet n wild"]),
+    ("Make Up", ["catrice"]),
+
+    # 21 Aug 2026 -- Bread/Fruits collision (58 listings). SQL query for
+    # bread/croissant/bun words + fruit-flavour words (~140 rows) showed
+    # most of that result set was noise from the broad WHERE clause
+    # ("Roll On" deodorant, paper towel/dog-waste rolls, Trolli gummy
+    # "Rolls", swiss-roll cakes, shortbread, a craft "Bunting Kit") --
+    # after filtering to genuine bakery items, the real bug was the same
+    # shape as every other Fruits/X pair today: bare "croissant" (Bread)
+    # tying, at the same tier, against a bare fruit-flavour word
+    # ("cherry", "strawberry", "fruit", "blueberry") -- e.g. "Bono Cherry
+    # Croissant" ties bare "cherry" against bare "croissant". Unlike the
+    # earlier brand-word fixes, "croissant" itself can't safely become an
+    # unconditional override (a few croissants elsewhere in the data are
+    # genuinely tri-tagged Cheese via an existing "cream"+"cheese" rule,
+    # e.g. "Karuzo Croissant Bun Cherry & Cheese Cream" -- promoting bare
+    # "croissant" alone would jump ahead of that and misfire), so this is
+    # scoped narrowly to croissant + fruit-word co-occurrence instead.
+    # Same root cause for "brioche" ("Greens Brioche Fruit Loaf" tying
+    # bare "fruit" against bare "brioche"). Separately, "Jesper's Fruit
+    # Loaf" wasn't even a tie -- "loaf" isn't a Bread keyword at all yet
+    # -- so added as an exact phrase instead of a bare word, to avoid
+    # touching anything else that merely contains "loaf".
+    # NOT touched: "Bear Fruit Rolls", "Regal ... Rolls", "STRAWBERRY
+    # ROLLS" -- these are fruit-leather snack rolls, not bakery bread, and
+    # already correctly resolve to Fruits (no "croissant"/"bun"/"loaf"
+    # keyword present, so they were never actually part of this bug).
+    ("Bread", ["croissant", "cherry"]),
+    ("Bread", ["croissant", "strawberry"]),
+    ("Bread", ["croissant", "fruit"]),
+    ("Bread", ["croissant", "blueberry"]),
+    ("Bread", ["brioche", "fruit"]),
 ]
 
 
