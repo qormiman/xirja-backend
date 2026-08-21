@@ -978,8 +978,8 @@ KEYWORD_RULES = [
         "haribo", "skittles", "starburst", "chupa chup", "lollipop", "lolly",
         "marshmallow", "toffee", "fudge", "nougat", "liquorice", "licorice",
         "halls", "ricola", "fisherman", "jelly bean", "gummy", "gummies",
-        "candy", "sherbet",
-    ]),
+        "candy", "sherbet", "fruit gum",
+    ]),  # "fruit gum" added 21 Aug 2026 -- bare "fruit" (an early, very broad Fruits keyword) was beating bare "gum" every time both appeared in the same name (e.g. "Rowntree's Fruit Gums"), so the phrase is needed to jump ahead of it
     ("Chocolates", [
         "lindt", "toblerone", "ferrero", "rocher", "mars bar", "snickers",
         "twix", "bounty bar", "galaxy", "aero", "wispa", "dairy milk",
@@ -1428,6 +1428,7 @@ KEYWORD_RULES = [
     ("Flour", ["farina"]),
     ("Honey", ["miele"]),
     ("Jelly", ["confettura", "marmellata"]),
+    ("Jelly", ["apricotj am"]),  # added 21 Aug 2026 -- "Zuegg Apricotj Am No Added Sugar" has a mangled "Apricot Jam" (missing space, extra space) that the normal "jam" keyword can't match. Not promoting bare "zuegg" instead -- WebSearch confirmed Zuegg also sells juices/nectars, not jam-only, so a blanket brand override would misfire on those
     ("Juices", ["succo", "spremuta"]),
     ("Tea", ["tisana", "camomilla"]),
     ("Soups", ["zuppa", "minestra"]),
@@ -1927,7 +1928,7 @@ KEYWORD_RULES = [
     ("Cooking Creams", ["soya cusine"]),
     ("Oils", ["bakery spray", "fry light", "isio 4", "sania vegetale"]),
     ("Herbs & Spices", ["erinn", "granules classico", "maggi aroma", "juicy cajun", "vegeta podravka", "crushed chillies"]),
-    ("Meat Alternatives", ["soya chunks"]),
+    ("Meat Alternatives", ["soya chunks", "soy morsels"]),  # "soy morsels" added 21 Aug 2026, user-confirmed -- "Pensa Bio Soy Morsels" is dehydrated TVP soy chunks (WebSearch-confirmed), same product type as "soya chunks" right above
     ("Cake Preparations", ["pie filling"]),
     ("Canned Seafood", ["excellence mussels", "mussles in brine"]),
     ("Crackers, Crispbread & Breadsticks", ["suski malutka", "sweet & savory crackers"]),
@@ -1966,6 +1967,7 @@ KEYWORD_RULES = [
     ("Milk", ["koko dairy free"]),
     ("Sausages", ["american hotdogs jar"]),
     ("Pasta & Couscous", ["tagliolini"]),
+    ("Pasta & Couscous", ["mafalde"]),  # added 21 Aug 2026 -- pasta shape (ribbon pasta), e.g. "Terre D`italia Mafalde Di Napoli", had no keyword coverage at all
     ("Legumes", ["lessati"]),
     ("Vegetables", ["simpl mais", "cipolle in agrodolce", "mix mediterraneo"]),
     ("Fruits", ["simpl pulp"]),
@@ -3341,6 +3343,7 @@ MULTI_KEYWORD_RULES = [
     ("Sauces & Condiments", ["sauce"]),
     ("Sauces & Condiments", ["chutney"]),
     ("Sauces & Condiments", ["pesto"]),
+    ("Sauces & Condiments", ["granpesto"]),  # added 21 Aug 2026 -- "Star Granpesto Tigulio Ricotta & Tartufo" concatenates "Gran" and "Pesto" with no space, so bare "pesto" (\bpesto\b) can't match it; was falling through to Cheese via bare "ricotta" instead. Found as a side-discovery while investigating the Cheese/Sauces & Condiments pair -- not the actual cause of that pair (see below) but a real bug in its own right
     ("Sauces & Condiments", ["relish"]),
     ("Sauces & Condiments", ["marinade"]),
     ("Sauces & Condiments", ["horseradish"]),
@@ -3461,6 +3464,33 @@ MULTI_KEYWORD_RULES = [
     ("Make Up", ["wet n wild"]),
     ("Make Up", ["catrice"]),
 
+    # 21 Aug 2026 -- Make Up/Stationery collision (59 listings). Real data
+    # (SQL query) showed every genuine tier-tie was Bellaoggi eyeliner/brow
+    # pencil products -- their names use the Italian word "matita" (pencil),
+    # e.g. "Bellaoggi Eyeliner Matita Occhi Kajal Black" and "Bellaoggi I
+    # Brow Liner Matita Sopracciglia Brown". Bare "matita" is a registered
+    # Stationery keyword (Italian stationery-word block) and ties against
+    # the bare "bellaoggi" Make Up brand keyword at the same tier, with the
+    # winner depending on file position -- some Bellaoggi products were
+    # landing in Stationery. Bellaoggi is a cosmetics-only brand (checked:
+    # only ever registered under Make Up in this file), so promoting it to
+    # a tier0 override fixes every Bellaoggi product regardless of which
+    # Italian stationery-sounding word appears in the name.
+    ("Make Up", ["bellaoggi"]),
+
+    # 21 Aug 2026 -- bonus bug found while investigating the pair above,
+    # same real-data sample. "Staedtler Noris ..." pencil products (Noris
+    # is Staedtler's classic pencil product line) were landing in Herbs &
+    # Spices, not Stationery -- caused by the bare Herbs & Spices keyword
+    # "nori" (seaweed) matching "Noris" through the engine's built-in
+    # trailing-s plural handling (see _keyword_matches's docstring: "nori"
+    # + optional "s" matches "noris"), and "nori" happening to sit earlier
+    # in the file than bare "staedtler". Staedtler is a stationery/office
+    # brand only (checked: registered nowhere else in this file), so a
+    # tier0 override fixes every Staedtler product regardless of which
+    # bare word its product line name collides with.
+    ("Stationery", ["staedtler"]),
+
     # 21 Aug 2026 -- Bread/Fruits collision (58 listings). SQL query for
     # bread/croissant/bun words + fruit-flavour words (~140 rows) showed
     # most of that result set was noise from the broad WHERE clause
@@ -3491,6 +3521,131 @@ MULTI_KEYWORD_RULES = [
     ("Bread", ["croissant", "fruit"]),
     ("Bread", ["croissant", "blueberry"]),
     ("Bread", ["brioche", "fruit"]),
+
+    # 21 Aug 2026 -- Fruits/Sweet Snacks residual (179 of the original 240
+    # -- the earlier fix that same day covered the generic candy words,
+    # but real data (SQL query, ~230 rows once personal-care/baby-food/tea
+    # noise is filtered out) showed a second, distinct shape: specific
+    # confectionery BRANDS losing to a bare fruit-flavour word, same root
+    # cause as the very first Fruits/X brand fixes today. "Cavendish &
+    # Harvey Orange Drops" ties bare "orange" (Fruits) against nothing at
+    # all on the Sweet Snacks side (that brand had no keyword coverage),
+    # so it fell straight to Fruits. Same for "Jakemans ... Menthol
+    # Drops" -- a WebSearch-confirmed medicated-lozenge-only brand (same
+    # shape as the already-correct "Ricola"/"lozenge" rule, so First Aid,
+    # not Sweet Snacks) -- and "Diablo Sweet Strawberry & Cream", which
+    # was landing on Cooking Creams via bare "cream" because it doesn't
+    # say the word "Sweets" (the existing tier-0 "sweets" override only
+    # catches the ones that do, e.g. "Diablo Sugar Free Lemon Cream
+    # Sweets").
+    ("Sweet Snacks", ["cavendish harvey"]),  # e.g. "Cavendish & Harvey Orange Drops" -- WebSearch-confirmed confectionery-only brand (boiled sweets/fruit drops/wine gums)
+    ("Sweet Snacks", ["diablo"]),  # e.g. "Diablo Sweet Strawberry & Cream" was landing on Cooking Creams (bare "cream") -- WebSearch-confirmed Belgian sugar-free-confectionery-only brand
+    ("First Aid", ["jakemans"]),  # e.g. "Jakemans Cherry & Menthol Drops" -- WebSearch-confirmed UK medicated-throat-lozenge-only brand, same category as the existing Ricola/lozenge rule
+    ("Sweet Snacks", ["smilegummi"]),  # e.g. "Nimm2 Smilegummi Softies Fruit Mix" -- as a bare KEYWORD_RULES word this still lost to "fruit" (which sits much earlier in that file-order-wins tier), so it needs to be here instead, in the tier that's always checked first regardless of position
+
+    # 21 Aug 2026 -- Sauces & Condiments/Vegetables residual (124 of the
+    # original 141 -- the earlier fix that same day was the narrow
+    # passata/polpa-vs-tomato bug; real data (SQL query, ~90 rows) showed
+    # a much bigger, single root cause behind most of what's left: the
+    # existing bare "pickle" keyword (Sauces & Condiments) uses a regex
+    # that only tolerates one optional trailing "s" (\bpickles?\b) -- it
+    # was written for "Pickles In Vinegar" and never matches "Pickled"
+    # (extra "d", not "s") at all. Every "Pickled Onions"/"Pickled
+    # Cucumber"/"Pickled Peppers" product across a dozen brands (Camel,
+    # Carrefour, Driver's, Durra, Deco', Krakus, Kuhne, Mayor, Munch, Mrs
+    # Darlington's, Waitrose...) was falling straight through to
+    # Vegetables via bare "onion"/"cucumber"/"pepper" as a result -- by
+    # far the largest single chunk of this pair. ("Pickled Gherkins" was
+    # already fine, via the separate "gherkin" rule fixed earlier this
+    # session.) Separately, "Sacla" and "Kunserva" (both already
+    # registered Sauces & Condiments brand words) were consistently
+    # losing to "tomato"/"garlic"/"onion" on their non-"Sauce"-labelled
+    # variants (e.g. "Sacla Sun Dried Tomato & Garlic" vs. the
+    # correctly-resolving "Sacla Intenso ... Stir-in Sauce") -- promoting
+    # both to unconditional overrides fixes every variant at once, the
+    # same fix already applied to "sacla"/"kunserva" is safe because
+    # neither word has any other use anywhere else in this file (checked
+    # individually). Same root shape for "Loyd Grossman" (the Tea brand
+    # "Loyd" collides with the Sauces & Condiments brand "Loyd Grossman"
+    # -- can't touch bare "loyd", so the fix is scoped to the full brand
+    # phrase instead) and "Cirio Chopped Tomatoes" (tinned tomato
+    # preparation, same shape as the passata/polpa fix -- Cirio's own
+    # "With Basil" variant already accidentally resolves right via a
+    # Herbs & Spices tie, but the "With Garlic" variant doesn't, so this
+    # makes both consistent).
+    ("Sauces & Condiments", ["pickled"]),
+    ("Sauces & Condiments", ["sacla"]),
+    ("Sauces & Condiments", ["kunserva"]),
+    ("Sauces & Condiments", ["loyd grossman"]),
+    ("Sauces & Condiments", ["chopped tomatoes"]),
+
+    # 21 Aug 2026 -- Fruits/Sports (86, a new pair in this run). Real data
+    # (SQL query, ~230 rows of protein/BCAA/isotonic/energy-gel products)
+    # showed the exact same root shape as almost every fix today: several
+    # sports-nutrition words/brands already existed as bare KEYWORD_RULES
+    # entries but sat too far down the file to ever beat an early bare
+    # fruit-flavour word (e.g. "creatine" and "bcaa" were already
+    # registered Sports keywords, but "BioTechUSA Creatine Orange
+    # Flavour" and "BCAA Blood Orange Del Sol" both still landed on
+    # Fruits via bare "orange"). "isotonic"/"electrolyte" have the same
+    # shape against "Energy Drinks"/"Sports". "energy gel" and "sports
+    # drink" had no keyword coverage at all (e.g. "Endurance Energy Gel
+    # Orange", "San Benedetto Energade Sports Drink Orange"). "Cellucor"
+    # (WebSearch-confirmed broad sports-nutrition brand, not just their
+    # C4 energy-drink line) and "Powerbar" (WebSearch-confirmed
+    # sports-nutrition-only) had no keyword coverage either. Promoting
+    # "biotechusa" and "qnt" specifically (both already bare Sports
+    # keywords added earlier this session) to unconditional overrides
+    # fixes the same file-position problem for their non-"Whey"/"Protein
+    # Powder"-labelled variants (e.g. "Qnt Vegan Protein Red Fruits").
+    ("Sports", ["creatine"]),
+    ("Sports", ["bcaa"]),
+    ("Sports", ["electrolyte"]),
+    ("Energy Drinks", ["isotonic"]),
+    ("Sports", ["energy gel"]),
+    ("Sports", ["sports drink"]),
+    ("Sports", ["cellucor"]),
+    ("Sports", ["powerbar"]),
+    ("Sports", ["biotechusa"]),
+    ("Sports", ["qnt"]),
+
+    # 21 Aug 2026 -- Chocolates/Nuts residual (76 of the original 83). Real
+    # data showed most of the sample (271 of ~300 real names) already
+    # resolves correctly via bare "chocolate" -- the actual remaining bug
+    # is narrower: bare "cacao" (already a registered Chocolates keyword)
+    # loses to bare "hazelnut" whenever a product says "Cacao" instead of
+    # "Chocolate" (e.g. "Bett'r Hazelnut Cacao Balls", "Jouyco Cakeroll
+    # Hazelnut & Cacao"). Safe to promote -- "cacao" has no other use
+    # anywhere else in this file.
+    ("Chocolates", ["cacao"]),
+
+    # 21 Aug 2026 -- Fruits/Tea (71, new pair). Real data (SQL query, ~250
+    # rows) showed 227 of 249 real names already resolve correctly to
+    # Tea -- the same shape as every other Fruits/X pair today: brand
+    # words and "teabag"/"tea bag" were already registered Tea keywords
+    # but sat too far down the file to beat an early bare fruit-flavour
+    # word (e.g. "Teekanne Spanish Orange" ties bare "orange" against
+    # bare "teekanne"). Promoting "ahmad", "yogi", "tetley", "teekanne",
+    # and "teabag"/"tea bag" fixes every variant of each at once. NOT
+    # promoting bare "loyd" the same way -- it's the Tea brand "Loyd" but
+    # also collides with the Sauces & Condiments brand "Loyd Grossman"
+    # (fixed earlier today, scoped to the full phrase specifically to
+    # avoid this) -- "Loyd Sunny Orange ... Teabags" is instead caught by
+    # the "teabag" promotion above. NOT promoting bare "infusion" either
+    # -- real data showed it's genuinely ambiguous (also used for vinegar
+    # and gin infusions, e.g. "Apple Cider Vinegar Infusion
+    # Cinnamon&Turmeric"), so scoped to the phrase "fruit infusion"
+    # instead (covers the Lion Brand and Carrefour infusion products
+    # without touching the vinegar/gin ones).
+    ("Tea", ["ahmad"]),
+    ("Tea", ["yogi"]),
+    ("Tea", ["tetley"]),
+    ("Tea", ["teekanne"]),
+    ("Tea", ["teabag"]),
+    ("Tea", ["tea bag"]),
+    ("Tea", ["fruit infusion"]),
+    ("Tea", ["fruits infusion"]),
+    ("Tea", ["immunitea"]),
 ]
 
 
