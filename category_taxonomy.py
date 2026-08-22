@@ -3732,6 +3732,59 @@ MULTI_KEYWORD_RULES = [
     # Scoped to "reese" + "dipped" instead, which only matches the
     # chocolate-dipped-peanuts variant.
     ("Chocolates", ["reese", "dipped"]),
+
+    # 21 Aug 2026 -- Fruits/Sweet Snacks, full-database pass (157). This
+    # report is now running against the full 132k-row production table
+    # rather than a small sample, so it surfaced a fresh batch: 8 brand/
+    # generic-dessert words that are already registered bare Sweet Snacks
+    # (or, for Condorelli, Chocolates) keywords, but sit far enough down
+    # the file to lose to an early bare fruit-flavour word -- e.g. "Halls
+    # Forest Fruit" (a cough-drop brand) was landing on Fruits because
+    # bare "fruit" is one of the very first Fruits keywords in the file.
+    # Same shape as every other promotion this session -- each word
+    # checked and confirmed registered nowhere else in this file.
+    ("Sweet Snacks", ["halls"]),
+    ("Sweet Snacks", ["trolli"]),
+    ("Sweet Snacks", ["trefin"]),
+    ("Sweet Snacks", ["cheesecake"]),
+    ("Sweet Snacks", ["cheescake"]),
+    ("Sweet Snacks", ["debron"]),
+    ("Sweet Snacks", ["de bron"]),
+    ("Sweet Snacks", ["crostatina"]),
+    ("Sweet Snacks", ["pectol"]),
+    ("Sweet Snacks", ["taveners"]),
+    # "Condorelli Letter Soft Nougat Covered With Orange" -- "condorelli"
+    # is already a registered bare Chocolates keyword (see the
+    # "torroncini" promotion above, same brand), but loses to bare
+    # "orange" the same way. Promoting it too closes the gap for
+    # Condorelli products that don't happen to say "torroncini".
+    ("Chocolates", ["condorelli"]),
+
+    # 21 Aug 2026 -- Fruits/Sports, full-database pass (69). Real data
+    # (SQL query, ~1950 rows) showed 27 genuine ties. Most are the same
+    # shape as everything else this session: a sports-nutrition brand or
+    # supplement-generic word that's already registered bare Sports, but
+    # sits after an early bare fruit-flavour word -- e.g. "L Carnitine
+    # Blueberry & Raspberry" (a supplement) was landing on Fruits because
+    # bare "carnitine" loses to bare "blueberry"/"raspberry". Each word
+    # checked and confirmed registered nowhere else in this file.
+    ("Sports", ["collagen"]),
+    ("Sports", ["biotona"]),
+    ("Sports", ["enervit"]),
+    ("Sports", ["carnitine"]),
+    ("Sports", ["purition"]),
+    # "dragon" is a special case -- it's already a registered bare Sports
+    # keyword (the "Dragon" superfoods/supplement brand), but unlike the
+    # words above it can't be promoted on its own, because "Dragon Fruit"
+    # is also a real, common fruit name in this data (e.g. "Dragon Fruit
+    # Red", "Pithaya (dragon Fruit)") that already correctly resolves to
+    # Fruits today -- a bare promotion would wrongly pull every one of
+    # those onto Sports. The actual bugs are narrower: "Dragon Acai
+    # Berry"/"Dragon Acai Berry Powder" and "Dragon Coconut Sugar" are
+    # Dragon-brand superfood powders, not fruit, so scoped to the specific
+    # word pairs that only match those.
+    ("Sports", ["dragon", "acai"]),
+    ("Sports", ["dragon", "coconut sugar"]),
 ]
 
 
