@@ -2279,6 +2279,13 @@ KEYWORD_RULES = [
     ("Tea", ["pyramid bags", "pyramid bag"]),  # Mokate/Twinings tea-bag format -- "Mokate Loyd Pyramid Bags Raspberry & Strawberry" / "...Pineapple & Pear" were landing on Fruits via the bare flavour words; the product is tea, the fruit names are just the flavour
     ("Herbs & Spices", ["fish seasoning", "fish rub"]),  # "Schwartz Fish Seasoning", "Bon Cuisine Zesty Fish Rub & Seasoning" were landing on Chilled Fish via bare "fish" -- these are spice/seasoning blends meant for cooking fish, not fish itself
     ("Skin Care", ["sun milk", "cleansing milk", "aftersun milk", "bath milk", "body milk"]),  # "milk" as a skincare-lotion term (not the dairy product) -- a whole cluster of suncare/cleansing products (Clinians, Equilibra, Carroten, Childs Farm) were landing on the Milk category via bare "milk"
+
+    # 24 Aug 2026 -- fourth pass phrases (see the matching-date comment in
+    # MULTI_KEYWORD_RULES above for context).
+    ("All-purpose Cleaners", ["scouring cream"]),  # "Cif Scouring Cream Lemon" was landing on Cooking Creams via bare "cream" -- it's a cleaning product, not a food cream
+    ("Oils", ["essential oil"]),  # "Essentia Natural Water Soluble Essential Oil Orange & Cinnamon" was landing on Fruits via bare "orange" -- it's a fragrance/aromatherapy oil, orange is the scent
+    ("Sauces & Condiments", ["salad dressing", "sesame dressing"]),  # real bug, not just a low-value tie: "Saitaku Sesame Dressing Roasted" was landing on First Aid, because bare "dressing" is a legitimate (and necessary) First Aid keyword for wound dressings -- this phrase-level fix keeps that medical meaning intact while fixing the food-dressing case
+    ("Cereals", ["multigrain puff", "multigrain puffs"]),  # "Piccolo Multigrain Puffs Carrot Stars" (a baby-snack puff cereal) was landing on Vegetables via bare "carrot"
 ]
 
 
@@ -2330,6 +2337,25 @@ MULTI_KEYWORD_RULES = [
     ("Candles", ["bolsius"]),  # Bolsius is a pure candle brand (already has other Candles keywords registered), was losing same-tier ties to bare scent/flavour words like "peach", "apple", "pomegranate"
     ("Candles", ["spaas"]),  # same brand-vs-scent-word tie as Bolsius above -- Spaas is a candle-only brand (see the existing "scented pillar"/"spaas" entry elsewhere in this file)
     ("Candles", ["tealight"]),  # unambiguous candle-product word, same fix -- "Box 10 Tealights Berries" was landing on Fruits via bare "berries"
+
+    # 24 Aug 2026 -- fourth collision-report pass, working down the ranked
+    # list (not just the top few pairs this time -- see the full 874-pair
+    # analysis). Same narrow, verified-against-real-examples approach.
+    ("Cold Cuts", ["pate"]),  # unambiguous deli-meat product word -- "Cuits Sliced Black Pepper Pate", "Artichoke Pate", "Mushroom Pate" were all landing on Vegetables via their bare flavour word (pepper/artichoke/mushroom)
+    ("Cheese", ["quark"]),  # unambiguous dairy product word -- "Berchtesgadener Land Quark With Herbs" was landing on Herbs & Spices via bare "herb"
+    ("Yoghurt", ["protein", "pudding"]),  # narrow co-occurrence -- "Arla Protein Pudding Vanilla Cookie" was landing on Biscuits via bare "cookie"; not a bare "pudding" promotion since Christmas/bread pudding is a real, separate Cake Preparations product
+    ("Coffee", ["beanies"]),  # Beanies is a flavoured-coffee brand, already registered, but was losing same-tier ties to bare "cream" -- "Beanies Strawberries & Cream Coffee" was landing on Cooking Creams
+    ("Coffee", ["latte"]),  # "latte" already correctly wins against most bare fruit-flavour words (LATTE STRAWBERRY, LATTE PINEAPPLE MANGO already resolve to Coffee) purely by being earlier in KEYWORD_RULES list order than most of them -- but "LATTE APPLE WITH OATS" landed on Fruits because "apple" happens to sit earlier in the list than "latte" does. Promoting closes that inconsistency instead of leaving it to list-order luck
+
+    # 24 Aug 2026 -- fifth pass, from the production run's own live report
+    # (which counts every store listing, not one row per distinct product
+    # name, so its ranking differs somewhat from the full-export analysis
+    # above -- both are being worked through in parallel).
+    ("Carbonated Drinks", ["soda"]),  # unambiguous fizzy-drink word -- "Warheads Soda Green Apple", "Living Things Soda Rhubarb & Apple" were landing on Fruits via the bare flavour word
+    ("Carbonated Drinks", ["perrier"]),  # brand, already registered but losing ties to bare "orange" -- "Maison Perrier Forever Orange"
+    ("Carbonated Drinks", ["pepsi"]),  # brand, already registered but losing ties to bare "cream" -- "Pepsi Strawberry N Cream Zero Can" was landing on Cooking Creams
+    ("Hand Wash Liquids", ["soap"]),  # generalizing the existing bare "soap" -> Hand Wash Liquids fallback (see its original comment: "closest existing category" for bar soap) from a same-tier word that sometimes wins its tie to one that always does -- real data showed it losing to "orange" (Fruits), "fizzy"+"watermelon" (Carbonated Drinks), and "butter" (Butter/Cooking Creams) across three different soap products. A product whose name contains the word "soap" is virtually always literally a soap
+    ("Hand Wash Liquids", ["handwash"]),  # same fix, same reasoning, for the already-registered "handwash" (no space) keyword -- "Carex Handwash Fizzy Watermelon" was landing on Carbonated Drinks via "fizzy"+"watermelon"
     # 18 Aug 2026 -- EIGHTH sweep regression fixes, checked ahead of everything
     # else for the same reason as the Areon/Conditioner/Candle rules below: each
     # is a brand or compound phrase that was losing to a shorter, more generic
