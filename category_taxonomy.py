@@ -2356,6 +2356,12 @@ MULTI_KEYWORD_RULES = [
     ("Carbonated Drinks", ["pepsi"]),  # brand, already registered but losing ties to bare "cream" -- "Pepsi Strawberry N Cream Zero Can" was landing on Cooking Creams
     ("Hand Wash Liquids", ["soap"]),  # generalizing the existing bare "soap" -> Hand Wash Liquids fallback (see its original comment: "closest existing category" for bar soap) from a same-tier word that sometimes wins its tie to one that always does -- real data showed it losing to "orange" (Fruits), "fizzy"+"watermelon" (Carbonated Drinks), and "butter" (Butter/Cooking Creams) across three different soap products. A product whose name contains the word "soap" is virtually always literally a soap
     ("Hand Wash Liquids", ["handwash"]),  # same fix, same reasoning, for the already-registered "handwash" (no space) keyword -- "Carex Handwash Fizzy Watermelon" was landing on Carbonated Drinks via "fizzy"+"watermelon"
+
+    # 24 Aug 2026 -- sixth pass, continuing down the Fruits/Spirits - Liqueurs
+    # pair (still the largest single remaining pattern in the live report).
+    ("Spirits - Liqueurs", ["gin", "peach"]),  # "Pride Of Wembley Peach Gin" was landing on Fruits. Checked the full export for false positives first (a "peach" dessert/tea product that happens to also mention "gin") -- none found
+    ("Spirits - Liqueurs", ["gin", "grapefruit"]),  # "Caelestis Grapefruit Gin" -- same pattern, also checked for false positives
+    ("Spirits - Liqueurs", ["spritz"]),  # already a registered keyword but losing same-tier ties to bare fruit words -- "Spritz Peach" was landing on Fruits; "spritz" is an unambiguous cocktail-style term
     # 18 Aug 2026 -- EIGHTH sweep regression fixes, checked ahead of everything
     # else for the same reason as the Areon/Conditioner/Candle rules below: each
     # is a brand or compound phrase that was losing to a shorter, more generic
