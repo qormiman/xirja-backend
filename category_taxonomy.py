@@ -2270,6 +2270,15 @@ KEYWORD_RULES = [
     ("Make Up", ["nail enamel", "eyebrow gel", "brow gel", "brow pen", "eye shadow palette", "shadow palette", "cheek tint", "skin tint", "lip color pencil", "dipliner", "armaf beaute"]),
     ("Sports", ["yoga mat", "wrist support", "ankle support", "knee support", "resistance band", "live up"]),
     ("Biscuits", ["pavesi", "balocco"]),
+
+    # 24 Aug 2026 -- phrases from the third collision-report pass (see the
+    # matching-date comment in MULTI_KEYWORD_RULES for the full context).
+    # These are plain OR-style phrase alternatives -- each wins over a bare
+    # single-word match purely by being a phrase (checked in the phrase
+    # pass, before any single-word pass), no co-occurrence logic needed.
+    ("Tea", ["pyramid bags", "pyramid bag"]),  # Mokate/Twinings tea-bag format -- "Mokate Loyd Pyramid Bags Raspberry & Strawberry" / "...Pineapple & Pear" were landing on Fruits via the bare flavour words; the product is tea, the fruit names are just the flavour
+    ("Herbs & Spices", ["fish seasoning", "fish rub"]),  # "Schwartz Fish Seasoning", "Bon Cuisine Zesty Fish Rub & Seasoning" were landing on Chilled Fish via bare "fish" -- these are spice/seasoning blends meant for cooking fish, not fish itself
+    ("Skin Care", ["sun milk", "cleansing milk", "aftersun milk", "bath milk", "body milk"]),  # "milk" as a skincare-lotion term (not the dairy product) -- a whole cluster of suncare/cleansing products (Clinians, Equilibra, Carroten, Childs Farm) were landing on the Milk category via bare "milk"
 ]
 
 
@@ -2298,6 +2307,29 @@ MULTI_KEYWORD_RULES = [
     ("Jelly", ["jam"]),  # the product-type word "jam" is more decisive than an ingredient callout -- "Alce Nero Organic Honey Citrus Fruits Jam" was landing on Fruits via bare "fruit" ahead of the actual product type
     ("Hand Wash Liquids", ["oil", "soap"]),  # co-occurrence, not a bare "oil" promotion -- "Venus Secrets Cannabis Oil Soap" was landing on Oils via bare "oil"; requiring both words present keeps this narrow (an actual cooking/skincare oil that never says "soap" is unaffected)
     ("Shower Gels", ["radox"]),  # brand beats ingredient word -- "Radox Salts Pouch Feel Relaxed" (bath salts) was landing on Herbs & Spices via bare "salt"; Radox already has its own Shower Gels keyword, it was just losing the tie
+
+    # 24 Aug 2026 -- second collision-report pass. Narrow co-occurrence
+    # fixes only, same reasoning as above: the product-type word should win
+    # over a flavor/filling word, but only when both are actually present,
+    # so an unrelated plain beef or fruit product is never touched.
+    ("Pasta & Couscous", ["beef", "ravioli"]),  # "Beef & Pecorino Ravioli" was landing on Beef -- it's a pasta dish, beef is the filling
+    ("Pasta & Couscous", ["beef", "noodle"]),  # "Mr Noodles Beef" / "Pot Noodles Beef" -- same pattern, instant-noodle products landing on Beef
+    ("Spirits - Liqueurs", ["fig", "gin"]),  # "Gunpowder Fig & Laurel Gin" was landing on Fruits via bare "fig" -- it's a gin, fig is a botanical/flavor note
+    ("Spirits - Liqueurs", ["pineapple", "rum"]),  # "Brewdog Duo Spiced Rum Pineapple" -- same pattern, a rum landing on Fruits via bare "pineapple". Deliberately not a bare "gin"/"rum" promotion -- "rum and raisin" desserts are a real, already-documented Cake Preparations/Spirits collision elsewhere in this file, so a global rum-wins rule would break those
+
+    # 24 Aug 2026 -- third collision-report pass, this time against a full
+    # (undeduplicated-by-category) production export. Same rule as always:
+    # narrow, verified-safe fixes only, not a blanket sweep.
+    ("Spirits - Liqueurs", ["gin", "watermelon"]),  # "Islands 8 Gin Watermelon" was landing on Fruits
+    ("Spirits - Liqueurs", ["gin", "blood orange"]),  # "Whitley Neill Blood Orange Gin" -- "blood orange" (not bare "orange") deliberately, since bare "orange" collides with real orange marmalade/jam products that happen to also mention gin as an ingredient (e.g. "Mrs Darlington's Orange Marmalade With Gin" -- verified in the real data, would have been a new bug)
+    ("Spirits - Liqueurs", ["breezer"]),  # Bacardi Breezer -- already a registered Spirits - Liqueurs keyword but was losing same-tier ties to bare fruit-flavour words ("Breezer Exotic Passion Fruit & Mango"); promoted since it's an unambiguous brand name
+    ("Pasta & Couscous", ["tagliatelle"]),  # unambiguous pasta-shape word -- "Tagliatelle Chickpea Cereal" was landing on Cereals via bare "cereal" (the product is pasta made from chickpea flour, not a breakfast cereal)
+    ("Legumes", ["favetta"]),  # Maltese broad-bean paste -- "Lamb Beans Favetta" was landing on the Lamb (meat) category via bare "lamb", because "Lamb" is also a canned-goods brand name (see the "Lamb Brand Pure Ground Almonds" example earlier in this file for the same brand causing the same kind of collision elsewhere)
+    ("Canned Seafood", ["calvo"]),  # already a registered brand keyword but losing same-tier ties to bare "tuna" (Chilled Fish) -- "Calvo Light Tuna In Brine", "Calvo Mexican Tuna Salad" are shelf-stable canned products, not fresh/chilled
+    ("Household Goods", ["spoon"]),  # a bare product-type word for kitchenware -- "Westmark Glory Stainless Steel Vegetable Spoon" was landing on Vegetables via bare "vegetable"; a spoon is virtually never itself a food item
+    ("Candles", ["bolsius"]),  # Bolsius is a pure candle brand (already has other Candles keywords registered), was losing same-tier ties to bare scent/flavour words like "peach", "apple", "pomegranate"
+    ("Candles", ["spaas"]),  # same brand-vs-scent-word tie as Bolsius above -- Spaas is a candle-only brand (see the existing "scented pillar"/"spaas" entry elsewhere in this file)
+    ("Candles", ["tealight"]),  # unambiguous candle-product word, same fix -- "Box 10 Tealights Berries" was landing on Fruits via bare "berries"
     # 18 Aug 2026 -- EIGHTH sweep regression fixes, checked ahead of everything
     # else for the same reason as the Areon/Conditioner/Candle rules below: each
     # is a brand or compound phrase that was losing to a shorter, more generic
@@ -3657,6 +3689,13 @@ MULTI_KEYWORD_RULES = [
     ("Bread", ["croissant", "strawberry"]),
     ("Bread", ["croissant", "fruit"]),
     ("Bread", ["croissant", "blueberry"]),
+    # 24 Aug 2026 -- same pattern, found via the production collision report
+    # (Bread/Nuts, 43): "Welbee's Croissant Pistacchio" was losing to bare
+    # "pistacchio" (Nuts) the same way the fruit-filled croissants above used
+    # to lose to bare fruit words. Both spellings covered since the crawled
+    # data uses the Italian "pistacchio" as often as "pistachio".
+    ("Bread", ["croissant", "pistacchio"]),
+    ("Bread", ["croissant", "pistachio"]),
     ("Bread", ["brioche", "fruit"]),
 
     # 21 Aug 2026 -- Fruits/Sweet Snacks residual (179 of the original 240
