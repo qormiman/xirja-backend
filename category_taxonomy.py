@@ -104,7 +104,7 @@ PAVI_CATEGORY_MAP = {
     "BEEF": "Beef", "MOUTHWASH": "Mouthwash", "INSECT KILLER": "Insect Killer", "JELLY": "Jelly",
     "CHILLED FISH": "Chilled Fish", "SHOE POLISH": "Shoe Polish", "WRAPS": "Wraps",
     "DISHWASHER TABLETS": "Dishwasher Tablets", "FOOTCARE PRODUCTS": "Footcare Products",
-    "CANNED FRUIT": "Canned Fruit", "SPIRITS - LIQUERS": "Spirits - Liquers",
+    "CANNED FRUIT": "Canned Fruit", "SPIRITS - LIQUEURS": "Spirits - Liqueurs",
     "COTTON BUDS": "Cotton Buds", "PORK": "Pork", "SWEET SNACKS": "Sweet Snacks",
     "ICED COFFEE": "Iced Coffee", "DRINKING CHOCOLATE": "Drinking Chocolate",
     "READY MEALS": "Ready Meals", "HONEY": "Honey", "SKIN CARE": "Skin Care",
@@ -472,7 +472,17 @@ KEYWORD_RULES = [
     ("Pasta & Couscous", ["pasta", "spaghetti", "penne", "macaroni", "couscous", "lasagne"]),
     ("Rice", ["rice", "risotto"]),
     ("Flour", ["flour"]),
+    # "Pensa Bio Gluten 1kg" -- vital wheat gluten, a baking ingredient
+    # (WebSearch-confirmed Pensa Bio sells this alongside its other pantry
+    # basics). Scoped to the two-word phrase rather than bare "gluten" --
+    # bare "gluten" would misfire on the very common "Gluten Free" dietary
+    # label that appears on thousands of unrelated products in this data.
+    ("Flour", ["bio gluten"]),
     ("Cake Preparations", ["yeast"]),  # baking ingredient, found via real data ("Doves Farm Yeast Quick Gluten Free")
+    # "Gypsophila Painted" / "Solidago Painted" -- cut-flower species names
+    # (baby's breath and goldenrod respectively) with no other keyword
+    # match, found unclassified in Greens' Flowers aisle real data.
+    ("Flowers", ["gypsophila", "solidago"]),
     ("Fresh Pastry", ["mqaret"]),  # a traditional Maltese date pastry -- worth a dedicated entry for a Maltese app
     ("Sweet Snacks", ["sweets", "helwa"]),  # "helwa" -- a traditional Maltese sweet (as in "Helwa Tat-Tork")
 
@@ -535,7 +545,7 @@ KEYWORD_RULES = [
     ("Wine - Sparkling", ["sparkling wine", "prosecco", "champagne", "cava"]),
     ("Spirits - Whisky", ["whisky", "whiskey"]),
     ("Spirits - Vodka", ["vodka"]),
-    ("Spirits - Liquers", ["liqueur", "liquer"]),
+    ("Spirits - Liqueurs", ["liqueur", "liquer"]),
     ("Coffee", ["coffee", "espresso", "cappuccino", "cappucino", "latte"]),  # "cappucino" -- common one-c typo, found via real data
     ("Tea", ["tea bag", "tea"]),
     ("Energy Drinks", ["energy drink"]),
@@ -687,7 +697,7 @@ KEYWORD_RULES = [
     # and "General Laundry Wash Universal" don't contain the exact phrase
     # "laundry liquid", just the word "laundry" or "wash(es)" on its own.
     ("Laundry Washing Liquids", ["wash booster", "laundry wash"]),
-    ("Household Goods", ["storage container", "lunch box", "thermos", "flask", "wooden spoon"]),
+    ("Household Goods", ["storage container", "lunch box", "thermos", "flask", "wooden spoon", "baking dish"]),  # "baking dish" added 23 Aug 2026 -- e.g. "No Nadir Baking Dish 1.8l", a Welbee's Home & Entertainment item with no other keyword match
     ("Stationery", ["scissors", "stationery"]),
     ("Electrical", ["light bulb", "led bulb", "gu10"]),  # "gu10" -- a specific, unambiguous lightbulb fitting type, found via real data
     ("Hand Tools", ["sandpaper", "sand paper"]),
@@ -1104,13 +1114,14 @@ KEYWORD_RULES = [
     ("Shaving Creams", ["shaving gel", "shaving foam", "shaving cream", "aftershave", "after shave", "gillette", "wilkinson", "mach3", "shave gel", "hair removal", "epilator", "wax strip", "veet"]),
     ("Perfume", ["eau de toilette", "eau de parfum", "body mist", "fragrance", "cologne"]),
     ("First Aid", [
-        "paracetamol", "ibuprofen", "aspirin", "multivitamin", "vitamin c",
-        "vitamin d", "vitamin b", "lozenge", "nasal spray",
+        "paracetamol", "ibuprofen", "aspirin", "multivitamin",
+        "lozenge", "nasal spray",
         "saline", "eye drop", "hand sanitiser", "hand sanitizer", "thermometer",
         "elastoplast", "compeed", "betadine", "savlon", "germolene", "gauze",
         "antihistamine", "cough syrup", "throat spray", "rehydration",
         "effervescent tablet",
-    ]),
+    ]),  # "vitamin c"/"vitamin d"/"vitamin b" moved out 23 Aug 2026 -- see
+    # note near the end of this list, right before MULTI_KEYWORD_RULES
     ("Hair & Nail Accessories", ["hair band", "hairband", "hair tie", "hair clip", "hair grip", "bobby pin", "scrunchie", "hair brush", "hairbrush", "paddle brush", "tweezer", "nail clipper", "nail scissors", "emery board", "hair roller", "shower cap"]),
     ("Nappies", ["pampers", "huggies"]),
     ("Baby Essentials", ["soother", "baby bottle", "bottle teat", "muslin", "baby bib", "bepanthen"]),
@@ -1243,6 +1254,12 @@ KEYWORD_RULES = [
 
     # ---- Home & Entertainment: tableware, cookware, textiles, car care ----
     ("Electrical", ["lightbulb", "table lamp", "fuse wire", "bedside lamp"]),
+    # "mocio" (Italian for "mop") and "steam mop" moved ahead of the
+    # "vileda" Household Goods rule below, 23 Aug 2026 -- Vileda's own
+    # "Mocio"-branded mop products (e.g. "Vileda Mocio Completo") were
+    # losing to bare "vileda" purely on file position, same as bare "mop"
+    # and "pavimenti" already do by sitting above this block.
+    ("Floor Cleaners", ["mocio", "steam mop"]),
     ("Household Goods", [
         "vileda", "tefal", "sistema", "turtle wax", "beach towel", "bath towel",
         "hand towel", "cooking tong", "frypan", "fry pan", "wok", "griddle pan",
@@ -1259,7 +1276,6 @@ KEYWORD_RULES = [
         "disposable glove", "vinyl glove", "chamois", "screen wash",
         "car shampoo", "wiper blade",
     ]),  # "vileda" spans mops, cloths, sponges and buckets -- all non-consumable cleaning equipment, which is what Household Goods is for here; the more specific words above (e.g. bare "sponge") still win where they apply
-    ("Floor Cleaners", ["mocio", "steam mop"]),
 
     # ========================================================================
     # 18 Aug 2026 -- THIRD bulk sweep.
@@ -1583,7 +1599,20 @@ KEYWORD_RULES = [
     ("Hair Colouring", ["excellence creme", "garnier color", "garnier olia", "schwarzkopf brilliance", "wella kit", "hair kit"]),
     ("Hair Styling", ["wella flex", "tigi", "bed head", "frizz ease", "john frieda", "blow dry", "workable wax", "styling spray"]),
     ("Shampoos", ["alpecin", "pantene", "wella wonder"]),
-    ("Perfume", ["edt", "edp", "eau de", "bugatti", "david beckham", "tom tailor", "brut", "she women", "life by", "adidas edt", "adidas edp"]),
+    # 23 Aug 2026 -- bare "brut" replaced with three specific phrases, full
+    # database pass (Wine - Sparkling/Wine - White, 48). "Brut" is a
+    # standard sparkling-wine dryness term (Moet & Chandon Brut, Veuve
+    # Clicquot Brut, Ferrari Brut Doc Metodo Classico, etc.), so the bare
+    # word was claiming 16 real Champagne/sparkling-wine products for
+    # Perfume, purely because nothing else in the file registered "brut"
+    # at all. Checked the real Perfume-category data first: every genuine
+    # Faberge Brut product in the database is named "Brut Edt ...", "Brut
+    # For Men ..." or "Brut Original Shower ..." -- these three phrases
+    # cover all of them (verified against "Brut Edt Attrection", "Brut Edt
+    # Musk", "Brut For Men Musk Spray", "Brut Original Shower Attraction",
+    # "Brut Original Shower Original"), so the bare word can be dropped
+    # entirely with no loss of real Perfume matches.
+    ("Perfume", ["edt", "edp", "eau de", "bugatti", "david beckham", "tom tailor", "brut edt", "brut for men", "brut original", "she women", "life by", "adidas edt", "adidas edp"]),
     ("Deodorants", ["dove men", "nivea men", "apd", "deo spray", "invisible care"]),
     ("Shower Gels", ["neutro roberts", "ushuaia", "bionsen", "jacklon", "amore mio", "foam bath", "bagno schiuma", "showel gel"]),
     ("Hand Wash Liquids", ["spuma di sciampagna", "sapone crema"]),
@@ -1621,7 +1650,7 @@ KEYWORD_RULES = [
     ("Wine - Rose", ["rosado", "rosato", "rose wine"]),
     ("Wine - Sparkling", ["asti", "freixenet", "cordon negro", "hugo"]),
     ("Spirits - Whisky", ["johnnie walker", "dewar", "aberfeldy", "single malt", "highland"]),
-    ("Spirits - Liquers", ["gin", "rum", "amaro", "liqueur", "liquore", "spritz", "aperitivo", "vermouth", "captain morgan", "havana club", "bacardi", "hendrick", "malfy", "gordons", "tanqueray", "breezer", "port"]),
+    ("Spirits - Liqueurs", ["gin", "rum", "amaro", "liqueur", "liquore", "spritz", "aperitivo", "vermouth", "captain morgan", "havana club", "bacardi", "hendrick", "malfy", "gordons", "tanqueray", "breezer", "port"]),
     ("Beers", ["cisk", "san miguel", "brewdog", "ipa", "lager"]),
     ("Energy Drinks", ["prime hydration"]),
     ("Carbonated Drinks", ["mirinda", "san pellegrino", "aranciata", "citrus fizz"]),
@@ -1842,7 +1871,7 @@ KEYWORD_RULES = [
     ('Wine - Red', ['albarossa', 'sangre de toro', 'santa cristina', 'cannonau', 'aglianico', 'montepulciano', 'montepuliciano', 'camenere', 'carmenere', 'medoc', 'pinto noir', 'sedara', 'famoso rubicone', 'sangria']),
     ('Wine - Sparkling', ['frizzantissima', 'spritzzoso', 'bollicine', 'fragolino']),
     ('Spirits - Whisky', ['chivas regal', 'douglas laing', 'famous grouse', 'glen moray', 'glenfiddich', "grant's triple wood", 'togouchi', "jack daniel's coke"]),
-    ('Spirits - Liquers', ['drambuie', 'fernet-branca', 'ameretto', 'cooking brandy', 'hennessy', 'jagermeister', 'amaretto', 'french brandy', 'anisette', 'napoleon brandy', 'grappa', 'ramazzotti', 'sambuca', 'limoncello', 'mediterranean aperitif', 'crema liquor', 'mojito', 'pina colada', 'sex on the beach', 'martini bellini', 'martini extra dry', 'martini fiero']),
+    ('Spirits - Liqueurs', ['drambuie', 'fernet-branca', 'ameretto', 'cooking brandy', 'hennessy', 'jagermeister', 'amaretto', 'french brandy', 'anisette', 'napoleon brandy', 'grappa', 'ramazzotti', 'sambuca', 'limoncello', 'mediterranean aperitif', 'crema liquor', 'mojito', 'pina colada', 'sex on the beach', 'martini bellini', 'martini extra dry', 'martini fiero']),
     ('Spirits - Vodka', ['smirnoff ice']),
     ('Beers', ['corona cero', 'hollandia pilsener', 'leffe brune', 'lowenbrau', 'mahou', 'peroni nastro azzurro', 'stella artois', 'tripel', 'karmeliet']),
     ('Ciders', ['kopparberg', 'strongbow', 'thatchers']),
@@ -2053,7 +2082,7 @@ KEYWORD_RULES = [
     ('Carbonated Drinks', ['dallthe']),
     ('Juices', ['go & fun original', 'lacto bottle']),
     ('Wine - Red', ['marsovin 100th anniversary', 'marsovin la torre']),
-    ('Spirits - Liquers', ['caravaggio twin pack', 'caterina riva', 'lord chambray']),
+    ('Spirits - Liqueurs', ['caravaggio twin pack', 'caterina riva', 'lord chambray']),
     ('Wine - Red', ['laurenz v']),
     ('Sports', ['cuvage de cuvage']),
     ('Air Fresheners', ["frutti d'acqua"]),
@@ -2193,6 +2222,46 @@ KEYWORD_RULES = [
     # bare-word matching needed to change at all.
     ("Oils", ["coconut oil"]),  # "Alibaba Coconut Oil" was tying bare "oil" (Oils) against bare "coconut" (Fruits)
     ("Skin Care", ["tanning oil", "tanning lotion", "bronzing"]),  # "Malibu Sun Bronzing Tanning Oil Spray Coconut" was tying bare "oil" (Oils) against bare "coconut" (Fruits) -- neither of which is actually right; it's a suncare product
+
+    # 23 Aug 2026 -- First Aid/Skin Care, full-database pass (51). "vitamin c"
+    # (and "vitamin d"/"vitamin b" for the same reason) used to sit near the
+    # top of the First Aid block, meaning it beat almost every Skin Care
+    # phrase in this file just by file position -- e.g. "Garnier Synergie
+    # Vitamin C Serum Anti Macchie" and "Face Facts Lip Serum Vitamin C &
+    # Cloudberry" were landing on First Aid even though they're clearly
+    # skincare (serums, creams, cleansers, sheet masks). "Vitamin C" is a
+    # near-universal skincare ingredient callout, not just a supplement
+    # name, so it's moved to the very end of this list -- it now only wins
+    # for a product that mentions no other keyword at all (a genuine
+    # Vitamin C tablet/supplement), while any skincare-specific word
+    # earlier in the file (serum, cream, cleansing, mask, etc.) wins first,
+    # same principle as the "coconut oil"/"tanning oil" fix just above.
+    ("First Aid", ["vitamin c", "vitamin d", "vitamin b"]),
+
+    # 24 Aug 2026 -- gap-fill sweep from a 30K-row no-match/mismatch audit
+    # (per-category shopping_category vs. classify_by_name() diff, run
+    # against a fresh SQL export). Appended at the very end of KEYWORD_RULES
+    # deliberately -- new entries here are lowest priority against every
+    # existing rule, so they can only fill genuine blanks (no prior match at
+    # all) and can't reorder or override anything already working. Each
+    # entry below is a real recurring pattern seen in the no-match sample
+    # for its category, picked for low collision risk (brand names,
+    # multi-word phrases, or country/dialect terms not used elsewhere in
+    # the taxonomy). Categories with large, genuinely mixed no-match buckets
+    # (Household Goods, Stationery) were deliberately left alone here --
+    # like Welbee's own "everything mixed together" aisles, they're mostly
+    # brand names and generic container/color words (bottle, cup, black,
+    # blue...) that would cause more collisions than they'd fix; they need
+    # a closer per-brand pass, not a quick word-frequency add.
+    ("Bread", ["hobza", "qaghaq", "ciabatta", "pitta"]),  # "hobza" is "hobz" (already a keyword) with the Maltese definite-article suffix -- _keyword_matches is whole-word so it doesn't stem this automatically
+    ("Beef", ["ribeye", "rib eye", "sirloin", "striploin", "topside", "rump steak", "angus beef", "scottona", "tagliata"]),
+    ("Water", ["levissima", "san benedetto", "acqua minerale"]),  # bare "acqua" deliberately not added -- it's also the lead word in unrelated products like Acqua Di Parma perfume
+    ("Sauces & Condiments", ["bbq sauce", "chipotle", "senape", "yogonese", "chili sauce", "kung pao"]),
+    ("Vegetables", ["zucchini", "fennel", "chicory", "radish", "galangal"]),
+    ("Beers", ["birra", "weissbier", "hefeweizen", "kellerbier", "erdinger", "moretti", "chimay", "kaiserdom", "hacker pschorr", "farsons"]),
+    ("Make Up", ["nail enamel", "eyebrow gel", "brow gel", "brow pen", "eye shadow palette", "shadow palette", "cheek tint", "skin tint", "lip color pencil", "dipliner", "armaf beaute"]),
+    ("Sports", ["yoga mat", "wrist support", "ankle support", "knee support", "resistance band", "live up"]),
+    ("Biscuits", ["pavesi", "balocco"]),
 ]
 
 
@@ -3389,7 +3458,7 @@ MULTI_KEYWORD_RULES = [
     ("Wine - Red", ["rosso"]),
 
     # 21 Aug 2026 -- the "Fruits / X" collision pattern (~490 listings across
-    # 7 pairs: Sports, Oils, Tea, Spirits - Liquers, Bread, Carbonated
+    # 7 pairs: Sports, Oils, Tea, Spirits - Liqueurs, Bread, Carbonated
     # Drinks, Ciders). In almost every example, a bare fruit-flavour word
     # (mango, berry, peach, coconut, orange, grapefruit...) in Fruits was
     # tying, at the SAME tier, against a bare brand-name word that already
@@ -3409,7 +3478,7 @@ MULTI_KEYWORD_RULES = [
     ("Sports", ["gatorade"]),  # same sports-drink brand, same tuple as powerade -- "Gatorade Orange" was tying bare "orange" (Fruits) the identical way
     ("Tea", ["lipton"]),  # e.g. "Lipton Peach Ice Tea" was tying bare "peach" (Fruits)
     ("Tea", ["clipper"]),  # e.g. "Clipper Mango & Ginger" was tying bare "mango" (Fruits)
-    ("Spirits - Liquers", ["bacardi"]),  # e.g. "Bacardi Mango" / "Bacardi Raspberry" were tying against Fruits
+    ("Spirits - Liqueurs", ["bacardi"]),  # e.g. "Bacardi Mango" / "Bacardi Raspberry" were tying against Fruits
     ("Carbonated Drinks", ["schweppes"]),  # e.g. "Schweppes Grapefruit" was tying bare "grapefruit" (Fruits)
     ("Body Lotions", ["vaseline"]),  # e.g. "Vaseline Cocoa Butter" type variants were tying against Fruits
 
@@ -3785,6 +3854,43 @@ MULTI_KEYWORD_RULES = [
     # word pairs that only match those.
     ("Sports", ["dragon", "acai"]),
     ("Sports", ["dragon", "coconut sugar"]),
+
+    # 23 Aug 2026 -- Cereals/Pasta & Couscous, full-database pass (49). Same
+    # file-position shape as everything else this session, on two words
+    # that are already registered bare Pasta & Couscous keywords (both
+    # confirmed registered nowhere else):
+    # - "couscous" was losing to bare "cereal" for "Dari 5 Cereal Couscous
+    #   500g" -- a couscous product whose own name happens to include the
+    #   word "cereal" (a grain-blend descriptor), landing it on Cereals.
+    # - "lasagna" was losing to bare "spelt" for the "Biona ... Spelt
+    #   Lasagna" products -- spelt is a wheat variety the pasta is made
+    #   from, not what the product actually is.
+    ("Pasta & Couscous", ["couscous"]),
+    ("Pasta & Couscous", ["lasagna"]),
+
+    # 23 Aug 2026 -- Wine - Sparkling/Wine - White, full-database pass (48).
+    # Same file-position shape again: "spumante" (Italian for "sparkling")
+    # and "asti" (the Asti DOCG region, whose wines under this name are
+    # always sparkling/frizzante -- Moscato d'Asti, Asti Spumante) are
+    # registered Wine - Sparkling keywords, but the grape-variety word they
+    # co-occur with ("moscato") sits earlier in KEYWORD_RULES, so file
+    # position picked White for e.g. "Moscato Spumante Bianco 75CL" and
+    # "Umberto Fiore Moscato D' Asti (750ml)". Scoped to "moscato" +
+    # "spumante"/"asti" specifically, NOT a bare promotion of "asti" --
+    # "asti" alone also appears in "Barbera D'Asti" (a still red wine,
+    # unrelated to this pair), which a bare promotion would wrongly pull
+    # onto Wine - Sparkling too. That's a separate, pre-existing bug
+    # (flagged to the user, not fixed here since it's outside this pair's
+    # scope -- Wine - Red vs Wine - Sparkling, not Wine - Sparkling vs
+    # Wine - White).
+    ("Wine - Sparkling", ["moscato", "spumante"]),
+    ("Wine - Sparkling", ["moscato", "asti"]),
+    # "bollicine" (Italian for "little bubbles") is an unambiguous
+    # sparkling-wine descriptor with no other meaning in this data, and is
+    # confirmed registered nowhere else -- safe to promote bare, same as
+    # "couscous"/"lasagna" above. Was losing to bare "verdicchio" (Wine -
+    # White) for "Rocca Del Forti Bollicine Di Verdicchio D.o.c Brut".
+    ("Wine - Sparkling", ["bollicine"]),
 ]
 
 
@@ -3976,7 +4082,7 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({"Chicken", "Pasta & Couscous"}),  # e.g. chicken pasta
     frozenset({"Butter", "Sweet Snacks"}),  # e.g. "butter sweets" toffee
     frozenset({"Biscuits", "Honey"}),  # e.g. honey almond cookies
-    frozenset({"Cooking Creams", "Spirits - Liquers"}),  # cream liqueurs
+    frozenset({"Cooking Creams", "Spirits - Liqueurs"}),  # cream liqueurs
     frozenset({"Frozen", "Fruits"}),  # frozen fruit
     frozenset({"Cheese", "Honey"}),  # e.g. goat cheese with honey
     frozenset({"Coffee", "Cooking Creams"}),  # e.g. coffee creamer, Irish cream latte
@@ -4090,7 +4196,7 @@ KNOWN_ACCEPTED_COLLISIONS = {
     # the real product names behind it and confirmed to land correctly (a
     # macaron liqueur, an oat shampoo, an avocado hair conditioner, a
     # coconut lentil cake). Listed so the run report stays readable.
-    frozenset({'Biscuits', 'Spirits - Liquers'}),
+    frozenset({'Biscuits', 'Spirits - Liqueurs'}),
     frozenset({'Cake Preparations', 'Fruits'}),
     frozenset({'Cereals', 'Cooking Creams'}),
     frozenset({'Cereals', 'Crackers, Crispbread & Breadsticks'}),
@@ -4145,13 +4251,13 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Bread', 'Lamb'}),
     frozenset({'Butter', 'Sauces & Condiments'}),
     frozenset({'Cake Preparations', 'Cooking Creams'}),
-    frozenset({'Cake Preparations', 'Spirits - Liquers'}),
+    frozenset({'Cake Preparations', 'Spirits - Liqueurs'}),
     frozenset({'Canned Seafood', 'Pasta & Couscous'}),
     frozenset({'Canned Seafood', 'Water'}),
     frozenset({'Carbonated Drinks', 'Make Up'}),
     frozenset({'Carbonated Drinks', 'Sweet Snacks'}),
     frozenset({'Cheese', 'Milk'}),
-    frozenset({'Chilled Fish', 'Spirits - Liquers'}),
+    frozenset({'Chilled Fish', 'Spirits - Liqueurs'}),
     frozenset({'Chilled Fish', 'Sweet Snacks'}),
     frozenset({'Cloths & Sponges', 'Sports'}),
     frozenset({'Cold Cuts', 'Dried Fruit'}),
@@ -4170,7 +4276,7 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Jelly', 'Toys & Games'}),
     frozenset({'Milk', 'Sports'}),
     frozenset({'Nuts', 'Sports'}),
-    frozenset({'Rice', 'Spirits - Liquers'}),
+    frozenset({'Rice', 'Spirits - Liqueurs'}),
     frozenset({'Rice', 'Sports'}),
     frozenset({'Sauces & Condiments', 'Sweet Snacks'}),
     frozenset({'Sauces & Condiments', 'Vinegars'}),
@@ -4395,7 +4501,7 @@ SCOPED_KEYWORD_RULES = {
         ("Wine - White", ["bianco", "white", "blanc", "cortese", "chablis", "verdejo", "albarino", "orvieto", "frascati", "bourgogne blanc"]),
         ("Wine - Red", ["rouge", "rosso", "red", "tinto", "nerello", "pinotage", "zinfandel", "zinfadel", "gamay", "cinsault", "bardolino", "bordeaux", "chateau", "emilion", "brunello", "barbera", "dolcetto", "ammasso", "barrel aged"]),
         ("Beers", ["alhambra", "bavaria", "budweiser", "baladin", "radler", "birra", "beer", "pilsner", "stout"]),
-        ("Spirits - Liquers", ["tequila", "teqila", "campari", "aperol", "bitters", "bitter", "advokaat", "bombay sapphire", "angostura", "caffo", "cocktail"]),
+        ("Spirits - Liqueurs", ["tequila", "teqila", "campari", "aperol", "bitters", "bitter", "advokaat", "bombay sapphire", "angostura", "caffo", "cocktail"]),
         ("Carbonated Drinks", ["gazzosa", "limonata", "tonic", "britvic", "frizzante"]),
         ("Juices", ["cappy", "belte", "multi vitamin", "multivitamin", "aloe vera drink", "aleo vera"]),
         ("Water", ["acqua"]),
