@@ -4428,6 +4428,34 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Cheese', 'Sauces & Condiments'}),
     frozenset({'Deodorants', 'Skin Care'}),
     frozenset({'Chips', 'Nuts'}),
+
+    # 24 Aug 2026 -- same reason, second batch, now that the pairs above
+    # dropped off the report and let these rise to the top instead. Each
+    # checked against both its original examples and the fresh ones this
+    # round's report surfaced:
+    #   Legumes/Vegetables -- Bigilla (broad-bean paste) and bean/pea/carrot
+    #     mixes correctly resolve to Legumes or Vegetables as appropriate.
+    #   Nuts/Snacks -- Bankok nuts correctly resolve to Nuts, rice-cake
+    #     snacks correctly resolve to Snacks.
+    #   Cereals/Pasta & Couscous -- "Spelt Penne"/"Spelt Spaghetti" (pasta
+    #     made from spelt flour) correctly resolve to Pasta & Couscous
+    #     despite "spelt" also being registered under Cereals.
+    #   Canned Seafood/Olive Oil -- tuna/salmon/mackerel packed in olive oil
+    #     correctly resolve to Olive Oil.
+    #   Stationery/Toys & Games -- Disney-branded pencil cases correctly
+    #     resolve to Stationery despite the character branding.
+    #   All-purpose Cleaners/Laundry Washing Liquids -- Marsiglia-soap
+    #     degreasers/washing liquids correctly resolve to Laundry Washing
+    #     Liquids.
+    #   Beers/Vegetables -- ginger beer correctly resolves to Beers despite
+    #     "ginger" also being a registered Vegetables keyword.
+    frozenset({'Legumes', 'Vegetables'}),
+    frozenset({'Nuts', 'Snacks'}),
+    frozenset({'Cereals', 'Pasta & Couscous'}),
+    frozenset({'Canned Seafood', 'Olive Oil'}),
+    frozenset({'Stationery', 'Toys & Games'}),
+    frozenset({'All-purpose Cleaners', 'Laundry Washing Liquids'}),
+    frozenset({'Beers', 'Vegetables'}),
 }
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
