@@ -104,7 +104,15 @@ PAVI_CATEGORY_MAP = {
     "BEEF": "Beef", "MOUTHWASH": "Mouthwash", "INSECT KILLER": "Insect Killer", "JELLY": "Jelly",
     "CHILLED FISH": "Chilled Fish", "SHOE POLISH": "Shoe Polish", "WRAPS": "Wraps",
     "DISHWASHER TABLETS": "Dishwasher Tablets", "FOOTCARE PRODUCTS": "Footcare Products",
-    "CANNED FRUIT": "Canned Fruit", "SPIRITS - LIQUEURS": "Spirits - Liqueurs",
+    "CANNED FRUIT": "Canned Fruit",
+    # Key intentionally kept as PAVI's own (misspelled) raw category string --
+    # this dict is a lookup on PAVI's actual chain_category value, which really
+    # is "SPIRITS - LIQUERS" in their source data (one 'U' short of correct).
+    # Only the canonical VALUE we output should be spelled correctly. Renaming
+    # the key here to match the value's spelling on 24 Aug 2026 broke this
+    # lookup for every PAVI liqueur/vintage-spirit listing (16 real production
+    # listings went unclassified as a direct result) -- restored same day.
+    "SPIRITS - LIQUERS": "Spirits - Liqueurs",
     "COTTON BUDS": "Cotton Buds", "PORK": "Pork", "SWEET SNACKS": "Sweet Snacks",
     "ICED COFFEE": "Iced Coffee", "DRINKING CHOCOLATE": "Drinking Chocolate",
     "READY MEALS": "Ready Meals", "HONEY": "Honey", "SKIN CARE": "Skin Care",
@@ -2280,6 +2288,16 @@ KEYWORD_RULES = [
 # below, since it's more specific than the bare "egg" single-word rule it's
 # here to override.
 MULTI_KEYWORD_RULES = [
+    # 24 Aug 2026 -- fixes for the top same-tier collisions found by a full
+    # production run's "matches keywords from more than one category" report
+    # (5,772 listings). Each entry below is a single more-decisive word that
+    # was losing a same-tier tie, purely on KEYWORD_RULES list order, to a
+    # shorter/more-generic word for an unrelated category:
+    ("Wine - Rose", ["rosato"]),  # e.g. "Caleo 2022 Primitivo Rosato" was landing on Wine - Red because the grape variety "primitivo" (a red grape) is also registered there -- the wine's own explicit colour word should always win over a grape-variety word that merely leans red
+    ("Crackers, Crispbread & Breadsticks", ["nairn's"]),  # brand identity beats a generic ingredient word -- "Nairn's Gf Raisin Apple Oaty Bar" was landing on Fruits via bare "apple", even though Nairn's is an oatcake/oat-bar brand with its own keyword already registered under this category
+    ("Jelly", ["jam"]),  # the product-type word "jam" is more decisive than an ingredient callout -- "Alce Nero Organic Honey Citrus Fruits Jam" was landing on Fruits via bare "fruit" ahead of the actual product type
+    ("Hand Wash Liquids", ["oil", "soap"]),  # co-occurrence, not a bare "oil" promotion -- "Venus Secrets Cannabis Oil Soap" was landing on Oils via bare "oil"; requiring both words present keeps this narrow (an actual cooking/skincare oil that never says "soap" is unaffected)
+    ("Shower Gels", ["radox"]),  # brand beats ingredient word -- "Radox Salts Pouch Feel Relaxed" (bath salts) was landing on Herbs & Spices via bare "salt"; Radox already has its own Shower Gels keyword, it was just losing the tie
     # 18 Aug 2026 -- EIGHTH sweep regression fixes, checked ahead of everything
     # else for the same reason as the Areon/Conditioner/Candle rules below: each
     # is a brand or compound phrase that was losing to a shorter, more generic
@@ -4497,7 +4515,7 @@ SCOPED_KEYWORD_RULES = {
     ("welbees", "Drinks"): [
         # Colour first -- it is the most reliable signal on a wine label.
         ("Wine - Rose", ["rose", "rosato", "rosado", "anjou", "provence"]),
-        ("Wine - Sparkling", ["sparkling", "sparking", "frizzant", "cuvee", "champagne", "bollinger", "blue nun", "moscato d asti"]),
+        ("Wine - Sparkling", ["sparkling", "sparking", "frizzant", "cuvee", "champagne", "bollinger", "blue nun", "moscato d asti", "brut"]),  # bare "brut" is unsafe globally (collides with Faberge Brut in Perfume -- see the 23 Aug 2026 note above), but scoped to this aisle it's unambiguous; closes 5 unclassified welbees/Drinks listings (Veuve Clicquot Brut, Chevaliers de Malte Brut, etc.)
         ("Wine - White", ["bianco", "white", "blanc", "cortese", "chablis", "verdejo", "albarino", "orvieto", "frascati", "bourgogne blanc"]),
         ("Wine - Red", ["rouge", "rosso", "red", "tinto", "nerello", "pinotage", "zinfandel", "zinfadel", "gamay", "cinsault", "bardolino", "bordeaux", "chateau", "emilion", "brunello", "barbera", "dolcetto", "ammasso", "barrel aged"]),
         ("Beers", ["alhambra", "bavaria", "budweiser", "baladin", "radler", "birra", "beer", "pilsner", "stout"]),
