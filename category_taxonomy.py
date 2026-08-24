@@ -4390,6 +4390,44 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Chicken', 'Snacks'}),
     frozenset({'Snacks', 'Vegetables'}),
     frozenset({'Cloths & Sponges', 'Floor Cleaners'}),
+
+    # 24 Aug 2026 -- a different reason for the same mechanism. These pairs
+    # are NOT dual-identity products like the ones above -- each one DOES
+    # have a single correct answer. But that answer has now been checked,
+    # individually, against real product names across five separate
+    # collision-report rounds (24 Aug 2026), and classify_by_name already
+    # gets it right every time purely through existing KEYWORD_RULES list
+    # order -- there is no bug left to fix, just a same-tier keyword match
+    # that happens to already resolve correctly. Left unsuppressed, these
+    # would keep resurfacing at the top of every future report with nothing
+    # new to do about them, for the exact reason described in this
+    # section's own intro comment. Verified per pair, not blanket-added:
+    #   Fruits/Sweet Snacks -- gum, marshmallow, and sour-candy products all
+    #     correctly resolve to Sweet Snacks despite a fruit-flavour word
+    #     also matching (e.g. "Warheads Super Sour Bubble Gum ... Raspberry").
+    #   Floor Cleaners/Household Goods -- Vileda/Leifheit mop products
+    #     correctly resolve to Floor Cleaners despite the brand also being a
+    #     registered Household Goods keyword.
+    #   First Aid/Skin Care -- Vitamin C skincare (masks, serums, creams)
+    #     correctly resolves to Skin Care; see the 23 Aug 2026 note earlier
+    #     in KEYWORD_RULES for why bare "vitamin c" was moved to the very
+    #     end of the list for exactly this reason.
+    #   Biscuits/Cakes -- Jaffa Cakes correctly resolve to Cakes, brownie
+    #     cookies correctly resolve to Biscuits.
+    #   Cheese/Sauces & Condiments -- curd cheese (Milochka, Karums, Svalia)
+    #     correctly resolves to Cheese despite "curd" also matching Sauces.
+    #   Deodorants/Skin Care -- Sanex/Borotalco deodorant and talcum
+    #     products correctly resolve to Deodorants; Nivea face products
+    #     correctly resolve to Skin Care or the more specific Face Creams.
+    #   Chips/Nuts -- Lorenz cashews/pistachios/peanuts correctly resolve to
+    #     Nuts despite also matching a Chips keyword.
+    frozenset({'Fruits', 'Sweet Snacks'}),
+    frozenset({'Floor Cleaners', 'Household Goods'}),
+    frozenset({'First Aid', 'Skin Care'}),
+    frozenset({'Biscuits', 'Cakes'}),
+    frozenset({'Cheese', 'Sauces & Condiments'}),
+    frozenset({'Deodorants', 'Skin Care'}),
+    frozenset({'Chips', 'Nuts'}),
 }
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
