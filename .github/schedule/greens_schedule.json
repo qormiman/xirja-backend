@@ -3,7 +3,7 @@
   "runs": [
     {
       "target": "2026-08-25T21:02:00+00:00",
-      "triggered": false
+      "triggered": true
     },
     {
       "target": "2026-08-26T21:47:00+00:00",
