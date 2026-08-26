@@ -2280,6 +2280,23 @@ KEYWORD_RULES = [
     ("Herbs & Spices", ["fish seasoning", "fish rub"]),  # "Schwartz Fish Seasoning", "Bon Cuisine Zesty Fish Rub & Seasoning" were landing on Chilled Fish via bare "fish" -- these are spice/seasoning blends meant for cooking fish, not fish itself
     ("Skin Care", ["sun milk", "cleansing milk", "aftersun milk", "bath milk", "body milk"]),  # "milk" as a skincare-lotion term (not the dairy product) -- a whole cluster of suncare/cleansing products (Clinians, Equilibra, Carroten, Childs Farm) were landing on the Milk category via bare "milk"
 
+    # 25 Aug 2026 -- unclassified-listing gap-fill (welbees' own "Everyday"
+    # pantyliner line was never matching at all: the existing "every day
+    # sens"/"every day normal" entries -- see the 'Sanitary Towels' co-
+    # occurrence rules and MULTI entries elsewhere -- were written with a
+    # space, but the crawled product names are the single word "Everyday").
+    ("Sanitary Towels", ["everyday sensitive", "everyday normal", "everyday sens", "everyday up"]),
+    ("Bathroom & Wc Cleaner", ["duck total action"]),  # "Duck" (a toilet-cleaner brand) is too generic a word to promote bare -- it collides with actual duck meat/pate products elsewhere in this data -- so scoped to its own specific product-line phrase instead
+    ("Sweet Snacks", ["skinny crunch"]),  # The Skinny Food Co's low-calorie snack-bar line (WebSearch-confirmed)
+    # NOTE: "plumcake" was NOT missing from the taxonomy -- it's already
+    # registered under Biscuits (see the "mulino bianco"/"flauti"/"plumcake"/
+    # "niederegger" entry earlier in this list). The real bug was that bare
+    # "milk" (registered far earlier, line ~430) was beating it on
+    # "Midi Plumcake With Milk Cream" since both are word-tier and list
+    # order decides ties -- fixed below via a MULTI_KEYWORD_RULES promotion
+    # instead of by re-registering "plumcake" a second time under a
+    # different category.
+
     # 24 Aug 2026 -- fourth pass phrases (see the matching-date comment in
     # MULTI_KEYWORD_RULES above for context).
     ("All-purpose Cleaners", ["scouring cream"]),  # "Cif Scouring Cream Lemon" was landing on Cooking Creams via bare "cream" -- it's a cleaning product, not a food cream
@@ -2351,6 +2368,7 @@ MULTI_KEYWORD_RULES = [
     # (which counts every store listing, not one row per distinct product
     # name, so its ranking differs somewhat from the full-export analysis
     # above -- both are being worked through in parallel).
+    ("Cake Preparations", ["bicarbonate", "soda"]),  # "Bicarbonate Of Soda"/"Multi Purpose Bicarbonate Of Soda" (baking soda) was landing on Carbonated Drinks -- the line-3465 "bicarbonate" tier-0 fix already existed for this but was placed AFTER the "soda" tier-0 rule below, so list order still let "soda" win every time; this earlier, more specific co-occurrence entry actually wins the tie (26 Aug 2026)
     ("Carbonated Drinks", ["soda"]),  # unambiguous fizzy-drink word -- "Warheads Soda Green Apple", "Living Things Soda Rhubarb & Apple" were landing on Fruits via the bare flavour word
     ("Carbonated Drinks", ["perrier"]),  # brand, already registered but losing ties to bare "orange" -- "Maison Perrier Forever Orange"
     ("Carbonated Drinks", ["pepsi"]),  # brand, already registered but losing ties to bare "cream" -- "Pepsi Strawberry N Cream Zero Can" was landing on Cooking Creams
@@ -2362,6 +2380,62 @@ MULTI_KEYWORD_RULES = [
     ("Spirits - Liqueurs", ["gin", "peach"]),  # "Pride Of Wembley Peach Gin" was landing on Fruits. Checked the full export for false positives first (a "peach" dessert/tea product that happens to also mention "gin") -- none found
     ("Spirits - Liqueurs", ["gin", "grapefruit"]),  # "Caelestis Grapefruit Gin" -- same pattern, also checked for false positives
     ("Spirits - Liqueurs", ["spritz"]),  # already a registered keyword but losing same-tier ties to bare fruit words -- "Spritz Peach" was landing on Fruits; "spritz" is an unambiguous cocktail-style term
+
+    # 25 Aug 2026 -- seventh pass. "milk" as a flavour descriptor on
+    # wafer/biscuit products (milk chocolate coating) was repeatedly
+    # beating the actual product-type word or brand -- "Deco' Mini Wafers
+    # Milk", "Jaffa Wafers Milk & Hazelnut", "Bahlsen Kunterbunt Milk",
+    # "Loacker Milk & Cereals" were all landing on the dairy Milk category.
+    ("Biscuits", ["wafer"]),
+    ("Biscuits", ["bahlsen"]),
+    ("Biscuits", ["loacker"]),
+    ("Biscuits", ["plumcake"]),  # same "milk" flavour-descriptor problem -- "Midi Plumcake With Milk Cream" was landing on Milk; "plumcake" is already registered under Biscuits (see "mulino bianco"/"flauti"/"plumcake"/"niederegger" earlier), this just promotes it to tier 0 so it beats the bare "milk" tie
+
+    # 26 Aug 2026 -- ninth pass, full-DB re-analysis after the taxonomy grew.
+    # "Borotalco" is a bare brand word under Deodorants (line ~1092), and it
+    # was beating the two Italian compound words for "shower gel"/"bath
+    # foam" -- "bagnodoccia" and "bagnoschiuma" -- since both are single
+    # words (no space in the source text) tied at the same tier, and
+    # "borotalco" appears earlier in list order. Real regression: the
+    # production DB already has "Borotalco Bagnoschiuma Setificante 600ml"
+    # correctly filed under Shower Gels from an earlier run, and this bug
+    # would have flipped it (and similar bagnodoccia/bagnoschiuma products)
+    # back to Deodorants on the next run. Borotalco genuinely spans both
+    # product lines (WebSearch/CSV-confirmed: they make deodorant roll-ons,
+    # sprays, and talc AND shower gels/bath foam), so -- same reasoning as
+    # the existing "deliberately NOT sanex/malizia" comment on that
+    # Deodorants line -- the fix is to promote the two shower-gel-specific
+    # words to tier 0 rather than touch the bare brand word (which still
+    # correctly catches actual Borotalco deodorant/talc products via
+    # "roll on", "deo spray", "deodorant", etc., or falls through to
+    # Skin Care for bare talc/powder items).
+    ("Shower Gels", ["bagnodoccia"]),
+    ("Shower Gels", ["bagnoschiuma"]),
+
+    # 26 Aug 2026 -- ninth pass continued. The generic "multi purpose" /
+    # "multipurpose" phrase (tier 1) and "multiuso" (bare word, tier 2)
+    # under All-purpose Cleaners are FAR too broad -- they're a common
+    # marketing descriptor on all sorts of non-cleaning products (tools,
+    # gloves, openers, torches, sponges, drain unblockers, even gluten-free
+    # flour), and were winning ties against the products' own, much more
+    # specific, already-registered category words. Not touching the bare
+    # phrase itself (real cleaners like "Astonish Multi Purpose Cleaner",
+    # "Dettol...Multi Purpose Cleaner", "MULTI PURPOSE CLEANER CITRUS" still
+    # need it, and it's the only signal some of them have) -- instead
+    # promoting the specific conflicting words, the same pattern used
+    # throughout this file, each checked against the full CSV export first.
+    ("Household Goods", ["multiuso", "guanti"]),  # "Guanti Satinati Multiuso" -- satin gloves, not a cleaner
+    ("Household Goods", ["multi purpose", "glove"]),
+    ("Household Goods", ["multi purpose", "bottle opener"]),  # "Fatigati Multi Purpose Bottle Opener"
+    ("Stationery", ["multi purpose", "scissors"]),  # "Korbond Multi Purpose Scissors" -- "Fatigati Multipurpose Scissors" already resolves fine via "scissors" alone beating "multi purpose" by word-count coincidence, but the tie needs closing properly
+    ("Stationery", ["multipurpose", "scissors"]),
+    ("Electrical", ["multi purpose", "torch"]),  # "Prof Premium Multipurpose Torch"
+    ("Electrical", ["multipurpose", "torch"]),
+    ("Cloths & Sponges", ["multipurpose", "sponge"]),  # already resolves correctly today (word-count coincidence again), promoted anyway to close the tie properly rather than leave it to luck
+    ("Cloths & Sponges", ["multi purpose", "sponge"]),
+    ("Drain Unblockers", ["multi purpose", "unblocker"]),  # "Kilrock Rhino Drain Unblocker Multi Purpose 1 Lt" -- was landing on All-purpose Cleaners
+    ("Flour", ["multiuso", "farina"]),  # "Nutri Free Farina Multiuso Gluten Free 1kg" -- Italian for "multi-purpose flour", not a cleaner
+    ("All-purpose Cleaners", ["turtle wax", "leather cleaner"]),  # "Turtle Wax Leather Cleaner Lux" -- bare "turtle wax" is a Household Goods fallback since there's no keyword path to the Car Accessories category, but this specific product is unambiguously a cleaner
     # 18 Aug 2026 -- EIGHTH sweep regression fixes, checked ahead of everything
     # else for the same reason as the Areon/Conditioner/Candle rules below: each
     # is a brand or compound phrase that was losing to a shorter, more generic
@@ -4456,6 +4530,47 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Stationery', 'Toys & Games'}),
     frozenset({'All-purpose Cleaners', 'Laundry Washing Liquids'}),
     frozenset({'Beers', 'Vegetables'}),
+
+    # 25 Aug 2026 -- third batch, same reasoning as the two above.
+    #   Hair & Nail Accessories/Toys & Games -- Disney-branded hairbrushes,
+    #     paddle brushes, and nail files correctly resolve to Hair & Nail
+    #     Accessories despite the character branding.
+    #   Oils/Vegetables -- vegetables preserved in oil (mushrooms,
+    #     artichokes) correctly resolve to Oils.
+    #   Sauces & Condiments/Vegetables -- tomato passata/polpa correctly
+    #     resolves to Sauces & Condiments despite "tomato" also being a
+    #     registered Vegetables keyword.
+    frozenset({'Hair & Nail Accessories', 'Toys & Games'}),
+    frozenset({'Oils', 'Vegetables'}),
+    frozenset({'Sauces & Condiments', 'Vegetables'}),
+
+    # 26 Aug 2026 -- fourth batch, from a fresh full-DB re-analysis (93,780
+    # distinct product names) after this round's fixes. Same reasoning as
+    # the three batches above -- each checked against its top examples:
+    #   Clothes/Dilutables -- "Bolero" socks correctly resolve to Clothes
+    #     via bare "sock" despite "bolero" also being a registered
+    #     Dilutables brand keyword (Bolero's actual instant-drink sachets
+    #     all say "Instant Drink", never "sock").
+    #   Fruits/Sports -- Dragon Fruit products correctly resolve to Fruits
+    #     via bare "fruit"; the "dragon" bare-brand promotion this pair is
+    #     named for was already deliberately scoped narrower (see the 23
+    #     Aug 2026 "dragon is a special case" comment above) specifically
+    #     to avoid this collision.
+    #   Household Goods/Vegetables -- Sistema/Tefal/Saitaku kitchenware
+    #     correctly resolves to Household Goods via the brand name; actual
+    #     food products (sushi ginger, vegetable lunch bowls) correctly
+    #     resolve to Vegetables despite a kitchenware brand/word also
+    #     matching.
+    #   Biscuits/Vegetables -- ginger/pumpkin/chive biscuits and cookies
+    #     correctly resolve to Biscuits via the product-type word.
+    #   Chocolates/Fruits -- checked across both directions: chocolate-brand
+    #     products (Ferrero, Snickers, Sperlari) and fruit-forward products
+    #     each resolve to the correct side; nothing landing wrong.
+    frozenset({'Clothes', 'Dilutables'}),
+    frozenset({'Fruits', 'Sports'}),
+    frozenset({'Household Goods', 'Vegetables'}),
+    frozenset({'Biscuits', 'Vegetables'}),
+    frozenset({'Chocolates', 'Fruits'}),
 }
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
