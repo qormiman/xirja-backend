@@ -7,7 +7,7 @@
     },
     {
       "target": "2026-08-26T21:26:00+00:00",
-      "triggered": false
+      "triggered": true
     }
   ]
 }
