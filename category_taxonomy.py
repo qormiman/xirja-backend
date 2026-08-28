@@ -5253,10 +5253,58 @@ def _keyword_matches(keyword, cleaned_text):
     accented letter (e.g. 'head & shoulders', 'rosé wine') could never
     match, since the product text has already had that same punctuation
     stripped out. See _compiled_keyword_pattern for why this is now
-    cached rather than rebuilt every call."""
+    cached rather than rebuilt every call.
+
+    Kept as the small, obviously-correct reference implementation -- used
+    directly by SCOPED_KEYWORD_RULES (a handful of entries, not worth
+    optimising) and by anything reasoning about a single keyword in
+    isolation. The hot path (classify_by_name / matching_categories_by_name,
+    which each check thousands of keywords per listing) uses
+    _fast_keyword_matches below instead; see its docstring for why."""
     return _compiled_keyword_pattern(keyword).search(cleaned_text) is not None
 
 
+@functools.lru_cache(maxsize=None)
+def _cleaned_keyword_forms(keyword):
+    """(cleaned_keyword, cleaned_keyword_plural, is_phrase) for one keyword,
+    cached -- companion to _compiled_keyword_pattern, computed once per
+    distinct keyword no matter how many listings get classified."""
+    cleaned_keyword = clean_for_matching(keyword)
+    return cleaned_keyword, cleaned_keyword + "s", " " in cleaned_keyword
+
+
+def _fast_keyword_matches(keyword, word_set, cleaned_text):
+    """Same match semantics as _keyword_matches (whole word/phrase, with
+    automatic trailing-'s' pluralisation), but far cheaper at this file's
+    current scale.
+
+    Real performance bug found on 28 Aug 2026: by the 24 Aug fix (see
+    _compiled_keyword_pattern's docstring), a single classify_by_name() call
+    ran one compiled-regex .search() per keyword -- fine at 628 keywords,
+    but this file has since grown past 5,000 individual keyword strings
+    across MULTI_KEYWORD_RULES and KEYWORD_RULES, and a live production run
+    (136,480 listings, each also re-scanned a second time by the collision
+    report) started missing the pipeline's 600-second hard timeout.
+
+    A regex .search() re-scans the whole cleaned product name looking for
+    a match position -- wasted work for the overwhelming majority of
+    keywords, which are a single word: whether "chips" appears in a ~40
+    character name is a whole-word-set membership question, not a string-
+    search question. Splitting the cleaned name into a word set once per
+    name (see classify_by_name/matching_categories_by_name) turns every
+    single-word keyword check into an O(1) hash lookup instead of a regex
+    scan. Multi-word phrase keywords (a small minority of the total) still
+    need the original regex path, since a set of individual words can't
+    tell whether "olive" and "oil" were adjacent -- those fall through to
+    _compiled_keyword_pattern unchanged. Behaviour is identical to
+    _keyword_matches for every keyword; this is purely a speed fix."""
+    cleaned_keyword, plural, is_phrase = _cleaned_keyword_forms(keyword)
+    if is_phrase:
+        return _compiled_keyword_pattern(keyword).search(cleaned_text) is not None
+    return cleaned_keyword in word_set or plural in word_set
+
+
+@functools.lru_cache(maxsize=None)
 def classify_by_name(product_name):
     """Returns a canonical category name, or None if nothing in
     MULTI_KEYWORD_RULES or KEYWORD_RULES matched.
@@ -5278,26 +5326,38 @@ def classify_by_name(product_name):
     (under Frozen) was even checked, since Dairy is listed before Frozen.
     Checking every phrase across the whole list before any single word
     avoids having to hand-order every category relative to every other one.
-    Found and verified via audit_keyword_rules.py, not guessed."""
+    Found and verified via audit_keyword_rules.py, not guessed.
+
+    Memoized (see @functools.lru_cache below) and uses _fast_keyword_matches
+    internally -- see that function's docstring (28 Aug 2026) for why: this
+    file has grown past 5,000 individual keyword strings, and a plain
+    regex-per-keyword scan on every one of 136,480 listings started missing
+    the pipeline's 600-second hard timeout. Memoizing by product_name also
+    means the ~30% of listings that share an identical name with another
+    listing (same product stocked at multiple stores) are classified once,
+    not once per row -- categorize_listings.py calls this once per listing,
+    so that redundancy was previously paid for in full, every run."""
     cleaned = clean_for_matching(product_name)
+    word_set = frozenset(cleaned.split())
 
     for category, required_words in MULTI_KEYWORD_RULES:
-        if all(_keyword_matches(w, cleaned) for w in required_words):
+        if all(_fast_keyword_matches(w, word_set, cleaned) for w in required_words):
             return category
 
     for category, keywords in KEYWORD_RULES:
         for kw in keywords:
-            if " " in kw.strip() and _keyword_matches(kw, cleaned):
+            if " " in kw.strip() and _fast_keyword_matches(kw, word_set, cleaned):
                 return category
 
     for category, keywords in KEYWORD_RULES:
         for kw in keywords:
-            if " " not in kw.strip() and _keyword_matches(kw, cleaned):
+            if " " not in kw.strip() and _fast_keyword_matches(kw, word_set, cleaned):
                 return category
 
     return None
 
 
+@functools.lru_cache(maxsize=None)
 def matching_categories_by_name(product_name):
     """Returns {category: tier} for every category whose KEYWORD_RULES
     entry matches this name -- not just the one classify_by_name would
@@ -5325,8 +5385,17 @@ def matching_categories_by_name(product_name):
 
     Deliberately doesn't consider MULTI_KEYWORD_RULES pairs as colliding
     with each other -- those are already deliberate, checked-in overrides
-    for known collisions, not things left to find."""
+    for known collisions, not things left to find.
+
+    Memoized and uses _fast_keyword_matches internally -- see
+    classify_by_name's docstring (28 Aug 2026) for why: this function does
+    the same full unconditional scan of every keyword (it never short-
+    circuits, since it needs every match, not just the first), so it was
+    the more expensive half of the pair of full-listing passes
+    categorize_listings.py does per run and the bigger contributor to a
+    real production run missing its 600-second timeout."""
     cleaned = clean_for_matching(product_name)
+    word_set = frozenset(cleaned.split())
     best_tier = {}
 
     def note(category, tier):
@@ -5334,12 +5403,12 @@ def matching_categories_by_name(product_name):
             best_tier[category] = tier
 
     for category, required_words in MULTI_KEYWORD_RULES:
-        if all(_keyword_matches(w, cleaned) for w in required_words):
+        if all(_fast_keyword_matches(w, word_set, cleaned) for w in required_words):
             note(category, 0)
 
     for category, keywords in KEYWORD_RULES:
         for kw in keywords:
-            if _keyword_matches(kw, cleaned):
+            if _fast_keyword_matches(kw, word_set, cleaned):
                 note(category, 1 if " " in kw.strip() else 2)
 
     return best_tier
