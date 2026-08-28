@@ -1855,7 +1855,7 @@ KEYWORD_RULES = [
     ('Stain Removers', ['stain off', 'stain solve']),
     ('Cloths & Sponges', ['reusable gloves', 'nitrile gloves', 'cotton gloves', 'gloves multi touch', 'microfibre', 'micro fibre', 'scrub mommy', 'dust magnet', 'yellow duster', 'cleaning pads', 'iron cleaning pads']),
     ('Disposables', ['foiltray', 'foil container', 'roasting bag', 'roasting dish', 'cling wrap', 'non stickpaper', 'flan dish', 'flan dishes', 'pie dish', 'foodsaver bags', 'toliet paper', 'hankies', 'hanky', 'cartapaglia', 'gran tavola scozzersi', 'super soft color']),
-    ('Stationery', ['writing set', 'colour peps', 'compass study holder', 'flexible', 'protractor', 'hilghlighters', 'pastel highlighters', 'clip board', 'transparent plastic folder', 'poster paint', 'jotter', 'blister pen', 'xblister', 'xblisters', 'duplicate book', 'whsmith tags', 'doodlerz gel', 'retractable ball', 'z-grip', 'zb ola ball', 'clay paint', 'sensory art', 'heart style pen']),
+    ('Stationery', ['writing set', 'colour peps', 'compass study holder', 'protractor', 'hilghlighters', 'pastel highlighters', 'clip board', 'transparent plastic folder', 'poster paint', 'jotter', 'blister pen', 'xblister', 'xblisters', 'duplicate book', 'whsmith tags', 'doodlerz gel', 'retractable ball', 'z-grip', 'zb ola ball', 'clay paint', 'sensory art', 'heart style pen']),  # bare "flexible" (28 Aug 2026) removed -- too broad, CSV shows it wrongly tagging a hair-styling mousse, a garden hose, a hairspray brand, and duster products as Stationery; "ruler"/"protractor" real Stationery items still match via their own keywords
     ('Toys & Games', ['hot wheels', 'matchbox', 'skip bo', 'magnetic letters', 'magnetic numbers', 'play food set', 'pull back', 'farm animals', 'playset dinosauri', 'princess bust', 'real baby', 'doctor set', 'glass marbles', 'construction vehicle', 'assorted cars', 'friction fire engine', 'changeable robot', 'mixer playset', 'combat set', 'racer', 'stacking flowers', 'space balls', 'free wheel trailer']),
     ('Electrical', ['stand fan', 'cordless black', 'vacuum cleaner', 'powerbank', 'mini chopper', 'high power aa', 'high power aaa', 'instax', 'sodastream']),
     ('Household Goods', ['slow cooker', 'sandwich tin', 'loaf tin', 'stainless steel fillet knife', 'personal cool bag', 'set of plates', 'double walled', 'strainer', 'citrus squeezer', 'bed sheets', 'fitted sheet', 'pillow case', 'toilet brush & holder', 'air fryer', "dish w'lid", 'dish w/llid', 'rectangular dish', 'cook&store', 'b b q plates', 'square plates 24cm', 'tablecloth', 'bio plates', 'christmas plates', 'pla cups', 'birthday flags', 'streamers', 'gas pump clock', 'thumblers', 'ashtrays', 'long drink glass', 'empire glasses', 'manicare essentials travel bottle', 'bestlock belt', 'massage glove', 'simpl hob']),
@@ -2313,6 +2313,7 @@ KEYWORD_RULES = [
     ("Cheese", ["burrata", "gibnaroll"]),  # "Dalli Cardillo Santa Marta Burrata"; "Hanini Gibnaroll Peppered" -- the existing entry (line ~2067) only has the plural "gibnarolls", this crawled name is singular
     ("Chocolates", ["rocky road"]),  # "Moo Rocky Road Bites" -- a chocolate confectionery product, not a Healthy Section item
     ("Perfume", ["french avenue"]),  # "French Avenue Sultana The Joyful Edp" was landing on Dried Fruit via bare "sultana"; French Avenue is exclusively a perfume brand in the CSV (23/23 occurrences)
+    ("Household Goods", ["lint remover"]),  # 28 Aug 2026 -- "Leifheit Lint Remover With Batteries" was landing on Electrical via bare "batteries"; not registered as a keyword at all before this
 ]
 
 
@@ -2762,6 +2763,7 @@ MULTI_KEYWORD_RULES = [
     # bare "almond".
     ("Skin Care", ["face scrub"]),
     ("Skin Care", ["body scrub"]),
+    ("Skin Care", ["clear pore"]),  # 28 Aug 2026 -- "Simple Daily Skin Detox Clear Pore Scrub" went unclassified after bare "detox" was removed from Sports (it was a real bug, matching non-sports detox products); this restores a correct, specific match for it instead of relying on the removed bare word
     # "Douche" -- French/Dutch for "shower", used on real European-brand
     # shower gels sold in Malta (confirmed via WebSearch: Nivea's own site
     # calls its shower gel range "Gel Douche"/"Douche Creme"). Found via
@@ -4308,6 +4310,12 @@ MULTI_KEYWORD_RULES = [
     ("Cake Preparations", ["lamb", "tartar"]),  # "Lamb Powders Cream Tartar" -- a truncated "Lamb Brand Powders Cream Of Tartar" (a Maltese baking-spice brand), not the animal or a cooking cream; same Lamb-Brand-prefix pattern already carved out elsewhere in this file (e.g. "lamb"+"icing")
     ("Sugar", ["lamb", "demerara"]),  # "Lamb Sugar Demerara Sugar" -- same Lamb Brand prefix, this time a demerara sugar product, not the animal
     ("Nuts", ["whisky", "mix"]),  # "Serano Nuts Whisky Mix" -- a bar-snack nut mix, not a spirit; CSV confirms no genuine whisky bottle also contains "mix"
+    ("Cold Cuts", ["caula", "peperoni"]),  # "Caula Peperoni" went unclassified after bare "peperoni" was removed from Cold Cuts (a real bug, mostly matching Italian bell-pepper products); ground truth confirms this specific Caula product is Cold Cuts, restored narrowly via brand co-occurrence since other Caula products (Chorizo Cheese, Serrano Olives Cheese) are Ham/Cheese, not Cold Cuts
+
+    # 28 Aug 2026 -- thirteenth pass: fixes from the newest live production
+    # run report (1194 collisions, target <500).
+    ("Hair Styling", ["deluxe", "oil"]),  # Wella's "Deluxe Oil" hair-styling line (mousse/spray variants) was landing on Oils via bare "oil"; scoped to the brand's own product-line word rather than a broad "mousse"+"oil" rule, which would wrongly sweep in real Dove Shower Mousse body-care products
+    ("Make Up", ["labello"]),  # "Nivea Labello Lip Oil" was landing on Oils via bare "oil"; Labello is a dedicated lip-care brand (all 50 CSV products are lip care), same pattern as the existing "rimmel" Make Up carve-out for "Rimmel Lip Oil"
 ]
 
 
@@ -5067,10 +5075,21 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Milk', 'Wine - White'}),     # "Mandorla" (almond, also a winery name) -- correctly Wine - White
     frozenset({'Stock Cubes', 'Wine - White'}),  # "Stock Pots White Wine" -- correctly Stock Cubes
     frozenset({'Cakes', 'Cooking Creams'}),  # "Lemon Custard Cake" -- correctly Cakes
+    frozenset({'Cake Preparations', 'Cooking Creams'}),  # same "Lemon Custard Cake" 3-way tie (Cakes/Cake Preparations/Cooking Creams via bare "cake"/"custard") -- this is the other pairing it generates, also resolves correctly to Cakes
     frozenset({'Chilled Fish', 'Chips'}),    # "Fish & Crisp Fille" -- correctly Chilled Fish
     frozenset({'Biscuits', 'Ham'}),          # "Biscuit Salami" (a chocolate dessert, no meat) -- correctly Biscuits
     frozenset({'Chocolates', 'Herbs & Spices'}),  # truffle-salt seasoning vs chocolate truffles -- already resolves correctly on both sides
     frozenset({'Biscuits', 'Herbs & Spices'}),    # cinnamon-flavoured cookies vs truffle-flavoured oil -- already resolves correctly on both sides
+
+    # 28 Aug 2026 -- eighth batch, from the newest live production run
+    # report. Each already resolves correctly today (verified against real
+    # CSV examples) -- nothing to fix, this just stops them resurfacing.
+    frozenset({'Crackers, Crispbread & Breadsticks', 'Vegetables'}),  # savory-cracker-with-vegetable-flavour naming overlap; CSV ground truth is itself inconsistent for the remaining edge cases, no clean single fix
+    frozenset({'Cereals', 'Meat Alternatives'}),  # Valsoia oat/soya drinks -- correctly split across Milk/Cereals/Nuts by existing rules; bare "valsoia" (for burgers/tofu) only ever loses the tie, no bug
+    frozenset({'Coffee', 'Nuts'}),           # Alpro/Mokate almond & hazelnut coffee drinks -- correctly Coffee
+    frozenset({'Fruits', 'Snacks'}),         # Bankok dried-fruit/nut snack mixes -- correctly resolve per product (Fruits/Chips/Dried Fruit)
+    frozenset({'Carbonated Drinks', 'Dilutables'}),  # plain soda-brand syrup vs Sodastream-branded syrup concentrate -- both correctly resolve to their own bucket
+    frozenset({'Hair Styling', 'Shaving Creams'}),  # "The Barb'" grooming brand -- wax correctly resolves to Hair Styling, genuine shaving items to Shaving Creams
 }
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
