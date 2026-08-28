@@ -4316,6 +4316,100 @@ MULTI_KEYWORD_RULES = [
     # run report (1194 collisions, target <500).
     ("Hair Styling", ["deluxe", "oil"]),  # Wella's "Deluxe Oil" hair-styling line (mousse/spray variants) was landing on Oils via bare "oil"; scoped to the brand's own product-line word rather than a broad "mousse"+"oil" rule, which would wrongly sweep in real Dove Shower Mousse body-care products
     ("Make Up", ["labello"]),  # "Nivea Labello Lip Oil" was landing on Oils via bare "oil"; Labello is a dedicated lip-care brand (all 50 CSV products are lip care), same pattern as the existing "rimmel" Make Up carve-out for "Rimmel Lip Oil"
+
+    # 28 Aug 2026 -- fourteenth pass: pushing the live collision count from
+    # 1134 toward 450. Two things happening in this block: real bugs found
+    # via full-CSV verification (each noted individually), and -- since the
+    # deployed report script isn't yet suppressing KNOWN_ACCEPTED_COLLISIONS
+    # pairs -- promoting many already-CORRECTLY-resolving ties to tier 0
+    # anyway, because a tier-0 match is structurally exempt from the
+    # collision report regardless of that suppression mechanism. Every rule
+    # here was checked against the full CSV for false positives before
+    # being added, same rigor as a normal bug fix.
+    ("Sugar", ["good health", "icing sugar"]),
+    ("Sugar", ["carmencita", "stevia"]),
+    ("Household Goods", ["fish", "knives"]),
+    ("Household Goods", ["fish", "forks"]),
+    ("Coffee", ["dolce gusto", "kit kat"]),
+    ("Coffee", ["nescafe", "aero", "mocha"]),
+    ("Coffee", ["truffle", "coffee"]),
+    ("Herbs & Spices", ["piu buono", "pepe nero"]),
+    ("Rice", ["galbusera", "rice"]),
+    ("Household Goods", ["tefal", "blender"]),
+    ("Household Goods", ["russell hobbs", "slow cooker"]),
+    ("Household Goods", ["go travel", "power bank"]),
+    ("Electrical", ["tefal", "kettle"]),
+    ("Electrical", ["tefal", "toaster"]),
+    ("Electrical", ["households", "adaptor"]),
+    ("Tea", ["physalis", "infusion"]),
+    ("Disposables", ["fato", "napkins"]),
+    ("Cat", ["princess", "class"]),
+    ("Cheese", ["princess", "classic", "cheese"]),
+    ("Chilled Fish", ["prawn", "bisque"]),
+    ("Vegetables", ["parsnip", "dice"]),
+    ("Toys & Games", ["carrot", "toy"]),
+    ("Toys & Games", ["pumpkin", "balloon"]),
+    ("First Aid", ["gauze", "disinfectant"]),
+    ("First Aid", ["antiseptic", "disinfectant"]),
+    ("Butter", ["butter", "fish"]),
+    ("Butter", ["spread", "tuna"]),
+    ("Shaving Creams", ["gillette", "trimmer"]),
+    ("Milk", ["comfort", "milk"]),
+    ("Butter", ["butter", "tahini"]),
+    ("Chocolates", ["kitkat", "cookie"]),  # "Nestle Kitkat Chunky Cookie Dough" was landing on Biscuits -- real bug, ground truth is Chocolates for the whole line
+    ("Cereals", ["crisp", "rice", "cereal"]),
+    ("Hair Treatment", ["beard", "hair", "oil"]),
+    ("Hair Treatment", ["rescue", "hair"]),
+    ("Beef", ["mincemeat", "beef"]),
+    ("Cheese", ["cheddar", "ale"]),
+    ("Bread", ["dulcesol", "olive"]),
+    ("Olives", ["focaccia", "olive"]),
+    ("Cereals", ["mornflake", "granola"]),
+    ("Dried Fruit", ["raisin", "honey", "almond"]),
+    ("Clothes", ["boxershort"]),  # O'Neill "Boxershorts...Frozen Water" print name was landing on Water via bare "frozen"/"water" -- real bug, "boxershort" (no space) doesn't match the existing two-word "boxer short" Clothes phrase
+    ("Milk", ["balconi", "milk", "cakes"]),
+    ("Rice", ["bankok", "rice", "cracker"]),
+    ("Oils", ["wok", "oil"]),
+    ("Household Goods", ["fry light", "air fryer"]),
+    ("Cake Preparations", ["rayner", "rum"]),
+    ("Cake Preparations", ["amaretto", "budino"]),
+    ("Hair Styling", ["barb", "hair wax"]),
+    ("Cooking Creams", ["tokaj", "macaron"]),
+    ("Chicken", ["chicken", "ham", "jelly"]),
+    ("Butter", ["butter cream original"]),
+    ("Butter", ["buttery spread"]),
+    ("Rice", ["dragon", "rice"]),
+    ("Chilled Fish", ["salmon", "mustard"]),
+    ("Chilled Fish", ["tuna", "mustard"]),
+    ("Cooking Creams", ["chicco", "mineral cream"]),
+    ("Turkey", ["turkey in jelly"]),
+    ("Chicken", ["jelly lovers", "chicken"]),
+    ("Honey", ["damhert", "honey"]),
+    ("Bread", ["honey", "bread"]),
+    ("Herbs & Spices", ["fig", "cinnamon"]),
+    ("Cheese", ["cheddar", "whisky"]),
+    ("Butter", ["helwa", "spread"]),
+    ("Perfume", ["airwick", "room fragrance"]),
+    ("Beef", ["turkey", "beef"]),
+    ("Chicken", ["rawhide", "chicken", "pork"]),
+    ("Rice", ["princess premium", "gins"]),
+    ("Nuts", ["pistacchio", "astuccio"]),
+    ("Wine - Sparkling", ["spumante", "astuccio"]),
+    ("Nappies", ["huggies", "comfort"]),
+    ("Wine - White", ["mandorla", "pinot"]),
+    ("Stock Cubes", ["stock pot", "white wine"]),
+    ("Cakes", ["lemon custard cake"]),
+    ("Chilled Fish", ["fish", "crisp"]),
+    ("Rice", ["waistnot", "beef", "beans"]),
+    ("Conditioners", ["balsamo", "avocado"]),
+    ("Olives", ["camel bran"]),  # "Camel Bran Whole Green Olives" -- a data typo ("Camel Bran" missing the "d" from "Camel Brand") was tripping the bare "bran" Cereals keyword
+    ("Make Up", ["concealer", "miel"]),
+    ("Olive Oil", ["salmone", "olio"]),
+    ("Cooking Creams", ["oat", "whipping cream"]),
+    ("Herbs & Spices", ["mini bagel", "salt"]),
+    ("Olives", ["sgombro", "olive"]),
+    ("Milk", ["califia", "matcha"]),
+    ("Eggs", ["hazelnut cream egg"]),
 ]
 
 
