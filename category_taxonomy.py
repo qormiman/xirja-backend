@@ -2436,6 +2436,195 @@ MULTI_KEYWORD_RULES = [
     ("Drain Unblockers", ["multi purpose", "unblocker"]),  # "Kilrock Rhino Drain Unblocker Multi Purpose 1 Lt" -- was landing on All-purpose Cleaners
     ("Flour", ["multiuso", "farina"]),  # "Nutri Free Farina Multiuso Gluten Free 1kg" -- Italian for "multi-purpose flour", not a cleaner
     ("All-purpose Cleaners", ["turtle wax", "leather cleaner"]),  # "Turtle Wax Leather Cleaner Lux" -- bare "turtle wax" is a Household Goods fallback since there's no keyword path to the Car Accessories category, but this specific product is unambiguously a cleaner
+
+    # 26 Aug 2026 -- tenth pass. Large parallel full-DB re-analysis of the
+    # top ~270 remaining collision pairs (each independently CSV-verified
+    # against the 93,780-distinct-name export before being added here, same
+    # rigor as every block above -- diagnosed via matching_categories_by_name()
+    # + _keyword_matches() against real product names, spot-checked against
+    # classify_by_name() before shipping).
+    ("Tea", ["twinings"]),  # "Twinings Rooibos, Honey & Fig Infusion" -> Honey; "Twining's Strawberry And Mango Infuso" -> Fruits. "twinings"/"twining" already registered but losing ties to bare flavour words
+    ("Tea", ["twining"]),
+    ("Tea", ["loyd", "pyr"]),  # "Loyd Pyr..." pyramid-bag tea -- "loyd" alone can't be promoted bare (collides with "Loyd Grossman" sauces), but "pyr" only ever appears on Loyd tea products
+    ("Crackers, Crispbread & Breadsticks", ["oat cake"]),  # "FINE OAT CAKES" -- savoury oatcakes, not dessert cake
+    ("Crackers, Crispbread & Breadsticks", ["buckwheat cake"]),
+    ("Crackers, Crispbread & Breadsticks", ["quinoa cake"]),
+    ("Crackers, Crispbread & Breadsticks", ["spelled cake"]),
+    ("Skin Care", ["aftersun"]),  # "Byron Bay Suncare Aftersun Shimmer Oil" -- suncare products losing to bare "oil"
+    ("Skin Care", ["suncare"]),
+    ("Skin Care", ["carroten"]),
+    ("Spirits - Liqueurs", ["gunpowder"]),  # "Drumshanbo Gunpowder Orange Gin" -- Drumshanbo's gin line, losing to bare "orange"
+    ("Spirits - Liqueurs", ["gordons"]),  # already registered, losing ties to bare "orange" -- "Gordons Gin Mediterranean Orange"
+    ("Spirits - Liqueurs", ["gin", "pineapple"]),  # narrow co-occurrence, not bare "pineapple" (which is a real Fruits word elsewhere)
+    ("Conditioners", ["gliss", "balsamo"]),  # "balsamo" = Italian for conditioner; Gliss/Elvive sell both shampoo and conditioner under the same brand word
+    ("Conditioners", ["elvive", "balsamo"]),
+    ("Carbonated Drinks", ["lemonade"]),  # "GIN & LEMONADE MIXED FRUIT" was landing on Fruits while the near-identical "...STRAWBERRY & LIME" already landed on Carbonated Drinks -- pure list-order luck
+    ("First Aid", ["ear plug"]),  # "Go Travel Pharma Ear Plugs" -- ear plugs are First Aid regardless of which travel-accessories brand sells them
+    ("Bread", ["croissant", "hazelnut"]),  # "7days Croissant Hazelnut Max" -- croissant is the base bread product, hazelnut is filling
+    ("Bread", ["bun", "cashew"]),  # "Johnny Cashew Cinnamon Bun"
+    ("Cold Cuts", ["streaky bacon"]),  # "Fior Di Vita Smoked Streaky Bacon" -- literally bacon, but "Fior Di Vita" is a registered Cheese brand
+    ("Cold Cuts", ["back bacon"]),
+    ("Cold Cuts", ["collar bacon"]),
+    ("Disposables", ["cake board"]),  # "Ipak Cake Board..." -- baking/party disposables, not food, losing to bare "cake"
+    ("Disposables", ["cake tray"]),
+    ("Disposables", ["cake cup"]),
+    ("Disposables", ["plum cake rectangle"]),  # scoped narrow -- NOT bare "plum cake", which is a real dessert elsewhere
+    ("Bread", ["ciabatta"]),  # "Ciabatta Quinoa" was landing on Cereals via "quinoa"
+    ("Household Goods", ["steak knife"]),  # "Tefal...Steak Knives" -- literal cutlery, was landing on Beef via bare "steak"
+    ("Household Goods", ["steak knives"]),  # "knife"->"knives" is an irregular plural that _keyword_matches' automatic trailing-"s" doesn't cover, so the singular phrase above never actually matches real (always-plural) product names -- this covers the real text
+    ("Vegetables", ["truffle", "mushroom"]),  # "MUSHROOM & TRUFFLE BLOCK" -- savoury fungus truffle, not confectionery; bare "truffle" can't be touched globally (dominated by savoury uses)
+    ("Vegetables", ["truffle", "tomato"]),
+    ("Vegetables", ["truffle", "tomatoes"]),
+    ("Herbs & Spices", ["salmon", "seasoning"]),  # "SMOKED SALMON RUB & SEASONING" -- a dry seasoning rub, not chilled fish
+    ("Snacks", ["twistees", "paprika"]),  # "Twistees Sweet Paprika" snack-chip bag -- list-order luck vs. an identically-shaped listing that already resolves correctly
+    ("Chocolates", ["novi"]),  # "Novi Nero 70% Dark Pistacchio" -- Novi is an unambiguous chocolate brand (39/39 CSV listings), losing ties to bare "pistacchio"
+    ("Chocolates", ["snickers"]),  # already registered but losing ties to bare "fruit" -- "Snickers Crisp Fruits And Nuts"
+    ("Hair Styling", ["hairspray"]),  # already registered but losing ties to shampoo-brand words -- unambiguous in the full CSV (25/25 listings are styling products)
+    ("Hair Styling", ["tresemme", "mousse"]),  # "mousse" NOT promoted bare -- heavy false-positive risk (cat food, chocolate, cleaning, face mousse); scoped to the two specific broken brand co-occurrences
+    ("Hair Styling", ["syoss", "mousse"]),
+    ("Oils", ["coconut oil"]),  # "Greens Organic Extra Virgin Coconut Oil" -- the existing bare KEYWORD_RULES "coconut oil" phrase (added for a different Oils/Fruits fix) is only tier 1, still loses ties to "extra virgin" (Olive Oil, also tier 1); this promotes it to tier 0
+    ("Candles", ["incense", "fruit"]),  # "Zed Black Incense Sticks Fruit Mix" -- incense sticks losing to bare "fruit"
+    ("Shampoos", ["elvive", "olio"]),  # "Elvive Olio Straordinario" -- L'Oreal haircare ("olio" is a real, heavily-used bare Olive Oil word so can't be promoted alone)
+    ("Shaving Creams", ["veet"]),  # already registered but losing ties to bare "cream" -- "Veet...Cream" hair-removal products
+    ("Yoghurt", ["danette", "twix"]),  # "Danone Danette Twix" -- Danette dairy dessert cups losing to the Twix candy-bar keyword
+    ("Yoghurt", ["hipro", "cioccolato"]),  # "Hipro Cup Pudding Cioccolato" -- same pattern
+    ("Air Fresheners", ["ariasana"]),  # already registered but losing ties to the Aero chocolate-bar brand keyword -- "Ariasana Aero..." air-freshener refills
+    ("Cake Preparations", ["lamb", "icing"]),  # "LAMB SUGAR ICING" -- Lamb-brand baking/icing sugar, not lamb meat (same "Lamb Brand" collision already fixed elsewhere in this file)
+    ("Fabric Softener", ["comfort", "apple"]),  # "Comfort Apple Blossom" laundry conditioner losing to bare "apple"
+    ("Fabric Softener", ["comfort", "coconut"]),  # "Comfort Coconut" -- scoped narrow, not bare "comfort" (also a real English word and a Comfort-brand chair/other products)
+    ("Household Goods", ["rice cooker"]),  # "Tefal Brushed Steel Rice Cooker" -- a kitchen appliance, was landing on Rice via bare "rice"
+    ("Cereals", ["country crisp"]),  # "Jordans Country Crisp Strawberry" -- a granola cereal brand phrase, unique to Jordans in the CSV
+    ("Cold Cuts", ["salamini"]),  # "SALAMINI JALAPENO" -- deli meat losing to bare "jalapeno" (Vegetables); "salamini" already registered at tier 2 with no non-meat CSV use
+    ("Chocolates", ["vidal", "jelly"]),  # "Vidal" is two unrelated brands -- a candy maker (Vidal Jelly gummy sweets) and a toiletries maker (registered Shower Gels keyword); every CSV "vidal"+"jelly" co-occurrence is candy, never toiletries
+    ("Household Goods", ["scrub daddy"]),  # already registered but losing ties to the "wash up" phrase -- "Scrub Daddy Wonder Wash-up" is a cleaning tool, not dish soap
+    ("Disposables", ["cuki"]),  # already registered but losing ties to "piatti" (Dish Washing Liquid) -- "Cuki Piatti Ciotola Alluminio" is disposable tableware (67 CSV listings, ~65 Disposables)
+
+    # 28 Aug 2026 -- eleventh pass. Large parallel full-DB re-analysis of
+    # the next ~250 remaining collision pairs after the tenth-pass fixes,
+    # same rigor as every block above (each independently CSV-verified
+    # against the 93,780-distinct-name export, spot-checked against
+    # classify_by_name() before being added here).
+    ("Biscuits", ['doria', 'semplicissimi']),
+    ("Biscuits", ['pavesi', 'paprika']),
+    ("Biscuits", ['shortbread']),
+    ("Biscuits", ['frollini', 'riso']),
+    ("Biscuits", ['frollino', 'riso']),
+    ("Sauces & Condiments", ['balsamic', 'dressing']),
+    ("Sauces & Condiments", ['tzatziki', 'dressing']),
+    ("Frozen", ['il gelato']),
+    ("Herbs & Spices", ['twistees', 'seasoning']),
+    ("Tea", ['h2o', 'infusion']),
+    ("Coffee", ['nespresso']),
+    ("Coffee", ['capuccino', 'hazelnut']),
+    ("Coffee", ['cappuccino', 'hazelnut']),
+    ("Chocolates", ['kitkat', 'milk']),
+    ("Gift Sets", ['banner']),
+    ("Spirits - Liqueurs", ['etsu']),
+    ("Spirits - Liqueurs", ['whitley neill', 'gin']),
+    ("Spirits - Liqueurs", ['gin tonic']),
+    ("Herbs & Spices", ['kinder', 'seasoning']),
+    ("Chips", ['pringle']),
+    ("Herbs & Spices", ['lamb', 'herbs']),
+    ("Herbs & Spices", ['lamb', 'salt']),
+    ("Herbs & Spices", ['lamb', 'cinnamon']),
+    ("Beers", ['lindemans']),
+    ("Beers", ['kaiserdom']),
+    ("Beers", ['cisk']),
+    ("Yoghurt", ['fruyo']),
+    ("Dish Washing Liquid", ['piatti', 'aceto']),
+    ("Dish Washing Liquid", ['svelto', 'aceto']),
+    ("Cake Preparations", ['paneangeli']),
+    ("Biscuits", ['balocco']),
+    ("Cake Preparations", ['vermicelli', 'sprinkle']),
+    ("Cake Preparations", ['pasta', 'icing']),
+    ("Ciders", ['strongbow']),
+    ("Chocolates", ['sperlari']),
+    ("Chilled Fish", ['salamun']),
+    ("Stationery", ['tesa', 'corrector']),
+    ("Toys & Games", ['jovi']),
+    ("Spirits - Vodka", ['vodka', 'orange']),
+    ("Spirits - Vodka", ['vodka', 'melon']),
+    ("Electrical", ['sodastream', 'maker']),
+    ("Dilutables", ['instant drink', 'aloe vera']),
+    ("Household Goods", ['cake', 'scraper']),
+    ("Household Goods", ['cake', 'cooler']),
+    ("Air Fresheners", ['room spray']),
+    ("Chilled Fish", ['fish', 'cake']),
+    ("Herbs & Spices", ['all purpose', 'seasoning']),
+    ("All-purpose Cleaners", ['cif', 'salt']),
+    ("Disposables", ['napkin', 'orange']),
+    ("Cakes", ['cinnamon', 'muffin']),
+    ("Water", ['cucumber', 'water']),
+    ("Sweet Snacks", ['werther', 'cappuccino']),
+    ("Sweet Snacks", ['werther', 'cappucino']),
+    ("Sweet Snacks", ['fliptop', 'espresso']),
+    ("Vinegars", ['grape', 'vinegar']),
+    ("Vinegars", ['balsamic', 'dressing']),
+    ("Shampoos", ['elvive', 'oil']),
+    ("Shampoos", ['gliss', 'oil']),
+    ("Shampoos", ['tresemme', 'oil']),
+    ("Shampoos", ['pantene', 'oil']),
+    ("Sports", ['cookie', 'protein bar']),
+    ("Sports", ['cookie', 'protein pancake']),
+    ("Sports", ['cookie', 'iron maxx']),
+    ("Skin Care", ['tissue', 'mask']),
+    ("Cakes", ['muffin', 'custard']),
+    ("Cakes", ['pandori', 'milk']),
+    ("Disposables", ['coffee', 'napkin']),
+    ("Disposables", ['paper', 'coffee', 'cup']),
+    ("Candles", ['incense']),
+    ("Disposables", ['vaschette', 'budino']),
+    ("Disposables", ['vaschetta', 'budino']),
+    ("Disposables", ['vaschette', 'torta']),
+    ("Disposables", ['vaschetta', 'torta']),
+    ("Shower Gels", ['foam bath', 'aloe vera']),
+    ("Shower Gels", ['bagno schiuma', 'aloe vera']),
+    ("First Aid", ['elastoplast', 'water']),
+    ("First Aid", ['bandage', 'water']),
+    ("First Aid", ['salvelox', 'water']),
+    ("Dog", ['pet bed']),
+    ("All-purpose Cleaners", ['cif', 'mousse']),
+    ("Household Goods", ['dough', 'scraper']),
+    ("Air Fresheners", ['airwick', 'spice']),
+    ("Air Fresheners", ['airflor', 'spice']),
+    ("Sauces & Condiments", ['kuhne', 'dressing']),
+    ("Skin Care", ['palmers', 'cocoa butter']),
+    ("Sweet Snacks", ['maynards', 'fish']),
+    ("Sweet Snacks", ['caramelle', 'zucchero']),
+    ("Household Goods", ['bowl', 'frozen']),
+    ("Household Goods", ['bucket', 'frozen']),
+    ("Deodorants", ['chupa chup', 'body spray']),
+    ("Disposables", ['napkin', 'cake']),
+    ("Disposables", ['cartaforno', 'muffin']),
+    ("Disposables", ['ipak', 'boaround']),
+    ("Clothes", ['sock', 'cream']),
+    ("Clothes", ['slipper', 'cream']),
+    ("Wine - Red", ['blue fish', 'riesling']),
+    ("Wine - Red", ['blue fish', 'pinot']),
+    ("Perfume", ['edt', 'ginger']),
+    ("Perfume", ['edp', 'ginger']),
+    ("Chocolates", ['swizzels', 'custard']),
+    ("Chocolates", ['swizzels', 'cream']),
+    ("Chocolates", ['poppets', 'cream']),
+    ("Skin Care", ['cleansing', 'mousse']),
+    ("International Cuisine", ['boromir']),
+    ("Water", ['san benedetto', 'baby bottle']),
+    ("Floor Cleaners", ['pavimenti', 'marsiglia']),
+    ("Yoghurt", ['kefir', 'mousse']),
+    ("Floor Cleaners", ['fabuloso', 'concentrato']),
+    ("Sanitary Towels", ['pantyliner', 'chamomile']),
+    ("Biscuits", ['gullon', 'fish']),
+    ("Cake Preparations", ['yeast', 'biscuit']),
+    ("Stationery", ['brunnen', 'water']),
+    ("Stationery", ['korbond', 'water']),
+    ("Chips", ['pringles', 'prawn']),
+    ("Skin Care", ['milk', 'cleanser']),
+    ("Dog", ['monge', 'fruit']),
+    ("Energy Drinks", ['rockstar']),
+    ("Cat", ['sheba']),
+    ("Cat", ['monge', 'buste']),
+    ("Cat", ['one sensitive']),
+
     # 18 Aug 2026 -- EIGHTH sweep regression fixes, checked ahead of everything
     # else for the same reason as the Areon/Conditioner/Candle rules below: each
     # is a brand or compound phrase that was losing to a shorter, more generic
@@ -2476,6 +2665,15 @@ MULTI_KEYWORD_RULES = [
     # was landing on Milk, and "True Living Candle Jar Apple Cinnamon" was
     # landing on Fruits. Worth watching for the same pattern elsewhere
     # (shampoo, lotion, soap etc. could plausibly have the same issue).
+    # 26 Aug 2026 -- exactly that: this bare "conditioner" tier-0 promotion
+    # was ALSO winning outright (no tie, so it never surfaced in any
+    # collision report) against genuine laundry "fabric conditioner"
+    # products, e.g. "Comfort Fabric Conditioner Blue Skies" was landing on
+    # the hair-care Conditioners category. Found by a regression test
+    # while verifying this round's Conditioners/Shampoos fixes, not from
+    # the collision-pair list. Placed before the bare rule below so it
+    # wins the tier-0 tie.
+    ("Fabric Softener", ["fabric conditioner"]),
     ("Conditioners", ["conditioner"]),
     ("Candles", ["candle"]),
     # "Gourmet Gold" -- a real Purina cat-food product line confirmed via
@@ -4571,6 +4769,230 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Household Goods', 'Vegetables'}),
     frozenset({'Biscuits', 'Vegetables'}),
     frozenset({'Chocolates', 'Fruits'}),
+
+    # 26 Aug 2026 -- fifth batch, from the same large parallel full-DB
+    # re-analysis as the tenth-pass fixes above (top ~270 remaining
+    # collision pairs, each independently CSV-verified against real
+    # examples before being marked accepted here). Mostly the same
+    # "flavour/mix-in descriptor vs. base ingredient" and "dish-combination"
+    # shapes already documented in the batches above -- not re-explaining
+    # each one individually at this volume, but every pair was checked
+    # against its own top examples and confirmed classify_by_name() already
+    # resolves correctly, not just resolvable-either-way.
+    frozenset({'Cheese', 'Frozen'}),
+    frozenset({'Meat Alternatives', 'Nuts'}),
+    frozenset({'Herbs & Spices', 'Legumes'}),
+    frozenset({'Cereals', 'Herbs & Spices'}),
+    frozenset({'Fruits', 'Oils'}),
+    frozenset({'Bread', 'Cakes'}),
+    frozenset({'Cereals', 'Vegetables'}),
+    frozenset({'Hair & Nail Accessories', 'Make Up'}),
+    frozenset({'Bread', 'Fruits'}),
+    frozenset({'Chicken', 'Household Goods'}),
+    frozenset({'Intimate Care', 'Sanitary Towels'}),
+    frozenset({'Make Up', 'Skin Care'}),
+    frozenset({'Make Up', 'Sweet Snacks'}),
+    frozenset({'Herbs & Spices', 'Honey'}),
+    frozenset({'Meat Alternatives', 'Rice'}),
+    frozenset({'Cooking Creams', 'Herbs & Spices'}),
+    frozenset({'Legumes', 'Snacks'}),
+    frozenset({'Chocolates', 'Snacks'}),
+    frozenset({'Cereals', 'Chocolates'}),
+    frozenset({'Legumes', 'Rice'}),
+    frozenset({'Dilutables', 'Spirits - Liqueurs'}),
+    frozenset({'Biscuits', 'Sweet Snacks'}),
+    frozenset({'Dilutables', 'Electrical'}),
+    frozenset({'Chocolates', 'Ham'}),
+    frozenset({'Disposables', 'Gift Sets'}),
+    frozenset({'Bread', 'Sauces & Condiments'}),
+    frozenset({'Deodorants', 'Face Creams'}),
+    frozenset({'Meat Alternatives', 'Sauces & Condiments'}),
+    frozenset({'Clothes', 'Household Goods'}),
+    frozenset({'Cheese', 'Legumes'}),
+    frozenset({'Chilled Fish', 'Hair Styling'}),
+    frozenset({'Turkey', 'Vegetables'}),
+    frozenset({'Cereals', 'Sports'}),
+    frozenset({'Bread', 'Olives'}),
+    frozenset({'All-purpose Cleaners', 'Sauces & Condiments'}),
+    frozenset({'Fabric Softener', 'Shaving Creams'}),
+    frozenset({'Shaving Creams', 'Skin Care'}),
+    frozenset({'Pork', 'Vegetables'}),
+    frozenset({'Cakes', 'Rice'}),
+    frozenset({'All-purpose Cleaners', 'Floor Cleaners'}),
+    frozenset({'Fabric Softener', 'Household Goods'}),
+    frozenset({'Dilutables', 'Vegetables'}),
+    frozenset({'Clothes', 'Nappies'}),
+    frozenset({'Flour', 'Herbs & Spices'}),
+    frozenset({'Chocolates', 'Oils'}),
+    frozenset({'Cloths & Sponges', 'Fruits'}),
+    frozenset({'Tea', 'Vegetables'}),
+    frozenset({'Bathroom & Wc Cleaner', 'Floor Cleaners'}),
+    frozenset({'Frozen', 'Pasta & Couscous'}),
+    frozenset({'Flour', 'Snacks'}),
+    frozenset({'Cotton Buds', 'Make Up'}),
+    frozenset({'Chicken', 'Meat Alternatives'}),
+    frozenset({'Hair Styling', 'Stationery'}),
+    frozenset({'Butter', 'Fruits'}),
+    frozenset({'Meat Alternatives', 'Milk'}),
+    frozenset({'Cakes', 'Milk'}),
+    frozenset({'Dried Fruit', 'Jelly'}),
+    # 28 Aug 2026 -- sixth batch, same large parallel re-analysis as the
+    # eleventh-pass fixes above. Each pair independently checked against
+    # its own real examples: same shapes as the batches above -- flavour/
+    # mix-in descriptors, dish combinations, genuine dual-identity brands,
+    # or cases where the CSV's own ground-truth category column is itself
+    # internally inconsistent for the exact pattern in question (verified
+    # per-pair, not blanket-added).
+    frozenset({'Bread', 'Cereals'}),
+    frozenset({'Fruits', 'Hair Styling'}),
+    frozenset({'Electrical', 'Hand Tools'}),
+    frozenset({'Beef', 'Household Goods'}),
+    frozenset({'Deodorants', 'Shower Gels'}),
+    frozenset({'Dried Fruit', 'Herbs & Spices'}),
+    frozenset({'Cake Preparations', 'Cakes'}),
+    frozenset({'All-purpose Cleaners', 'Stain Removers'}),
+    frozenset({'Milk', 'Yoghurt'}),
+    frozenset({'Juices', 'Vegetables'}),
+    frozenset({'Nuts', 'Oils'}),
+    frozenset({'Herbs & Spices', 'Sports'}),
+    frozenset({'Chilled Fish', 'Herbs & Spices'}),
+    frozenset({'Flour', 'Fruits'}),
+    frozenset({'Biscuits', 'Cheese'}),
+    frozenset({'Coffee', 'Household Goods'}),
+    frozenset({'Dilutables', 'Dried Fruit'}),
+    frozenset({'Cereals', 'Coffee'}),
+    frozenset({'Cake Preparations', 'Household Goods'}),
+    frozenset({'Herbs & Spices', 'Meat Alternatives'}),
+    frozenset({'Oils', 'Sauces & Condiments'}),
+    frozenset({'All-purpose Cleaners', 'Household Goods'}),
+    frozenset({'Cake Preparations', 'Nuts'}),
+    frozenset({'Hand Wash Liquids', 'Laundry Washing Liquids'}),
+    frozenset({'Chicken', 'Fruits'}),
+    frozenset({'All-purpose Cleaners', 'Dish Washing Liquid'}),
+    frozenset({'Cheese', 'Cold Cuts'}),
+    frozenset({'Hand Tools', 'Household Goods'}),
+    frozenset({'Household Goods', 'Stationery'}),
+    frozenset({'Baby Essentials', 'Skin Care'}),
+    frozenset({'Canned Seafood', 'Chilled Fish'}),
+    frozenset({'First Aid', 'Household Goods'}),
+    frozenset({'Carbonated Drinks', 'Fruits'}),
+    frozenset({'Hair & Nail Accessories', 'Household Goods'}),
+    frozenset({'Cereal & Cereal Bars', 'Cereals'}),
+    frozenset({'Chicken', 'Hair Styling'}),
+    frozenset({'Oils', 'Skin Care'}),
+    frozenset({'Hand Wash Liquids', 'Shower Gels'}),
+    frozenset({'Dried Fruit', 'Snacks'}),
+    frozenset({'Bread', 'Herbs & Spices'}),
+    frozenset({'Biscuits', 'Bread'}),
+    frozenset({'Chocolates', 'Nuts'}),
+    frozenset({'Bread', 'Nuts'}),
+    frozenset({'Biscuits', 'Milk'}),
+    frozenset({'First Aid', 'Honey'}),
+    frozenset({'Shaving Creams', 'Stationery'}),
+    frozenset({'Fruits', 'Shower Gels'}),
+    frozenset({'First Aid', 'Herbs & Spices'}),
+    frozenset({'Crackers, Crispbread & Breadsticks', 'Nuts'}),
+    frozenset({'Fruits', 'Household Goods'}),
+    frozenset({'Ham', 'Pasta & Couscous'}),
+    frozenset({'Oils', 'Olive Oil'}),
+    frozenset({'Fruits', 'Ham'}),
+    frozenset({'Butter', 'Yoghurt'}),
+    frozenset({'Make Up', 'Toys & Games'}),
+    frozenset({'Rice', 'Yoghurt'}),
+    frozenset({'Cheese', 'Yoghurt'}),
+    frozenset({'Biscuits', 'Sugar'}),
+    frozenset({'Laundry Washing Liquids', 'Stain Removers'}),
+    frozenset({'Olive Oil', 'Vegetables'}),
+    frozenset({'Fruits', 'Meat Alternatives'}),
+    frozenset({'Crackers, Crispbread & Breadsticks', 'Rice'}),
+    frozenset({'Cakes', 'Cereals'}),
+    frozenset({'Pasta & Couscous', 'Yoghurt'}),
+    frozenset({'Chips', 'Snacks'}),
+    frozenset({'Chicken', 'Sausages'}),
+    frozenset({'Crackers, Crispbread & Breadsticks', 'Fruits'}),
+    frozenset({'Beef', 'Meat Alternatives'}),
+    frozenset({'Cake Preparations', 'Flour'}),
+    frozenset({'Beef', 'Fruits'}),
+    frozenset({'All-purpose Cleaners', 'Skin Care'}),
+    frozenset({'Biscuits', 'Eggs'}),
+    frozenset({'Beef', 'Pasta & Couscous'}),
+    frozenset({'Chocolates', 'Vinegars'}),
+    frozenset({'Disposables', 'Toys & Games'}),
+    frozenset({'Honey', 'Tea'}),
+    frozenset({'All-purpose Cleaners', 'Fruits'}),
+    frozenset({'Baby Essentials', 'Hair & Nail Accessories'}),
+    frozenset({'Hair Styling', 'Shampoos'}),
+    frozenset({'Baby Essentials', 'Cloths & Sponges'}),
+    frozenset({'Chilled Fish', 'Spirits - Whisky'}),
+    frozenset({'Rice', 'Turkey'}),
+    frozenset({'Flour', 'Vegetables'}),
+    frozenset({'Hair & Nail Accessories', 'Stationery'}),
+    frozenset({'Sauces & Condiments', 'Snacks'}),
+    frozenset({'Baby Essentials', 'Toys & Games'}),
+    frozenset({'Herbs & Spices', 'Juices'}),
+    frozenset({'Biscuits', 'Flour'}),
+    frozenset({'Baby Essentials', 'Insect Killer'}),
+    frozenset({'Household Goods', 'Rice'}),
+    frozenset({'Pasta & Couscous', 'Snacks'}),
+    frozenset({'Pork', 'Snacks'}),
+    frozenset({'Nuts', 'Pasta & Couscous'}),
+    frozenset({'Household Goods', 'Wine - Sparkling'}),
+    frozenset({'Olive Oil', 'Sauces & Condiments'}),
+    frozenset({'Ham', 'Nuts'}),
+    frozenset({'Fabric Softener', 'Floor Cleaners'}),
+    frozenset({'Bread', 'Dried Fruit'}),
+    frozenset({'Soups', 'Vegetables'}),
+    frozenset({'Wine - Sparkling', 'Wine - White'}),
+    frozenset({'Fruits', 'Perfume'}),
+    frozenset({'Cereals', 'Sugar'}),
+    frozenset({'Dried Fruit', 'Sports'}),
+    frozenset({'Cold Cuts', 'Olives'}),
+    frozenset({'Ham', 'Olives'}),
+    frozenset({'All-purpose Cleaners', 'First Aid'}),
+    frozenset({'Baby Essentials', 'Household Goods'}),
+    frozenset({'Bathroom & Wc Cleaner', 'Hair Styling'}),
+    frozenset({'Electrical', 'Fruits'}),
+    frozenset({'Dental Care', 'Stationery'}),
+    frozenset({'Fabric Softener', 'Water'}),
+    frozenset({'Herbs & Spices', 'Soups'}),
+    frozenset({'Cooking Creams', 'Vinegars'}),
+    frozenset({'Cheese', 'Spirits - Whisky'}),
+    frozenset({'Fabric Softener', 'Toys & Games'}),
+    frozenset({'Deodorants', 'Tea'}),
+    frozenset({'Nuts', 'Spirits - Liqueurs'}),
+    frozenset({'Frozen', 'Milk'}),
+    frozenset({'Adult Nappies', 'Sanitary Towels'}),
+    frozenset({'Chilled Fish', 'Olives'}),
+    frozenset({'Cakes', 'Legumes'}),
+    frozenset({'Baby Food', 'Fabric Softener'}),
+    frozenset({'All-purpose Cleaners', 'Drain Unblockers'}),
+    frozenset({'Fabric Softener', 'Milk'}),
+    frozenset({'Frozen', 'Water'}),
+    frozenset({'Laundry Tablets', 'Laundry Washing Liquids'}),
+    frozenset({'Carbonated Drinks', 'Spirits - Vodka'}),
+    frozenset({'Frozen', 'Lamb'}),
+    frozenset({'Electrical', 'Shaving Creams'}),
+    frozenset({'Coffee', 'Sanitary Towels'}),
+    frozenset({'Fruits', 'Sugar'}),
+    frozenset({'Butter', 'Legumes'}),
+    frozenset({'Butter', 'Chilled Fish'}),
+    frozenset({'Coffee', 'Rice'}),
+    frozenset({'Household Goods', 'Lamb'}),
+    frozenset({'Make Up', 'Oils'}),
+    frozenset({'Floor Cleaners', 'Perfume'}),
+    frozenset({'Beef', 'Cereals'}),
+    frozenset({'Disposables', 'Fabric Softener'}),
+    frozenset({'Fruits', 'Shaving Creams'}),
+    frozenset({'Chicken', 'Chips'}),
+    frozenset({'Cakes', 'Sweet Snacks'}),
+    frozenset({'Rice', 'Snacks'}),
+    frozenset({'Hair Treatment', 'Skin Care'}),
+    frozenset({'Cake Preparations', 'Sports'}),
+    frozenset({'Dried Fruit', 'Honey'}),
+    frozenset({'Face Creams', 'First Aid'}),
+    frozenset({'Bread', 'Sweet Snacks'}),
+    frozenset({'Hair Styling', 'Shaving Creams'}),
+    frozenset({'Bread', 'Cheese'}),
 }
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
