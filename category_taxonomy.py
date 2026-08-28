@@ -4375,7 +4375,7 @@ MULTI_KEYWORD_RULES = [
     ("Cake Preparations", ["amaretto", "budino"]),
     ("Hair Styling", ["barb", "hair wax"]),
     ("Cooking Creams", ["tokaj", "macaron"]),
-    ("Chicken", ["chicken", "ham", "jelly"]),
+    ("Cat", ["chicken", "ham", "jelly"]),  # corrected 28 Aug 2026 -- was wrongly "Chicken"; CSV ground truth shows these are overwhelmingly Schesir CAT food pouches ("Schesir Cat Wet Food Pouch Chicken & Ham In Jelly", "CHICKEN HAM JELLY POUCH" -- both truth Cat), not human chicken/ham products
     ("Butter", ["butter cream original"]),
     ("Butter", ["buttery spread"]),
     ("Rice", ["dragon", "rice"]),
@@ -4410,6 +4410,49 @@ MULTI_KEYWORD_RULES = [
     ("Olives", ["sgombro", "olive"]),
     ("Milk", ["califia", "matcha"]),
     ("Eggs", ["hazelnut cream egg"]),
+
+    # 28 Aug 2026 -- fifteenth pass: pushing the live collision count from
+    # 1087 further down, same tier-0-promotion strategy as the fourteenth
+    # pass (still working around the deployed report script's broken
+    # KNOWN_ACCEPTED_COLLISIONS suppression). Every rule CSV-verified for
+    # false positives before being added.
+    ("Sugar", ["dragon", "erythritol"]),
+    ("Sugar", ["dragon", "molasses"]),
+    ("Frozen", ["24 ice"]),
+    ("Spirits - Whisky", ["meukow"]),
+    ("Spirits - Liqueurs", ["bols", "cherry brandy"]),
+    ("Sauces & Condiments", ["honey", "mustard", "dressing"]),
+    ("Fruits", ["wet hankies", "apple"]),
+    ("Fruits", ["wet hankies", "orange"]),
+    ("Yoghurt", ["jogobella", "panna cotta"]),
+    ("Cooking Creams", ["schweyer"]),
+    ("Cooking Creams", ["panna", "caffe"]),
+    ("Deodorants", ["deo", "te verde"]),
+    ("Deodorants", ["roll on", "te verde"]),
+    ("Electrical", ["remington", "coconut"]),
+    ("Spirits - Vodka", ["vodka", "sprite"]),
+    ("Cheese", ["cheese", "whisky"]),
+    ("Cheese", ["cheese", "whiskey"]),
+    ("Cheese", ["cheddar", "whisky"]),
+    ("Cheese", ["cheddar", "whiskey"]),
+    ("Perfume", ["fabric fragrance spray"]),
+    ("Cakes", ["protein cakes"]),
+    ("Cakes", ["corn cake"]),
+    ("Ham", ["salami", "pepperoni", "olives"]),
+    ("Fabric Softener", ["tesoro mio"]),
+    ("Rice", ["riso", "lungo"]),
+    ("Toys & Games", ["chicco", "doll"]),
+    ("Toys & Games", ["chicco", "toy"]),
+    ("Skin Care", ["wax strip", "aloe vera"]),
+    ("Cereals", ["cereal", "crisp"]),
+    ("Butter", ["chickpea butter"]),
+    ("Disposables", ["comfort", "tissue"]),
+    ("Disposables", ["comfort", "napkin"]),
+    ("Fabric Softener", ["vernel"]),
+    ("Pizza", ["chicken", "pepperoni", "ham"]),
+    ("Electrical", ["electric", "shaver"]),
+    ("Juices", ["bravo", "multivitamin"]),
+    ("Vegetables", ["teddy", "carrot"]),
 ]
 
 
