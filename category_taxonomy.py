@@ -1775,7 +1775,7 @@ KEYWORD_RULES = [
     ("Electrical", ["babyliss", "demeliss", "braun", "curling iron", "multi groomer", "silk epil"]),
     ("Hair Styling", ["brylcreem", "glossy hold", "kera protein", "liss & protect"]),
     ("Hair & Nail Accessories", ["abc hello kitty", "hello kitty", "bow clip", "hair towel", "magic brush", "satin hair"]),
-    ("Cotton Buds", ["bastoncini cotonati", "bastoncini", "precut cotton", "cotton ball"]),
+    ("Cotton Buds", ["bastoncini cotonati", "precut cotton", "cotton ball"]),  # bare "bastoncini" (28 Aug 2026) removed -- it's just Italian for "sticks", and CSV shows it overwhelmingly means fish sticks (Frozen Fish), diffuser sticks (Air Fresheners), biscuit sticks (Biscuits) and veg sticks (Frozen Vegetables), not cotton buds; the specific "bastoncini cotonati" phrase (and "cotonet" registered elsewhere) already cover real cotton-bud products
     ("Dental Care", ["flosser", "waxed tape", "crema adesiva", "protesi", "full action refill"]),
     ("Shaving Creams", ["classic blade", "perfect angle", "men s blade"]),
     ("Hand Wash Liquids", ["sapone solido", "sapone", "dove bar", "dove pink"]),
@@ -1802,7 +1802,7 @@ KEYWORD_RULES = [
 
     # ---- Greens: Gluten Free / Organic / Dietary aisles ----
     ("Bread", ["balviten", "damhert", "sliced loaf", "bridge roll", "hamburger roll", "mini roll", "long roll", "bagel", "piadina", "white sandwich", "airos", "arios", "salty stick"]),
-    ("Sports", ["protein shake", "maca", "spirulina", "chlorella", "moringa", "ashwagandha", "matcha", "hemp protein", "superfood", "superberries", "biotona", "dragon", "chia protein", "detox", "greens capsule"]),
+    ("Sports", ["protein shake", "maca", "spirulina", "chlorella", "moringa", "ashwagandha", "matcha", "hemp protein", "superfood", "superberries", "biotona", "dragon", "chia protein", "greens capsule"]),  # bare "detox" (28 Aug 2026) removed -- too broad, CSV shows it mostly means teas, shampoos, face masks, shower gels and wipes, not sports supplements; real Sports products still match via other keywords/brands
     ("Nuts", ["semi di chia", "semi di lino", "semi girasole", "semi zucca", "semi di zucca", "seed blend"]),
     ("Coffee", ["cafedirect", "roast & ground", "roast and ground"]),
     ("Sauces & Condiments", ["tamari"]),
@@ -2062,7 +2062,7 @@ KEYWORD_RULES = [
     ('Clothes', ['maternity feeding bra']),
     ('Skin Care', ['massage gel exotic escape']),
     ('Skin Care', ['moisturising massage gel']),  # 21 Aug 2026 -- "Control Sweet Vanilla Moisturising Massage Gel" was unclassified; same product type as the "massage gel exotic escape" line just above, so following that same precedent rather than guessing this is an Intimate Care product (Control is an intimate-care/condom brand, but this specific line is a general moisturising gel, not condom-adjacent)
-    ('Cold Cuts', ['gran mixed', 'sensation sliced bacon', 'sweet bacon in cubes', 'peperoni', "n'duja", 'salamino casereccio', 'smoked bacon sliced in cubes', 'bresi', 'antipasti mediterranean']),
+    ('Cold Cuts', ['gran mixed', 'sensation sliced bacon', 'sweet bacon in cubes', "n'duja", 'salamino casereccio', 'smoked bacon sliced in cubes', 'bresi', 'antipasti mediterranean']),  # bare "peperoni" (28 Aug 2026) removed -- Italian for bell pepper, not English "pepperoni" meat; CSV shows it overwhelmingly used for peppers (Vinegars, Herbs & Spices, Canned Vegetables, Sauces & Condiments) with only rare real cured-meat hits, which still match via "salami"/other Cold Cuts keywords
     ('Sports', ['coldpress vitamins']),
     ('Cheese', ['gibnarolls', 'pekorin semi mature', 'hanini creamy light', 'blue ceese', 'spreadable-blue', 'spreadable blue']),
     ('Sweet Snacks', ['anelli di ciocolato']),
@@ -2303,6 +2303,16 @@ KEYWORD_RULES = [
     ("Oils", ["essential oil"]),  # "Essentia Natural Water Soluble Essential Oil Orange & Cinnamon" was landing on Fruits via bare "orange" -- it's a fragrance/aromatherapy oil, orange is the scent
     ("Sauces & Condiments", ["salad dressing", "sesame dressing"]),  # real bug, not just a low-value tie: "Saitaku Sesame Dressing Roasted" was landing on First Aid, because bare "dressing" is a legitimate (and necessary) First Aid keyword for wound dressings -- this phrase-level fix keeps that medical meaning intact while fixing the food-dressing case
     ("Cereals", ["multigrain puff", "multigrain puffs"]),  # "Piccolo Multigrain Puffs Carrot Stars" (a baby-snack puff cereal) was landing on Vegetables via bare "carrot"
+
+    # 28 Aug 2026 -- unclassified-listing gap-fill (11 welbees listings from
+    # a live run report, none matching any existing keyword at all -- see
+    # the matching-date note in MULTI_KEYWORD_RULES for the Surf Capsules
+    # fix that closes the 12th).
+    ("Household Goods", ["dust pan", "measuring tape", "glass brush"]),  # "Minerva Dust Pan Long", "Minerva Dust Pan With Long Handle" -- the existing "dustpan" keyword (line ~1170) is one word, these crawled names are two; "Avro-Avron Measuring Tape 8mt"; "Flair Home Glass Brush"
+    ("All-purpose Cleaners", ["hagerty"]),  # Hagerty (WebSearch-confirmed metal/silver-polish brand) -- "Hagerty Silver & Multimetal Foam", "Hagerty Silver Spray" -- not registered as a keyword at all before this
+    ("Cheese", ["burrata", "gibnaroll"]),  # "Dalli Cardillo Santa Marta Burrata"; "Hanini Gibnaroll Peppered" -- the existing entry (line ~2067) only has the plural "gibnarolls", this crawled name is singular
+    ("Chocolates", ["rocky road"]),  # "Moo Rocky Road Bites" -- a chocolate confectionery product, not a Healthy Section item
+    ("Perfume", ["french avenue"]),  # "French Avenue Sultana The Joyful Edp" was landing on Dried Fruit via bare "sultana"; French Avenue is exclusively a perfume brand in the CSV (23/23 occurrences)
 ]
 
 
@@ -4252,6 +4262,52 @@ MULTI_KEYWORD_RULES = [
     # "couscous"/"lasagna" above. Was losing to bare "verdicchio" (Wine -
     # White) for "Rocca Del Forti Bollicine Di Verdicchio D.o.c Brut".
     ("Wine - Sparkling", ["bollicine"]),
+
+    # 28 Aug 2026 -- unclassified-listing gap-fill from a live run report
+    # (11 listings, all welbees, none matching any existing keyword at all).
+    # "Surf Capsules Tropical (15p)" -- Surf is a laundry brand, but bare
+    # "surf" is too generic to claim alone (see the "Surf Tropical Liquid"
+    # note elsewhere in this file); scoped here to co-occur with "capsules"
+    # instead of "liquid" so laundry capsules/pods under this brand resolve
+    # too.
+    ("Laundry Tablets", ["surf", "capsules"]),
+    # "Toppits Airfryer Rectangular Paper Trays" -- disposable liners, not
+    # the appliance itself; the existing "air fryer" phrase (Household
+    # Goods, line ~1861) is two words and wouldn't match "Airfryer" as one
+    # word anyway, so this is scoped separately rather than widened, to
+    # keep the appliance and its disposable liners in their correct
+    # categories.
+    ("Disposables", ["airfryer", "tray"]),
+
+    # 28 Aug 2026 -- twelfth pass: fixes from the newest live production run
+    # report (1420 still-colliding listings), same tier-0 co-occurrence
+    # pattern used throughout this file. Each verified against the real
+    # colliding product names via classify_by_name()/matching_categories_by_name()
+    # before being added.
+    ("Chocolates", ["perugina", "milk"]),  # "Perugina Block Milk 30%" -- Perugina also makes ice cream/gift boxes, so scoped to co-occur with "milk" rather than promoted bare
+    ("Chocolates", ["icam", "milk"]),  # "Icam Cioco Pasticceria Milk" -- Icam also has non-chocolate gift-box lines, same reasoning
+    ("Chocolates", ["nestle", "aero"]),  # "Nestle Aero Bubbly Milk Bar" -- bare "aero" is unsafe (Ariasana air-freshener brand, Nescafe "Aero" flavour), scoped to the Nestle brand co-occurrence
+    ("Chocolates", ["lindor"]),  # Lindt's Lindor line is 100% chocolate in the CSV -- safe bare promotion
+    ("Chocolates", ["feastables"]),  # MrBeast's Feastables brand is 100% chocolate in the CSV -- safe bare promotion
+    ("Crackers, Crispbread & Breadsticks", ["ryvita"]),  # already registered as a bare KEYWORD_RULES word (tier 2) but losing the tie to bare "onion"/"tomato" (Vegetables); Ryvita is a crackerbread-only brand (CSV-confirmed), promoted to tier 0 to close it properly rather than leave it to list-order luck
+    ("Crackers, Crispbread & Breadsticks", ["breadstick", "cheese"]),  # "Valledoro Cheese Breadsticks" -- bare "cheese" was beating "breadstick"; mirrors the existing "cheese"+"biscuit" co-occurrence rule for the same underlying pattern
+    ("Crackers, Crispbread & Breadsticks", ["oatcake", "cheese"]),  # "Nairns Oatcakes Gluten Free Cheese" -- same pattern, oatcake variant
+    ("Meat Alternatives", ["tofu", "tomato"]),  # "Organic Tofu With Tomato" -- bare "tofu" alone is unsafe (matches tofu-based cat litter in the CSV), scoped to co-occur with the flavour word actually seen colliding
+    ("Meat Alternatives", ["tofu", "vegetable"]),  # "Tofu Vegetable Kebab"
+    ("Meat Alternatives", ["quorn", "garlic"]),  # "Quorn Garlic & Mushroom Escalopes"
+    ("Meat Alternatives", ["quorn", "mushroom"]),  # same product, other flavour word
+    ("Crackers, Crispbread & Breadsticks", ["grissini", "bread"]),  # "Schar Grissini...Bread Sticks" -- bare "bread" was beating "grissini"; CSV confirms all "grissini" products are breadsticks
+    ("Crackers, Crispbread & Breadsticks", ["tuc"]),  # already registered as a bare KEYWORD_RULES word (tier 2, WebSearch-confirmed cracker-only brand) but losing the tie to bare "herb"/"paprika" (Herbs & Spices); promoted to tier 0. Placed AFTER the "milka" Chocolates rule above so "Milka Tuc" (a real chocolate-covered-cracker product) still resolves to Chocolates first.
+    ("Yoghurt", ["jogobella"]),  # already registered as a bare KEYWORD_RULES word (tier 2, Zott's yoghurt-only brand) but losing the tie to bare "panna" (Cooking Creams) on "Jogobella Panna Cotta"; promoted to tier 0. "Stuffer Panna Per Caffe" is unaffected (doesn't contain "jogobella").
+    ("Ciders", ["thatchers"]),  # already registered as a bare KEYWORD_RULES word (tier 2, cider-only brand, CSV-confirmed) but losing the tie to bare "apple"/"orange" (Fruits); promoted to tier 0.
+    ("Cloths & Sponges", ["multipurpose", "cloth"]),  # closes the "multipurpose"/"multi purpose" tie properly for the cloth variant, matching the existing "multipurpose"+"sponge" rule; also fixes a bonus bug where "Fatigati Multipurpose Tea Cloth" was landing on Tea via bare "tea"
+    ("Cloths & Sponges", ["multi purpose", "cloth"]),
+    ("Sugar", ["stevia", "cinnamon"]),  # "Stevia Liquid Cinnamon" is one flavour in a sweetener product line (Vanilla, Caramel, Strawberry, Pure, Chocolate); cinnamon here is the flavour, not the spice
+    ("Baby Essentials", ["chicco", "oil"]),  # "Chicco Baby Moments Message Oil" -- bare "chicco" (already registered) was losing the tie to bare "oil"; scoped co-occurrence wins it cleanly without touching the bare "chicco" registration used elsewhere
+    ("Milk", ["kefir", "fragolino"]),  # "Milk Kefir Fragolino Di Bosco" -- bare "fragolino" is mostly a sparkling-wine name in the CSV; co-occurrence with "kefir" isolates the flavoured-kefir case
+    ("Cake Preparations", ["lamb", "tartar"]),  # "Lamb Powders Cream Tartar" -- a truncated "Lamb Brand Powders Cream Of Tartar" (a Maltese baking-spice brand), not the animal or a cooking cream; same Lamb-Brand-prefix pattern already carved out elsewhere in this file (e.g. "lamb"+"icing")
+    ("Sugar", ["lamb", "demerara"]),  # "Lamb Sugar Demerara Sugar" -- same Lamb Brand prefix, this time a demerara sugar product, not the animal
+    ("Nuts", ["whisky", "mix"]),  # "Serano Nuts Whisky Mix" -- a bar-snack nut mix, not a spirit; CSV confirms no genuine whisky bottle also contains "mix"
 ]
 
 
@@ -4993,6 +5049,28 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Bread', 'Sweet Snacks'}),
     frozenset({'Hair Styling', 'Shaving Creams'}),
     frozenset({'Bread', 'Cheese'}),
+
+    # 28 Aug 2026 -- seventh batch, from the newest live production run
+    # report. Each pair below already resolves correctly today via existing
+    # rule/list order (verified individually against the real colliding
+    # names) -- there's nothing left to fix, this just stops them
+    # resurfacing in every future report.
+    frozenset({'Coffee', 'Legumes'}),        # "Lavazza...Beans" -- coffee beans, correctly Coffee
+    frozenset({'Honey', 'Vegetables'}),      # honey-glazed vegetable/meat products; no single safe fix, resolves reasonably
+    frozenset({'Milk', 'Sauces & Condiments'}),  # "Besciamella" (bechamel) -- correctly Sauces & Condiments
+    frozenset({'Coffee', 'Yoghurt'}),        # "Caffreze"/"Cappuccino Freddo" chilled coffee-yoghurt hybrids -- ground truth itself is inconsistent, current resolution (Coffee) is defensible
+    frozenset({'Beef', 'Chips'}),            # "Amica Natura" beef burgers vs the unrelated "Amica" chips brand -- correctly Beef
+    frozenset({'Milk', 'Wine - Sparkling'}), # "Milk Kefir Fragolino" -- correctly Milk
+    frozenset({'Coffee', 'Sports'}),         # "Detox Coffee" -- correctly Coffee
+    frozenset({'Stationery', 'Wine - Sparkling'}),  # "astuccio" (Italian for both pencil case and gift box) -- correctly Wine - Sparkling
+    frozenset({'Fabric Softener', 'Nappies'}),      # "Huggies...Comfort" -- correctly Nappies
+    frozenset({'Milk', 'Wine - White'}),     # "Mandorla" (almond, also a winery name) -- correctly Wine - White
+    frozenset({'Stock Cubes', 'Wine - White'}),  # "Stock Pots White Wine" -- correctly Stock Cubes
+    frozenset({'Cakes', 'Cooking Creams'}),  # "Lemon Custard Cake" -- correctly Cakes
+    frozenset({'Chilled Fish', 'Chips'}),    # "Fish & Crisp Fille" -- correctly Chilled Fish
+    frozenset({'Biscuits', 'Ham'}),          # "Biscuit Salami" (a chocolate dessert, no meat) -- correctly Biscuits
+    frozenset({'Chocolates', 'Herbs & Spices'}),  # truffle-salt seasoning vs chocolate truffles -- already resolves correctly on both sides
+    frozenset({'Biscuits', 'Herbs & Spices'}),    # cinnamon-flavoured cookies vs truffle-flavoured oil -- already resolves correctly on both sides
 }
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
