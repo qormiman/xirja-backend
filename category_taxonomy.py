@@ -2333,6 +2333,32 @@ KEYWORD_RULES = [
 # here to override.
 MULTI_KEYWORD_RULES = [
     # ==========================================================================
+    # Eighteenth pass (29 Aug 2026): round-3 collision sweep, working through the
+    # user's live production report of 249 remaining collisions (48 pairs). Placed
+    # FIRST (ahead of even the seventeenth pass) for the same reason as before --
+    # some of these are narrow brand/co-occurrence carve-outs that could otherwise
+    # be blocked by an earlier, broader existing rule. CSV-verified: each rule's
+    # keyword combination was checked against every matching product name in the
+    # ground-truth export using the real word-set matcher (not naive substring),
+    # so false positives like "bumbu" matching "Bumbum" or "salmon" matching
+    # "Salmone" are already ruled out. Most of round 3's 48 pairs were left
+    # ACCEPT-AMBIGUOUS (genuine CSV ground-truth self-contradiction on
+    # near-identical names, or already correctly resolved by list order) --
+    # see /tmp/xirja_export/round3_rules.py and the round-3 agent triage output
+    # for the full reasoning.
+    ("Nuts", ["amaretto", "mandorle"]),
+    ("Dog", ["dog", "harness"]),
+    ("Cat", ["carrots", "soup"]),
+    ("Chilled Fish", ["salmon", "pistacchio"]),
+    ("Chilled Fish", ["tuna", "pistacchio"]),
+    ("Cat", ["delickcious", "cat"]),
+    ("Dog", ["delickcious", "dog"]),
+    ("Stationery", ["william lamb"]),
+    ("Olive Oil", ["pietro coricelli", "truffle"]),
+    ("Olive Oil", ["cirio", "truffle"]),
+    ("Spirits - Whisky", ["tokaj"]),
+    ("Spirits - Whisky", ["bumbu"]),
+    # ==========================================================================
     # Seventeenth pass (29 Aug 2026): round-2 collision sweep. These are placed
     # FIRST in the list (ahead of every other tier-0 rule, including the sixteenth
     # pass) because several of them were found to be blocked by an earlier,
