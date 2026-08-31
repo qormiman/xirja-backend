@@ -1,13 +1,13 @@
 {
-  "planned_at": "2026-08-24T01:56:45.393673+00:00",
+  "planned_at": "2026-08-31T05:30:51.607470+00:00",
   "runs": [
     {
-      "target": "2026-08-25T19:59:00+00:00",
-      "triggered": true
+      "target": "2026-09-01T19:16:00+00:00",
+      "triggered": false
     },
     {
-      "target": "2026-08-26T21:26:00+00:00",
-      "triggered": true
+      "target": "2026-09-05T21:39:00+00:00",
+      "triggered": false
     }
   ]
 }
