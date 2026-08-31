@@ -2333,6 +2333,35 @@ KEYWORD_RULES = [
 # here to override.
 MULTI_KEYWORD_RULES = [
     # ==========================================================================
+    # Nineteenth pass (31 Aug 2026): round-4 collision sweep, against a FRESH
+    # ground-truth export (31 Aug 2026) rather than the stale 24 Aug one earlier
+    # rounds used -- the live catalog had grown/shifted enough since then that a
+    # chunk of the round-3 report turned out to be brand-new SKUs with no
+    # ground truth in the old CSV. Placed FIRST for the same reason as every
+    # prior pass: narrow co-occurrence carve-outs that could be blocked by a
+    # broader existing rule need to win outright. CSV-verified against the
+    # fresh export using the real word-set matcher (whole-word, not substring).
+    # The Chocolates/Oils trio (Cooking Sprays / International Cuisine / Olive
+    # Oil) has an internal order dependency -- keep it as-is if editing nearby.
+    ("All-purpose Cleaners", ["scouring", "cream"]),
+    ("Wine - Red", ["notte rossa"]),
+    ("Household Goods", ["acana", "moisture"]),
+    ("Frozen", ["elastoplast", "frozen"]),
+    ("Intimate Care", ["o b"]),
+    ("Intimate Care", ["ob"]),
+    ("Sauces & Condiments", ["herbs", "dressing"]),
+    ("Drinks", ["fantastic four"]),
+    ("Herbs & Spices", ["marigold", "green"]),
+    ("Herbs & Spices", ["marigold", "purple"]),
+    ("Sauces & Condiments", ["lamb", "casserole"]),
+    ("Gift Sets", ["pap star", "wrapping"]),
+    ("Gift Sets", ["tissue", "paper"]),
+    ("Dilutables", ["not guilty", "hazelnut"]),
+    ("Cakes", ["pro fusion", "protein cakes"]),
+    ("Cooking Sprays", ["truffle", "olive oil", "spray"]),
+    ("International Cuisine", ["jimmy tartufi", "olive oil"]),
+    ("Olive Oil", ["truffle", "olive oil"]),
+    # ==========================================================================
     # Eighteenth pass (29 Aug 2026): round-3 collision sweep, working through the
     # user's live production report of 249 remaining collisions (48 pairs). Placed
     # FIRST (ahead of even the seventeenth pass) for the same reason as before --
