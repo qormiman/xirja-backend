@@ -136,6 +136,30 @@ PAVI_CATEGORY_MAP = {
     "OLIVES": "Olives", "SAFETY": "Safety", "ICE CUBES": "Ice Cubes",
     "ORGANISERS & TOOL BOXES": "Organisers & Tool Boxes", "CHRISTMAS": "Christmas", "TURKEY": "Turkey",
     "READY-TO-COOK": "Ready-to-cook",
+    # Round 7 (3 Sep 2026) -- 10 pavipama chain categories added after showing
+    # up unclassified in a live run, all confidently direct-mappable from
+    # their own examples. "Household Goods" used as the general non-food
+    # catch-all, consistent with how every other miscellaneous kitchenware/
+    # homeware PAVI category already maps in this file.
+    "READY SOUPS": "Soups", "LUNCH BOXES": "Household Goods", "STORAGE BOXES": "Household Goods",
+    "DINNERWARE": "Household Goods", "FURNITURE & DECORATIONS": "Household Goods",
+    "NON ALCOHOLIC": "Beverages", "LAUNDRY BASKETS & STORAGE BOXES": "Household Goods",
+    "BABY TOYS": "Toys & Games", "ELECTRONICS": "Electrical", "POTS, PANS & BAKEWARE": "Household Goods",
+    # Round 7, part 2 -- these two were held back initially because their
+    # names are misleading: "FABRIC SOFTENER & IRON PRODUCTS" sounds like it
+    # mixes two product types, and "BATTERIES" doesn't sound like appliances
+    # at all. Got the FULL unclassified list (not just the 8-example preview)
+    # via the run's "unclassified-listings" GitHub Actions artifact before
+    # mapping these -- confirmed all 156 "FABRIC SOFTENER & IRON PRODUCTS"
+    # items are fabric softener/conditioner (Italian "AMM"/ammorbidente,
+    # "F/COND", "MORBIDO", etc, zero actual irons -- any real iron products
+    # in this PAVI category already match the existing "iron" keyword rules,
+    # which is exactly why they never showed up here unclassified), and all
+    # 26 "BATTERIES" items are small kitchen/home appliances (air fryer,
+    # kettle, microwave, vacuum, iron, juicer, mixer, toaster...) with zero
+    # actual batteries -- the chain category name is simply mislabeled on
+    # PAVI's own site.
+    "FABRIC SOFTENER & IRON PRODUCTS": "Fabric Softener", "BATTERIES": "Electrical",
 }
 
 
@@ -2342,6 +2366,66 @@ KEYWORD_RULES = [
 # below, since it's more specific than the bare "egg" single-word rule it's
 # here to override.
 MULTI_KEYWORD_RULES = [
+    # ==========================================================================
+    # Twenty-first pass (3 Sep 2026): round-7 collision sweep, against a fresh
+    # post-round-6 run -- only 108 pairs (228 occurrences) this time, down
+    # from round 6's 113/238, confirming round 6 actually helped rather than
+    # just shuffling the same collisions around.
+    #
+    # Six parallel agents proposed 57 candidate rules from the pairs' own
+    # colliding examples, same as round 6. New this round: every proposal was
+    # THEN re-checked against how its exact keyword combination matches across
+    # the FULL 96,432-name catalog, not just the handful of examples that
+    # triggered the original collision -- because a keyword can look
+    # perfectly clean on 2-3 local examples while actually being a common
+    # word that already sits correctly in a dozen other categories elsewhere
+    # in the catalog. That broader check is what caught round 6's two bad
+    # proposals ("belcando"+"lamb", "face"+"mousse"); doing it exhaustively
+    # this round rather than case-by-case caught 27 more: "socks" alone
+    # (81% Clothes, but would've wrongly swept up 30 Toys & Games + 17 Cat
+    # items), "panko" alone (only 27% actually Flour -- mostly International
+    # Cuisine/Breadcrumbs), "toaster" alone (47% Household Goods vs. 37%
+    # Electrical), "grappa" alone (only 1/11 -- the rest were Whisky/Vodka/
+    # Wine bottles that happen to mention grappa), and 23 similar cases -- see
+    # /tmp/xirja_round7/work/round7_risky_rules.json for the full list with
+    # each one's real corpus-wide category spread. All 27 were left
+    # unresolved (neither ruled nor added to KNOWN_ACCEPTED_COLLISIONS) since
+    # rejecting a bad rule isn't the same as confirming genuine ambiguity --
+    # they're candidates for a future round with more targeted keywords
+    # (e.g. a phrase instead of a bare word), not settled either way. The 29
+    # rules below passed: each is either narrow enough that it only ever
+    # matched its own small handful of real products (most matched 1-3
+    # products total across the whole catalog), or matched a wider set that
+    # was still ≥85% consistent with the proposed category.
+    ("Mouthwash", ["listerine", "rinse"]),
+    ("Baby Essentials", ["chicco", "mousse"]),
+    ("Chicken", ["chicken", "breadcrumbs"]),
+    ("Biscuits", ["savoiardi"]),
+    ("Wine - Red", ["farina", "valpolicella"]),
+    ("Clothes", ["tights", "miele"]),
+    ("Deodorants", ["deo", "vitamin c"]),
+    ("Olive Oil", ["olio", "quinoa"]),
+    ("Biscuits", ["foccacelle"]),
+    ("Yoghurt", ["yosoi"]),
+    ("Sauces & Condiments", ["cranberry", "port"]),
+    ("Frozen", ["frozen", "green beans"]),
+    ("Household Goods", ["hooks", "suckers"]),
+    ("Legumes", ["chickpeas", "water"]),
+    ("Spirits - Vodka", ["rice", "vodka"]),
+    ("Baby Essentials", ["bath", "book"]),
+    ("Household Goods", ["bowl", "cream"]),
+    ("Household Goods", ["bowl", "pasta"]),
+    ("Spirits - Vodka", ["vodka", "watermelon"]),
+    ("Legumes", ["chickpeas", "honey"]),
+    ("Pasta & Couscous", ["teddy", "pasta"]),
+    ("Stationery", ["design", "book"]),
+    ("Pasta & Couscous", ["oyak", "ramen"]),
+    ("Cake Preparations", ["torta", "irkotta"]),
+    ("Skin Care", ["bioten", "scrub"]),
+    ("Intimate Care", ["durex", "lube"]),
+    ("Shampoos", ["styling cream"]),
+    ("Ham", ["ham", "mustard"]),
+    ("Cereals", ["lunch bowl", "quinoa"]),
     # ==========================================================================
     # Twentieth pass (1 Sep 2026): round-6 collision sweep. This is the first
     # round working from the FULL collision report -- earlier rounds only ever
