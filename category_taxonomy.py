@@ -1414,6 +1414,16 @@ KEYWORD_RULES = [
 
     # ---- Home & Entertainment ----
     ("Stationery", ["refill pad", "asticky", "a4 file", "lever arch", "box file", "document wallet", "display book", "index card", "pencil box", "school bag", "subject book", "writing pad"]),
+    # welbees' "Books: <title>" listings (children's storybooks, several in
+    # Maltese) were showing up unclassified -- ground truth is blank for most
+    # of them in the source data itself (the store hasn't categorised them
+    # either), so this is a judgment call, not CSV-verified: filed under
+    # Stationery per 31 Aug 2026 user decision. Bare "book" only, checked
+    # after every phrase-tier rule above (including "display book"/"subject
+    # book"/"colouring book") so those keep winning as intended -- this only
+    # catches the plain "Books: <title>" listings that would otherwise be
+    # unclassified.
+    ("Stationery", ["book"]),
     ("Hand Tools", ["tesa", "hand tearable"]),
     ("Household Goods", [
         "mirror", "picnic set", "shoe lace", "shoelace", "insole",
@@ -2332,6 +2342,53 @@ KEYWORD_RULES = [
 # below, since it's more specific than the bare "egg" single-word rule it's
 # here to override.
 MULTI_KEYWORD_RULES = [
+    # ==========================================================================
+    # Twentieth pass (1 Sep 2026): round-6 collision sweep. This is the first
+    # round working from the FULL collision report -- earlier rounds only ever
+    # saw the report as pasted into chat, which turned out to be silently
+    # clipped by GitHub's web log viewer well before the end; the raw log
+    # (downloaded via "Download log archive") revealed 113 distinct pairs
+    # (238 occurrences), not the ~30 pairs previously visible. Six parallel
+    # research agents CSV-verified every pair against the 31 Aug ground-truth
+    # export using the real word-set matcher. Two agent-proposed rules were
+    # dropped after broader verification contradicted the agent's own
+    # reasoning: "belcando"+"lamb" (56% of matches were actually Dog food)
+    # and "face"+"mousse" for Skin Care (mostly Hair Styling, not Skin Care).
+    # The rest are 100% CSV-clean except "whisky"+"glasses" (5/6, one Gift
+    # Sets outlier) -- kept per the established narrow-signal-mostly-correct
+    # bar used in every prior round. Most of the 113 pairs were left
+    # ACCEPT-AMBIGUOUS: genuine ground-truth self-contradiction on
+    # near-identical names, or already correctly resolved by existing list
+    # order -- see /tmp/xirja_export/round6/ for the full agent triage output.
+    ("Household Goods", ["golden drop", "air fryer"]),
+    ("Air Fresheners", ["airpure", "dehumidifier"]),
+    ("Beers", ["desperados"]),
+    ("Skin Care", ["beauty recipe"]),
+    ("Dog", ["cheeses", "beef"]),
+    ("Beef", ["beef", "emmenthal"]),
+    ("Butter", ["philadelphia", "salmone"]),
+    ("Cold Cuts", ["arla", "gobon"]),
+    ("Household Goods", ["piatti", "diluito"]),
+    ("Household Goods", ["piatti", "conc"]),
+    ("Butter", ["cake", "margarine"]),
+    ("Butter", ["butter", "croissant"]),
+    ("Cooking Creams", ["president", "coffee"]),
+    ("Cereals", ["mio gum", "cereals"]),
+    ("Coffee", ["thai", "coffee"]),
+    ("Skin Care", ["disney", "exfoliating"]),
+    ("Flowers", ["gypsophila"]),
+    ("Cakes", ["rice up cakes", "himalayan salt"]),
+    ("Cake Preparations", ["torras", "fondant"]),
+    ("Fish & Other Animals", ["for birds"]),
+    ("Stationery", ["button envelope"]),
+    ("Disposables", ["ipak", "salad"]),
+    ("Cakes", ["meister", "moulin"]),
+    ("Skin Care", ["charcoal", "cleanser"]),
+    ("Wine - Sparkling", ["ice", "edt", "blanc"]),
+    ("Spirits - Whisky", ["whisky", "rum"]),
+    ("Legumes", ["dragon", "lentil"]),
+    ("Spirits - Whisky", ["whisky", "glasses"]),
+    ("Spirits - Whisky", ["whiskey", "glasses"]),
     # ==========================================================================
     # Nineteenth pass (31 Aug 2026): round-4 collision sweep, against a FRESH
     # ground-truth export (31 Aug 2026) rather than the stale 24 Aug one earlier
