@@ -5175,6 +5175,62 @@ MULTI_KEYWORD_RULES = [
     ("Herbs & Spices", ['granulated', 'garlic']),
     ("Spirits - Whisky", ['bombay', 'gin']),
     ("Sauces & Condiments", ['salata', 'dressing']),
+
+    # Twenty-third pass (Round 9 collision sweep) -- 3 Sep 2026. From the
+    # newest live production run (140,403-row ground truth), a full sweep of
+    # 70 reported collision pairs (165 occurrences) plus the 3 remaining
+    # unclassified listings, worked with 4 parallel review passes and then
+    # broad-verified (each candidate keyword combo checked against every
+    # distinct name in the fresh 96k-name catalog, not just its own pair's
+    # examples) before merging -- the same discipline every round since
+    # round 7, because it keeps catching genuinely broad/wrong candidates
+    # that look clean on local evidence alone (this round: 'grissini',
+    # 'make up remover', 'guanciale', 'cotonet', 'cotton pads', 'ramen'+
+    # 'noodles', 'boxer shorts', 'finish'+'quantum', 'bread knife', 'face
+    # mousse', 'fish'+'fingers', 'ambi pur'+'wc', 'lamb'+'nut'+'coconut',
+    # and a bad 'robinsons'+'squash' -> Fruits proposal that actually
+    # contradicts the already-deployed Dilutables rule for that exact
+    # phrase -- all rejected and their originating pairs recorded in
+    # KNOWN_ACCEPTED_COLLISIONS below instead of ruled on). Of 47
+    # candidate rules only the ones below cleared the bar (<=3 total
+    # corpus matches, or >=85% of real matches already agree with the
+    # proposed category); the last two entries are the unclassified-
+    # listing fixes (brand/product identities confirmed via web search).
+    ("Chilled Fish", ['fish', 'scaler']),  # collision fix (Chilled Fish vs Household Goods); corpus: {'Household Goods': 1, 'Chilled Fish': 1}
+    ("Chilled Fish", ['shrimp', 'knife']),  # collision fix (Chilled Fish vs Household Goods); corpus: {'Chilled Fish': 1}
+    ("Air Fresheners", ['air freshener', 'fridge']),  # collision fix (Air Fresheners vs Household Goods); corpus: {'Air Fresheners': 1}
+    ("Wine - Red", ['lachryma vitis', 'red wine']),  # collision fix (Wine - Red vs Wine - White); corpus: {'Wine - Red': 2}
+    ("Wine - Red", ['caravaggio', 'shiraz']),  # collision fix (Wine - Red vs Wine - White); corpus: {'Wine - Red': 3}
+    ("Chicken", ['buttermilk', 'chicken']),  # collision fix (Chicken vs Milk); corpus: {'Frozen': 1, 'Chicken': 1}
+    ("Fish & Other Animals", ['treat dispensing', 'toy']),  # collision fix (Cakes vs Toys & Games); corpus: {'Fish & Other Animals': 1}
+    ("Fabric Softener", ['ammorbidente', 'lotus']),  # collision fix (Biscuits vs Fabric Softener); corpus: {'Fabric Softener': 2}
+    ("Coffee", ['macchiato', 'orzomalto']),  # collision fix (Coffee vs Meat Alternatives); corpus: {'Coffee': 1}
+    ("Milk", ['oat milk', 'macchiato']),  # collision fix (Coffee vs Meat Alternatives); corpus: {'Milk': 1}
+    ("Cereals", ['bankok', 'barley']),  # collision fix (Cereals vs Snacks); corpus: {'Cereals': 1}
+    ("Cereals", ['bankok', 'cereal']),  # collision fix (Cereals vs Snacks); corpus: {'Cereals': 1}
+    ("Insect Killer", ['fly swapper']),  # collision fix (Household Goods vs Insect Killer); corpus: {'Insect Killer': 1}
+    ("Insect Killer", ['arix', 'flytrap']),  # collision fix (Household Goods vs Insect Killer); corpus: {'Insect Killer': 1}
+    ("Tea", ['notte', 'camomilla']),  # collision fix (Sanitary Towels vs Tea); corpus: {'Tea': 2}
+    ("Seasonal Items", ['herb', 'scissors']),  # collision fix (Hair & Nail Accessories vs Herbs & Spices); corpus: {'Seasonal Items': 1, 'Household Goods': 1}
+    ("Seasonal Items", ['herb', 'scissors', 'comb']),  # collision fix (Herbs & Spices vs Stationery); corpus: {'Seasonal Items': 1, 'Household Goods': 1}
+    ("Sugar", ['damhert', 'sweetener']),  # collision fix (Bread vs Sugar); corpus: {'Sugar': 2}
+    ("Wine - Red", ['cabernet']),  # collision fix (Spirits - Liqueurs vs Wine - Red); corpus: {'Wine - Red': 116, 'Wine - White': 2, 'Spirits - Whisky': 1, 'Sweet Snacks': 1}
+    ("Wine - Red", ['grappa', 'barolo']),  # collision fix (Spirits - Liqueurs vs Wine - Red); corpus: {'Wine - Red': 1}
+    ("Oils", ['sifcon', 'fragrance oil']),  # collision fix (Oils vs Perfume); corpus: {'Oils': 1}
+    ("Pasta & Couscous", ['riso scotti', 'frollino']),  # collision fix (Biscuits vs Pasta & Couscous); corpus: {'Biscuits': 1, 'Pasta & Couscous': 1}
+    ("Pasta & Couscous", ['orzo', 'frollino']),  # collision fix (Biscuits vs Pasta & Couscous); corpus: {'Pasta & Couscous': 1}
+    ("Household Goods", ['toaster', 'cream']),  # collision fix (Cooking Creams vs Electrical); corpus: {'Household Goods': 1}
+    ("Toys & Games", ['pixar', 'bath glove']),  # collision fix (Cloths & Sponges vs Toys & Games); corpus: {'Toys & Games': 1}
+    ("Cooking Creams", ['cream of chicken']),  # collision fix (Chicken vs Cooking Creams); corpus: {'Soups': 2, 'Cooking Creams': 1}
+    ("Cakes", ['riso scotti', 'honey']),  # collision fix (Honey vs Rice); corpus: {'Cakes': 1}
+    ("Biscuits", ['gallette', 'cioccolato']),  # collision fix (Chocolates vs Rice); corpus: {'Biscuits': 2}
+    ("Fruits", ['elevenfit', 'dragon fruit']),  # collision fix (Dilutables vs Sports); corpus: {'Fruits': 1}
+    ("Pasta & Couscous", ['truffle', 'mashed potatoes']),  # collision fix (Chocolates vs Vegetables); corpus: {'Pasta & Couscous': 1}
+    ("Canned Vegetables", ['antipasto', 'vegetable']),  # collision fix (Cold Cuts vs Vegetables); corpus: {'Canned Vegetables': 1}
+    ("Wine - Red", ['porto cruz']),  # collision fix (Spirits - Liqueurs vs Wine - White); corpus: {'Wine - Red': 1}
+    ("Spirits - Whisky", ['opihr']),  # collision fix (Spirits - Liqueurs vs Vegetables); corpus: {'Spirits - Whisky': 3}
+    ("Cereal & Cereal Bars", ["higates", "plain"]),  # "Higates Plain & Delicious (120grms)" -- a flapjack bar per retailer/openfoodfacts listings; was unclassified
+    ("Biscuits", ["palmary", "winners"]),  # "Palmary 9 Winners (130grms)" -- chocolate-filled biscuit, aka "Kool 9 Winners" per openfoodfacts/retailer listings; was unclassified
 ]
 
 
@@ -5949,6 +6005,71 @@ KNOWN_ACCEPTED_COLLISIONS = {
     frozenset({'Fruits', 'Snacks'}),         # Bankok dried-fruit/nut snack mixes -- correctly resolve per product (Fruits/Chips/Dried Fruit)
     frozenset({'Carbonated Drinks', 'Dilutables'}),  # plain soda-brand syrup vs Sodastream-branded syrup concentrate -- both correctly resolve to their own bucket
     frozenset({'Hair Styling', 'Shaving Creams'}),  # "The Barb'" grooming brand -- wax correctly resolves to Hair Styling, genuine shaving items to Shaving Creams
+
+    # Twenty-third pass (Round 9 collision sweep) -- 3 Sep 2026, part 2.
+    # These pairs were reviewed against real evidence but did NOT get a new
+    # keyword rule -- either because the candidate rule failed the broad-verify
+    # check (the keyword combo is too common catalog-wide / the real matches
+    # don't actually agree with the proposed category), or because the ground
+    # truth itself is genuinely ambiguous or self-contradictory for the
+    # product(s) involved. Recorded here so they stop resurfacing as open
+    # collisions, per this round's 'sort everything, once and for all' request.
+    frozenset({'Chilled Fish', 'Frozen Fish'}),  # rejected candidate rule ['fish', 'fingers'] -> Frozen Fish; corpus dist {'Frozen Fish': 15, 'Chilled Fish': 11, 'Frozen': 2, 'Dog': 1}
+    frozenset({'Fruits', 'Lamb'}),  # rejected candidate rule ['lamb', 'nut', 'coconut'] -> Chocolates; corpus dist {'Chocolates': 1, 'Dried Fruit': 2, 'Legumes & Nuts': 1}
+    frozenset({'Air Fresheners', 'Bathroom & Wc Cleaner'}),  # rejected candidate rule ['ambi pur', 'wc'] -> Bathroom & Wc Cleaner; corpus dist {'Bathroom & Wc Cleaner': 2, 'Air Fresheners': 2, 'Household Goods': 3}
+    frozenset({'Bread', 'Crackers, Crispbread & Breadsticks'}),  # rejected candidate rule ['grissini'] -> Crackers, Crispbread & Breadsticks; corpus dist {'Biscuits': 5, 'Chocolates': 1, 'Super Prices': 1, 'Crackers, Crispbread & Breadsticks': 15, 'Pizza': 1, 'Bread & Crackers': 2, 'Snacks': 1}
+    frozenset({'First Aid', 'Make Up'}),  # rejected candidate rule ['make up remover'] -> Skin Care; corpus dist {'Skin Care': 19, 'Make Up': 26, 'Face Creams': 1, 'Sports': 1, 'Seasonal Items': 1, 'Women Care': 1}
+    frozenset({'Cotton Buds', 'Skin Care'}),  # rejected candidate rule ['cotonet'] -> Cotton Buds; corpus dist {'Household Goods': 1, 'Cotton Buds': 6, 'Make Up': 2, 'Wipes': 1, 'Baby Essentials': 1}
+    frozenset({'Bread', 'Household Goods'}),  # rejected candidate rule ['bread knife'] -> Bread; corpus dist {'Household Goods': 3, 'Bread': 2}
+    frozenset({'Cold Cuts', 'Herbs & Spices'}),  # rejected candidate rule ['guanciale'] -> Ham; corpus dist {'Ham': 7, 'Cold Cuts': 5, 'Super Prices': 1, 'Chilled': 1}
+    frozenset({'Dish Washing Liquid', 'Dishwasher Tablets'}),  # rejected candidate rule ['finish', 'quantum'] -> Household Goods; corpus dist {'Household Goods': 11, 'Dishwasher Tablets': 5}
+    frozenset({'Clothes', 'Toys & Games'}),  # rejected candidate rule ['boxer shorts'] -> Clothes; corpus dist {'Clothes': 8, 'Cat': 2}
+    frozenset({'Oils', 'Pasta & Couscous'}),  # rejected candidate rule ['ramen', 'noodles'] -> International Cuisine; corpus dist {'International Cuisine': 15, 'Noodles': 1, 'Pasta & Couscous': 1, 'Soups': 1}
+    frozenset({'Hair Styling', 'Oils'}),  # rejected candidate rule ['face mousse'] -> Skin Care; corpus dist {'Hair Styling': 3, 'Skin Care': 3}
+    frozenset({'Cereals', 'Dilutables'}),  # rejected candidate rule ['robinsons', 'squash'] -> Fruits; corpus dist {'Dilutables': 2}
+
+    # Round 9 agent-reviewed pairs where no safe keyword rule exists at all --
+    # genuine dual-attribute products, flavour/mix-in overlaps, or cases where
+    # the ground truth itself splits inconsistently across near-identical
+    # listings of the same product.
+    frozenset({'All-purpose Cleaners', 'Cloths & Sponges'}),  # Microfibre/multi-purpose cloth products ('panno multiuso') legitimately carry both cleaning-product and cloth/sponge keywords, and the evidence shows the ground truth itself splits inconsistently across Household Goods, Cloths & Sponges and All-purpose Cleaners for near-identical products (e.g. 'Elbow Grease Microfibre Cloth 1pk' vs 'Elbow Grease Microfibre Cloths 4 Pack'), so no single in-name pattern can safely pick a winner.
+    frozenset({'Chocolates', 'Milk'}),  # Confectionery/biscuit products that name milk as a flavour or ingredient (Kinder Brioss With Milk, Torras Zero Milk And Hazelnuts) genuinely reference both categories with no reliable distinguishing word; true categories in the evidence range across Biscuits, Chocolates and Milk depending on the specific product, same flavour-descriptor shape as other already-accepted collisions.
+    frozenset({'Beef', 'Honey'}),  # Beef jerky flavoured with honey genuinely mentions both words, and the evidence shows the same product line (Wild West Beef Jerky Honey Bbq, differing only by size/gluten-free variant) is ground-truthed inconsistently between Snacks and Beef -- neither of which is ever Honey -- so there is no safe keyword that both fixes the Honey false match and respects the existing ground truth.
+    frozenset({'Herbs & Spices', 'Milk'}),  # Spice-flavoured dairy/plant-milk drinks (kefir with cardamom, oat milk with pumpkin spice) legitimately name both a spice and milk in the product name, the same flavour-descriptor shape already accepted for other category pairs (e.g. Herbs & Spices/Vegetables), with true categories split between Yoghurt and Milk and no reliable keyword to prefer one over Herbs & Spices.
+    frozenset({'Flour', 'Household Goods'}),  # This is the same 'panko' breadcrumb-coating ambiguity round 7 already found unsafe to rule on (bare 'panko' was only 27% actually Flour catalog-wide, mostly International Cuisine/Breadcrumbs); the evidence here again splits between International Cuisine and Flour with no distinguishing word, so it is recorded as accepted rather than re-attempting the same rejected keyword.
+    frozenset({'Flour', 'Sweet Snacks'}),  # Same underlying 'panko' Japanese breadcrumb-coating ambiguity as the Flour/Household Goods pair above (Frumen Panko Japanese Coating splits between International Cuisine and Flour); round 7 already established 'panko' alone is an unsafe catalog-wide keyword, and no narrower distinguishing phrase exists in this evidence either.
+    frozenset({'Herbs & Spices', 'Snacks'}),  # Spiced nut/snack mixes (Bombay Mix, Oriental Mix, roasted nut blends) legitimately span Herbs & Spices, Snacks and Legumes & Nuts; the evidence even shows the identical product 'Good Health Bombay Mix' ground-truthed as both Legumes & Nuts and Snacks in different listings, confirming there is no reliable in-name signal to standardize on.
+    frozenset({'Chocolates', 'Sweet Snacks'}),  # The 104-row evidence sample for this pair spans at least ten real true categories (Chocolates, Sweet Snacks, Cakes, Biscuits, Frozen, Cereal Bars, Cake Snacks, Sweet Pastry, Fruit & Nuts, International Cuisine) for products mentioning chocolate/fudge/toffee, with Chocolates dominant but no safe narrow keyword available -- exactly the over-broad-common-word trap rounds 7-8 warned against, so this is recorded as an accepted ambiguity rather than risking a sweeping rule.
+    frozenset({'Fruits', 'Tea'}),  # Fruit-flavoured tea/herbal infusions (Mandarin & Ginger Infusion, Chamomile & Peach, Strawberry & Rhubarb) legitimately name a fruit alongside a tea/infusion term, but the actual ground truth for these products splits across Coffee and Beverages rather than either Fruits or Tea, so no keyword derived from this evidence could reliably target the right category.
+    frozenset({'Biscuits', 'Yoghurt'}),  # Plumcake/protein-yoghurt hybrid snack products (Kinder Plumcake Yogurt, Deco' Plumcake Greek Yogurt, Zott Protein Drink) span at least seven real true categories in the evidence (Cake Snacks, Yoghurt, Cakes, Biscuits, Chocolates, Mixers, Cooking Creams, Cereal Bars) with no consistent in-name signal -- a genuine multi-way ambiguity, not a two-category rule opportunity.
+    frozenset({'Coffee', 'Dilutables'}),  # Ground truth itself contradicts on near-identical Nescafe iced-syrup names (one 'Espressp' typo variant filed Dilutables, the near-twin 'Espresso' variant filed Coffee), so there is no reliable pattern to rule on -- the source labeling is inconsistent, not the keyword matching.
+    frozenset({'Cereals', 'Legumes'}),  # Valfrutta Buonmix genuinely combines corn/farro (cereal) with cannellini beans (legume) in one product -- a real mixed-ingredient item with no single correct base category, same shape as the accepted mixed-meat pairs.
+    frozenset({'Oils', 'Shower Gels'}),  # Ground truth contradicts itself on near-duplicate names: 'Dove Shower Mousse With Coconut Oil (200ml)' is filed Oils while the essentially identical 'Dove Shower Mousse Coconut Oil 200ml' (no 'With') is filed Shower Gels, so there is no reliable textual signal to rule on -- the source labeling itself is inconsistent.
+    frozenset({'Bread', 'Chocolates'}),  # Chocolate/pistachio-filled croissant products span International Cuisine, Croissants, Chocolates and Cakes with no reliable pattern -- ground truth itself contradicts on near-identical Antonelli Croissants Pistachio Choco items, so no single keyword rule can be safe.
+    frozenset({'Body Lotions', 'Skin Care'}),  # Body lotion/hand cream vs facial moisturiser overlap has no reliable keyword signal -- ground truth splits inconsistently across near-identical Simple-brand moisturiser listings, so this is a genuine, permanent ambiguity rather than a fixable gap.
+
+    # Round 9 -- flagged by review as likely SOURCE-DATA problems (contradictory
+    # or mislabeled ground truth for the same/near-identical product), not code
+    # bugs. Recorded here rather than left open, since no keyword rule can fix
+    # a labeling inconsistency in the source data itself.
+    frozenset({'Fruits', 'Pasta & Couscous'}),  # [data issue] 'Fruit Spaghetti' is a fruit-leather candy shaped like pasta, not an actual Fruits/Pasta ambiguity; the real problem is that near-identical listings of the same product (e.g. 'Fruit Spaghetti Mango' variants) carry four different ground-truth categories (Pasta & Couscous, Food, Baby Food) in the source data, so no keyword rule can be consistent with contradictory ground truth for the same item.
+    frozenset({'Bathroom & Wc Cleaner', 'Household Goods'}),  # [data issue] Both evidence rows are the same dehumidifier product ('Damp Clear Moisture Trap 2x500g') from different listings, one ground-truthed All-purpose Cleaners and the other Household Goods -- a genuine data inconsistency for an identical item, not a categorization gap a keyword rule can resolve.
+    frozenset({'Chicken', 'Olives'}),  # [data issue] Both evidence rows are the same product (chicken luncheon meat with olives), differing only by a spelling variant ('Luncheonmeat' vs 'Lncheon Meat'), yet are ground-truthed Cold Cuts and Chicken respectively -- an inconsistency in the source data for what should be one product, not a genuine Chicken/Olives categorization question (neither row is even Olives).
+    frozenset({'Dilutables', 'Milk'}),  # [data issue] Both evidence rows are the same brand/flavour ('Coolee...Strawberry...Milk...') differing only in word order, yet ground-truthed Mixers and Milk respectively -- neither actually Dilutables -- indicating an inconsistency in the source data for near-duplicate listings rather than a fixable keyword gap.
+    frozenset({'Air Fresheners', 'Stain Removers'}),  # [data issue] Both evidence rows are the same product ('Ace Gentile Spray...Refill 650ml'), differing only in punctuation ('+refill' vs '& Refill'), yet ground-truthed Household Goods and Stain Removers respectively -- an inconsistency in the source data for what is effectively one listing, not a genuine Air Fresheners/Stain Removers ambiguity.
+    frozenset({'Cooking Creams', 'Yoghurt'}),  # [data issue] Both evidence rows are the same product ('Zott Protein...Cookie...Cream Drink 250ml'), differing only by word order in the name, yet ground-truthed Mixers and Cooking Creams respectively -- an inconsistency in the source data for a near-duplicate listing rather than a fixable Cooking Creams/Yoghurt categorization gap.
+    frozenset({'Spirits - Liqueurs', 'Wine - Sparkling'}),  # [data issue] Two La Gioiosa 'Aperitivo' products land on ground-truth categories that don't even match cat1/cat2 or each other (Wine - Red for 'Hugo Aperitivo', Spirits - Liqueurs for 'Spritzzoso Aperitivo') with no wine-colour or spirit-type word in either name to explain the split -- looks like inconsistent/mislabeled source category data for this product line, not a resolvable naming pattern.
+    frozenset({'Dried Fruit', 'Lamb'}),  # [data issue] Two near-identical Leonardo-brand pet-food products ('Lamb & Cranberries' vs 'Belcando Lamb Nad Cranberries', the latter with a garbled 'Nad') get contradictory ground truth (Cat vs the bare meat category Lamb) despite both containing the same 'lamb'/'cranberries' words -- reads as corrupted/inconsistent source labeling for this listing pair, not a namable distinction.
+    frozenset({'Fruits', 'Spirits - Liqueurs'}),  # [data issue] Three liqueur products get three unrelated ground-truth categories (Spirits - Whisky, Spirits - Vodka, Fruits) none of which is actually 'Spirits - Liqueurs' (cat1) and none of which is named anywhere in the product text (no product says 'whisky' or 'vodka') -- looks like randomized/incorrect subtype assignment in the source data rather than a pattern a keyword rule could reproduce.
+    frozenset({'Frozen', 'Household Goods'}),  # [data issue] Both evidence products are kitchenware (an ice-cream cup/scoop-recipe item and a stainless steel ice-cream scoop) whose brands -- 'Innova Goods' and 'Ok Stainless' -- are already established, deliberate Household Goods keywords elsewhere in this file. Ground truth here marking them as Frozen directly contradicts that existing, already-verified brand mapping, which strongly suggests the ground truth is mislabeled rather than a real naming gap.
+    frozenset({'All-purpose Cleaners', 'Herbs & Spices'}),  # [data issue] Zoflora is an established, deliberate All-purpose Cleaners brand keyword elsewhere in this file (a disinfectant/scent-spray brand), and 'Winter Spice' is just a fragrance name, not an ingredient. Ground truth marking this identical product as Herbs & Spices (consistently across both duplicate listings) contradicts the already-verified brand classification -- looks like a source mislabeling, and codifying 'spice' as a signal here would actively misfile a cleaning product as food.
+    frozenset({'Household Goods', 'Wine - White'}),  # [data issue] 'Bormioli' is an established, deliberate Household Goods keyword (a glassware/tableware brand) elsewhere in this file. Both evidence products -- a 6-piece Chardonnay glass set and an oval serving dish -- are glassware/tableware, not bottled wine, so ground truth calling them Wine - White directly contradicts the existing, already-verified brand classification and looks like a source mislabeling rather than a real naming gap.
+    frozenset({'Fruits', 'Pastry'}),  # [data issue] 'Fentoys Art Craft ... Single Dough Pot-orange' is a children's play-dough craft toy, not a food item -- the ground truth of 'Fruits' comes from the word 'orange' matching a fruit-color name, which is a source labeling error rather than a real Fruits-vs-Pastry categorization gap.
+    frozenset({'Chilled Fish', 'Ham'}),  # [data issue] The only evidenced product ('TUNA W/HAM BROTH7') is actually cat food with ground truth 'Cat' -- neither side of the reported Chilled Fish/Ham pair is correct, so this is a mislabelled/misgrouped collision report artifact, not a real ambiguity between the two reported categories.
+    frozenset({'Shower Gels', 'Skin Care'}),  # [data issue] Ground truth is internally inconsistent for the identical Dalan D'olive shower gel line -- the same scent/size is labeled Shower Gels in one listing and Skin Care in another ('Only €2.99') listing, so no keyword pattern can resolve the contradictory ground truth.
+
+    frozenset({'Cereals', 'Dilutables'}),  # "Robinsons Squashes Fruit & Barley (1l)" ties Cereals ('barley') / Dilutables ('squash', single-word tier) / Fruits at tier 2; classify_by_name already resolves this specific name to Fruits (matches ground truth) via existing tie-break order -- not a real bug, just a rare 3-way single-product tie.
+    frozenset({'Lamb', 'Nuts'}),  # same "Lamb Nut Coconut 500g" product/rule as the Chocolates/Fruits+Lamb rejection above (['lamb','nut','coconut'] was only 1/4 = 25% actually Chocolates catalog-wide) -- one underlying listing drives both reported pairs, both rejected together
 }
 def clean_for_matching(name):
     # html.unescape() first -- belt-and-suspenders against a real bug found
