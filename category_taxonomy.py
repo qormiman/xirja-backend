@@ -2367,6 +2367,43 @@ KEYWORD_RULES = [
 # here to override.
 MULTI_KEYWORD_RULES = [
     # ==========================================================================
+    # Twenty-second pass (3 Sep 2026): round-8 collision sweep, against a run
+    # after round 7 landed -- collisions dropped again, from 108 pairs/228
+    # occurrences to 79/182, confirming round 7 helped too. Same four-agent
+    # + full-catalog-broad-verify process as round 7, but this time the
+    # agents were told up front about round 7's overreach lesson (a keyword
+    # clean on its own pair can still be a common word elsewhere) -- didn't
+    # fully prevent it: they still proposed "bankok", "camomilla", "grissini"
+    # and a bare "ammorbidente", all previously-seen or newly-caught
+    # overreaches (2%-58% actually-correct catalog-wide), plus 11 more new
+    # ones this round alone (e.g. "damhert" was only 4% correct -- 53
+    # catalog-wide matches, only 2 actually Sugar). All 15 were dropped by
+    # the same broad-verify check, none forced. The 10 below passed: each
+    # matched only its own small handful of real products catalog-wide (1-3
+    # in most cases), or matched a wider set (shower+cream: 39) that was
+    # still ≥85% consistent with the proposed category.
+    ("Clothes", ["barbie", "socks"]),
+    ("All-purpose Cleaners", ["viakal", "vinegar"]),
+    ("Sweet Snacks", ["caramelle", "miel"]),
+    ("Make Up", ["face", "puff"]),
+    ("Shower Gels", ["shower", "cream"]),
+    ("Disposables", ["salviette", "igienizzanti"]),
+    ("Olive Oil", ["johnson", "olio"]),
+    ("Dental Care", ["hotpack", "toothpick"]),
+    ("Beef", ["ajinomoto", "beef"]),
+    ("Milk", ["aptamil", "growing up"]),
+    # Round 8, part 2 -- the last 5 remaining unclassified listings from
+    # round 7 that had a safe, specific fix (3 were left genuinely
+    # unresolved: 2 single-item cases with no distinguishing pattern in the
+    # name, and 1 with a corrupted product name). Each keyword combo below
+    # matched only 1-2 products catalog-wide, checked the same way as every
+    # rule above.
+    ("Biscuits", ["florbu", "surdito"]),  # Florbu's other 7 catalog products are all Biscuits (wafers/cookies) -- same brand pattern
+    ("Sugar", ["nkd living", "inulin"]),  # sibling "Nkd Living...Stevia Powder" is Sugar -- same brand, same sugar-substitute positioning
+    ("Household Goods", ["dunlop", "toiletry"]),  # a travel toiletry bag, not a car product despite the Dunlop brand
+    ("Sports", ["vege protein"]),  # matches the existing pattern of standalone protein-powder products landing in Sports
+    ("Nuts", ["hemp seed", "shelled"]),  # matches "Linwoods Shelled Hemp"/"Good Earth Hemp Seeds Hulled", both already Nuts
+    # ==========================================================================
     # Twenty-first pass (3 Sep 2026): round-7 collision sweep, against a fresh
     # post-round-6 run -- only 108 pairs (228 occurrences) this time, down
     # from round 6's 113/238, confirming round 6 actually helped rather than
