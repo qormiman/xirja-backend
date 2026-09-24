@@ -6,7 +6,8 @@ doesn't remember — read this file (and the actual code) before trusting any
 recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
-**Last verified against the actual code/deployment: 24 Sept 2026.**
+**Last verified against the actual code/deployment: 24 Sept 2026 (updated
+same day — real shopping-list feature added).**
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -30,24 +31,35 @@ verified" line and the relevant section whenever real progress happens.
   barcode/fuzzy-match system with a human review workflow for
   medium-confidence matches, deployed as GitHub Actions
   (`match-products.yml`, `apply-review.yml`, `export-review.yml`).
-- **Price API**: `api/main.py` — real FastAPI service, one working endpoint
-  (`GET /categories/{category}/prices`, cheapest current price per store),
-  deployed on Render (`https://xirja-backend.onrender.com` per the mobile
-  app's config — confirm this matches the live Render dashboard address).
-- **Mobile app — first screen**: a real "My list" screen (`App.js`) that
-  calls the live API and renders real prices for 4 hardcoded categories.
-  As of 24 Sept 2026 this was recovered from a local download and turned
-  into a proper, git-tracked project (`xirja-app` repo) — before that it
-  only existed as a pasted-in Expo Snack session, which is why it wasn't
-  showing up as "built" anywhere durable.
+- **Price API**: `api/main.py` — real FastAPI service, deployed on Render
+  (`https://xirja-backend.onrender.com` per the mobile app's config —
+  confirm this matches the live Render dashboard address). Endpoints:
+  `GET /categories/{category}/prices` (cheapest current price per store),
+  `GET /categories` (every category with a live price, for the app's
+  add-item search), and a full shopping-list CRUD set —
+  `GET /lists/{user_id}`, `POST /lists/{user_id}/items`,
+  `PATCH /lists/{user_id}/items/{item_id}`,
+  `DELETE /lists/{user_id}/items/{item_id}`.
+- **Database — list tables extended**: `migration_001_list_by_category.sql`
+  (in `xirja-backend`) makes `app_list_item` support an item identified by
+  shared category (`shopping_category`), not only a matched `product_id` —
+  needed because product-matching coverage is still partial. Must be run
+  once against the real database before the list endpoints above work —
+  confirm it's actually been run in Neon, this file only records that the
+  migration was written and delivered.
+- **Mobile app — first screen, now a real list**: `App.js` (`xirja-app`
+  repo) — search-and-add a category, change quantity, remove an item, pull
+  to refresh, all against the live API and database. Previous version only
+  showed 4 hardcoded categories with no way to change them. Uses a random
+  per-device id (`AsyncStorage`) in place of real accounts, which don't
+  exist yet — documented in `xirja-app/SETUP.md` as a deliberate, swappable
+  shortcut, not an oversight.
 
 ## Not started / explicitly designed-only (confirmed absent from the code)
 
 - Real navigation across the other 8 designed screens (Browse, Compare,
   Item detail, Store lists, Shopping mode, Trip summary, Settings,
   Onboarding) — these exist only in the clickable `.dc.html` prototype.
-- The `app_list` / `app_list_item` tables and the "add/remove item to my
-  list" feature — the mobile app's category list is still hardcoded.
 - The price-correction workflow (`user_price` table, site-vs-mine trust
   logic) — designed in the prototype and spec, not ported to real code.
 - Legal / Terms-of-Service review for each chain — flagged as overdue in
@@ -56,6 +68,15 @@ verified" line and the relevant section whenever real progress happens.
   unresolved.
 - Failure alerting beyond "the job crashed" — a job that runs but silently
   stops finding prices isn't caught yet.
+- Automated tests for the new list endpoints (`get_or_create_list`,
+  `add_item`, etc) — written and manually reviewed for correctness, not
+  covered by an automated test the way `check_crawl_freshness.py` is.
+- The API's CORS is still wide open (`allow_origins=["*"]`) and Render is
+  still on the free tier (sleeps after 15 min idle, ~30-60s cold start) —
+  fine for testing, not for real users.
+- Real navigation across the other 8 designed screens is still untouched —
+  this update only makes the existing "My list" screen real, it doesn't
+  add any new screens.
 
 ## How to keep this file honest
 
