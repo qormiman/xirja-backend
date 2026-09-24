@@ -7,9 +7,9 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 24 Sept 2026 (updated
-same day four times — real shopping-list feature, then Browse + basic
-navigation, a reliability fix for Render free-tier cold starts, then a
-real Compare screen).**
+same day five times — real shopping-list feature, then Browse + basic
+navigation, a reliability fix for Render free-tier cold starts, a real
+Compare screen, then a fix for the database connection pool going stale).**
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -42,7 +42,18 @@ real Compare screen).**
   so a store carrying none of a list's items still appears in the
   ranking), and a full shopping-list CRUD set — `GET /lists/{user_id}`,
   `POST /lists/{user_id}/items`, `PATCH /lists/{user_id}/items/{item_id}`,
-  `DELETE /lists/{user_id}/items/{item_id}`.
+  `DELETE /lists/{user_id}/items/{item_id}`. Every endpoint now goes
+  through one shared helper (`run_with_db`) instead of repeating its own
+  connection-handling: found via a real Render log (24 Sept), a pooled
+  database connection can go stale without warning (Render's free tier
+  sleeping after 15 idle minutes, or Neon closing a connection it decides
+  has been idle too long), and using a stale one crashed the request with
+  `psycopg2.OperationalError: SSL connection has been closed
+  unexpectedly`. The helper now discards a connection that fails this way
+  and retries the same request once with a fresh one, instead of letting
+  it crash — confirmed by reading the code path, not yet re-confirmed
+  against a fresh Render log showing the fix catch a real stale
+  connection in the wild.
 - **Database — list tables extended**: `migration_001_list_by_category.sql`
   (in `xirja-backend`) makes `app_list_item` support an item identified by
   shared category (`shopping_category`), not only a matched `product_id` —
@@ -98,9 +109,14 @@ real Compare screen).**
   a raw network error while the other succeeds — the app now retries once
   automatically on that specific failure and no longer discards an
   already-successful result just because a second, unrelated request
-  failed. The underlying free-tier sleep behavior itself is unchanged —
-  moving off the free tier is the real fix, this just makes the app
-  tolerate it better in the meantime.
+  failed. Also found via a real Render log (24 Sept): the same free-tier
+  sleep (or a Neon-side idle timeout) can leave a stale connection sitting
+  in the server's connection pool, which used to crash the request with
+  `psycopg2.OperationalError` instead of recovering — the server now
+  detects that specific failure and retries once with a fresh connection
+  (see `run_with_db` in `api/main.py`). Both fixes make the free tier's
+  rough edges tolerable, not solved — moving off the free tier is still
+  the real fix for the underlying sleep/idle behavior itself.
 
 ## How to keep this file honest
 
