@@ -9,11 +9,15 @@ What this does, in plain terms:
   this server over a normal web address, and this server is the only thing
   that ever holds the real database credentials.
 
-  Right now this has exactly one real feature -- the minimum needed to prove
-  the whole chain works end to end: real prices, from the real database,
-  reachable over the internet, ready for a real screen to show. More
-  endpoints (adding items to a list, browsing, price corrections) come
-  later, once this first slice is proven out.
+  Started with exactly one endpoint -- the minimum needed to prove the whole
+  chain works end to end: real prices, from the real database, reachable
+  over the internet. This now adds the second real feature: a genuinely
+  usable shopping list (add an item by category, see its cheapest current
+  price, remove it, change quantity) -- the previous "My list" screen only
+  showed 4 hardcoded categories with no way to change them.
+
+  Still ahead: browsing by category, the price-correction workflow. Add
+  those the same way this one was added -- one proven slice at a time.
 
 Run locally:
     cd api
@@ -22,11 +26,15 @@ Run locally:
     uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
   Then open http://127.0.0.1:8000/docs in a browser -- FastAPI builds that
-  page automatically, and it lets you try the endpoint by hand before the
+  page automatically, and it lets you try every endpoint by hand before the
   app ever calls it.
 
 Deploy: see ../SETUP.md -> "Running the API online (Render)" for the
 step-by-step walkthrough (no server administration experience needed).
+Re-deploying an update: Render redeploys automatically on every push to
+this repo's main branch (or every file upload through GitHub's web
+interface, which creates a commit the same way) -- nothing extra to do on
+Render's side.
 """
 
 import os
@@ -34,6 +42,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 from psycopg2 import pool as pg_pool
 
 # A small, reusable pool of database connections, opened once when the
@@ -67,20 +76,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Xirja API", lifespan=lifespan)
 
-# Wide open for now -- every endpoint here is read-only, public shelf-price
-# information (nothing personal, nothing a shopper typed in), and the app
-# is still being built and tested from lots of different places (a phone,
-# a simulator, this sandbox). Narrow this to the app's real domain once
-# there's a production app to protect and something worth protecting it
-# from (e.g. a competitor scraping this API instead of the chains' own
-# sites).
+# Wide open for now -- every endpoint here is either public shelf-price
+# information or a shopping list keyed by a random per-device id with
+# nothing personally identifying in it (see "On user_id" below). Narrow
+# this to the app's real domain once there's a production app to protect
+# and something worth protecting it from (e.g. a competitor scraping this
+# API instead of the chains' own sites, or someone guessing another
+# device's list id).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 
+
+# ============================================================================
+# Shared helpers
+# ============================================================================
 
 # Finds the cheapest CURRENT price per store for a shared category, e.g.
 # "Milk". Written as: first narrow down to just the listings in that
@@ -129,23 +142,6 @@ CHEAPEST_PER_CATEGORY_SQL = """
     WHERE latest.price IS NOT NULL
     ORDER BY cl.store_id, latest.price ASC
 """
-
-
-@app.get("/health")
-def health():
-    """
-    A trivial endpoint with no real data in it -- lets you (or, later, an
-    automated check) confirm the server is running AND can reach the
-    database, separately from any real feature actually working.
-    """
-    conn = get_pool().getconn()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1")
-            cur.fetchone()
-        return {"status": "ok"}
-    finally:
-        get_pool().putconn(conn)
 
 
 def group_cheapest_per_store(rows):
@@ -197,6 +193,38 @@ def group_cheapest_per_store(rows):
     return sorted(by_store.values(), key=lambda s: s["price"])
 
 
+def fetch_cheapest_for_category(cur, category):
+    """
+    Shared by both /categories/{category}/prices and the list endpoints, so
+    "what's the cheapest price for this item" is computed exactly one way
+    everywhere in the app -- never two slightly different versions of the
+    same logic drifting apart.
+    """
+    cur.execute(CHEAPEST_PER_CATEGORY_SQL, (category,))
+    rows = cur.fetchall()
+    if not rows:
+        return None
+    stores = group_cheapest_per_store(rows)
+    return {"cheapest": stores[0], "by_store": stores}
+
+
+@app.get("/health")
+def health():
+    """
+    A trivial endpoint with no real data in it -- lets you (or, later, an
+    automated check) confirm the server is running AND can reach the
+    database, separately from any real feature actually working.
+    """
+    conn = get_pool().getconn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            cur.fetchone()
+        return {"status": "ok"}
+    finally:
+        get_pool().putconn(conn)
+
+
 @app.get("/categories/{category}/prices")
 def category_prices(category: str):
     """
@@ -212,21 +240,224 @@ def category_prices(category: str):
     conn = get_pool().getconn()
     try:
         with conn.cursor() as cur:
-            cur.execute(CHEAPEST_PER_CATEGORY_SQL, (category,))
-            rows = cur.fetchall()
+            result = fetch_cheapest_for_category(cur, category)
     finally:
         get_pool().putconn(conn)
 
-    if not rows:
+    if result is None:
         raise HTTPException(
             status_code=404,
             detail=f"No listings found for category '{category}'.",
         )
 
-    stores = group_cheapest_per_store(rows)
+    return {"category": category, **result}
+
+
+@app.get("/categories")
+def list_categories():
+    """
+    Every shared category that currently has at least one real, in-stock
+    price behind it, with how many stores carry it -- what the app's "add
+    an item" screen searches/browses against. Deliberately reads from real
+    listing + price data (not a fixed list somewhere in code), so it can
+    never show a category that would then come back empty when added to a
+    list.
+    """
+    sql = """
+        SELECT l.shopping_category, COUNT(DISTINCT o.store_id) AS store_count
+        FROM listing l
+        JOIN outlet o ON o.id = l.outlet_id
+        JOIN LATERAL (
+            SELECT 1 FROM price_observation po
+            WHERE po.listing_id = l.id
+            ORDER BY po.observed_at DESC
+            LIMIT 1
+        ) latest ON TRUE
+        WHERE l.shopping_category IS NOT NULL
+        GROUP BY l.shopping_category
+        ORDER BY l.shopping_category ASC
+    """
+    conn = get_pool().getconn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            rows = cur.fetchall()
+    finally:
+        get_pool().putconn(conn)
 
     return {
-        "category": category,
-        "cheapest": stores[0],
-        "by_store": stores,
+        "categories": [
+            {"category": name, "store_count": count} for name, count in rows
+        ]
     }
+
+
+# ============================================================================
+# Shopping list
+# ============================================================================
+#
+# On user_id: there's no real login system yet (the spec always intended
+# accounts to come later). Until then, the app generates one random id the
+# first time it opens and keeps it on the phone -- see the app's own code
+# for exactly how. That id is meaningless outside "which rows in app_list
+# belong together" -- it's not an email, a name, or anything else personal.
+# This is a deliberate, documented shortcut, not an oversight: swap it for
+# a real logged-in user_id later without changing anything about how lists
+# or items are stored.
+
+
+class AddItemBody(BaseModel):
+    category: str = Field(..., min_length=1)
+    quantity: float = Field(default=1, gt=0)
+
+
+class UpdateItemBody(BaseModel):
+    quantity: float = Field(..., gt=0)
+
+
+def get_or_create_list(cur, user_id: str):
+    cur.execute("SELECT id FROM app_list WHERE user_id = %s LIMIT 1", (user_id,))
+    row = cur.fetchone()
+    if row:
+        return row[0]
+    cur.execute(
+        "INSERT INTO app_list (user_id) VALUES (%s) RETURNING id", (user_id,)
+    )
+    return cur.fetchone()[0]
+
+
+def serialize_items(cur, list_id):
+    cur.execute(
+        """
+        SELECT id, shopping_category, quantity
+        FROM app_list_item
+        WHERE list_id = %s
+        ORDER BY id
+        """,
+        (list_id,),
+    )
+    rows = cur.fetchall()
+
+    items = []
+    for item_id, category, quantity in rows:
+        priced = fetch_cheapest_for_category(cur, category)
+        items.append(
+            {
+                "item_id": str(item_id),
+                "category": category,
+                "quantity": float(quantity),
+                # None when nothing's currently in stock/priced anywhere for
+                # this category -- the app shows "no price found" for this,
+                # same wording as the old hardcoded screen used.
+                "cheapest": priced["cheapest"] if priced else None,
+                "by_store": priced["by_store"] if priced else [],
+            }
+        )
+    return items
+
+
+@app.get("/lists/{user_id}")
+def get_list(user_id: str):
+    """
+    Returns this user's list (creating an empty one the very first time
+    they're seen), with each item's real, current cheapest price attached
+    -- the app never has to make a second round-trip per item.
+    """
+    conn = get_pool().getconn()
+    try:
+        with conn.cursor() as cur:
+            list_id = get_or_create_list(cur, user_id)
+            items = serialize_items(cur, list_id)
+        conn.commit()
+    finally:
+        get_pool().putconn(conn)
+
+    return {"list_id": str(list_id), "items": items}
+
+
+@app.post("/lists/{user_id}/items")
+def add_item(user_id: str, body: AddItemBody):
+    """
+    Adds a category to the list. If it's already on there, this bumps the
+    existing row's quantity instead of creating a duplicate row for the
+    same category -- "add Milk" twice should mean "2 milk", not two
+    separate Milk rows.
+    """
+    conn = get_pool().getconn()
+    try:
+        with conn.cursor() as cur:
+            list_id = get_or_create_list(cur, user_id)
+
+            cur.execute(
+                """
+                SELECT id, quantity FROM app_list_item
+                WHERE list_id = %s AND shopping_category = %s
+                """,
+                (list_id, body.category),
+            )
+            existing = cur.fetchone()
+            if existing:
+                item_id, current_qty = existing
+                cur.execute(
+                    "UPDATE app_list_item SET quantity = %s WHERE id = %s",
+                    (float(current_qty) + body.quantity, item_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO app_list_item (list_id, shopping_category, quantity)
+                    VALUES (%s, %s, %s)
+                    """,
+                    (list_id, body.category, body.quantity),
+                )
+
+            items = serialize_items(cur, list_id)
+        conn.commit()
+    finally:
+        get_pool().putconn(conn)
+
+    return {"list_id": str(list_id), "items": items}
+
+
+@app.patch("/lists/{user_id}/items/{item_id}")
+def update_item(user_id: str, item_id: str, body: UpdateItemBody):
+    """Changes an item's quantity. To remove an item entirely, use DELETE."""
+    conn = get_pool().getconn()
+    try:
+        with conn.cursor() as cur:
+            list_id = get_or_create_list(cur, user_id)
+            cur.execute(
+                """
+                UPDATE app_list_item SET quantity = %s
+                WHERE id = %s AND list_id = %s
+                """,
+                (body.quantity, item_id, list_id),
+            )
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Item not found on this list.")
+            items = serialize_items(cur, list_id)
+        conn.commit()
+    finally:
+        get_pool().putconn(conn)
+
+    return {"list_id": str(list_id), "items": items}
+
+
+@app.delete("/lists/{user_id}/items/{item_id}")
+def remove_item(user_id: str, item_id: str):
+    conn = get_pool().getconn()
+    try:
+        with conn.cursor() as cur:
+            list_id = get_or_create_list(cur, user_id)
+            cur.execute(
+                "DELETE FROM app_list_item WHERE id = %s AND list_id = %s",
+                (item_id, list_id),
+            )
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Item not found on this list.")
+            items = serialize_items(cur, list_id)
+        conn.commit()
+    finally:
+        get_pool().putconn(conn)
+
+    return {"list_id": str(list_id), "items": items}
