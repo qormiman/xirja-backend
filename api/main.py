@@ -296,6 +296,82 @@ def category_prices(category: str):
     return {"category": category, **result}
 
 
+# ----------------------------------------------------------------------------
+# Price history -- a genuinely different question from everything above.
+# Every other endpoint in this file only ever looks at the SINGLE latest
+# price_observation row per listing ("what does it cost right now"). This
+# is the first one that looks BACK through that table's real history,
+# which every crawler run has been quietly building up in the background
+# since the very first one. Bucketed into calendar weeks (not one point
+# per crawl) because crawls run far more often than prices actually
+# change, and a week-by-week trend is what a shopper actually wants to
+# see, not a jagged line of "same price, sampled 40 times."
+# ----------------------------------------------------------------------------
+
+PRICE_HISTORY_SQL = """
+    WITH category_listings AS (
+        SELECT l.id AS listing_id, o.store_id
+        FROM listing l
+        JOIN outlet o ON o.id = l.outlet_id
+        WHERE l.shopping_category = %s
+    ),
+    weekly AS (
+        SELECT
+            cl.store_id,
+            date_trunc('week', po.observed_at)::date AS week_start,
+            MIN(po.price) AS price
+        FROM category_listings cl
+        JOIN price_observation po ON po.listing_id = cl.listing_id
+        WHERE po.observed_at >= now() - interval '8 weeks'
+        GROUP BY cl.store_id, week_start
+    )
+    SELECT w.store_id, s.name, s.short_code, s.color, w.week_start, w.price
+    FROM weekly w
+    JOIN store s ON s.id = w.store_id
+    ORDER BY w.store_id, w.week_start ASC
+"""
+
+
+def fetch_price_history(cur, category):
+    """
+    Same "lowest price that period" idea as fetch_cheapest_for_category
+    above, just applied once per calendar week over the last 8 weeks
+    instead of once for right now -- kept as its own function (like that
+    one) so it can be reasoned about and tested on its own.
+    """
+    cur.execute(PRICE_HISTORY_SQL, (category,))
+    rows = cur.fetchall()
+
+    by_store = {}
+    for store_id, name, short_code, color, week_start, price in rows:
+        if store_id not in by_store:
+            by_store[store_id] = {
+                "store_id": store_id,
+                "store_name": name,
+                "short_code": short_code,
+                "color": color,
+                "weeks": [],
+            }
+        by_store[store_id]["weeks"].append(
+            {"week_start": week_start.isoformat(), "price": float(price)}
+        )
+
+    return list(by_store.values())
+
+
+@app.get("/categories/{category}/history")
+def category_history(category: str):
+    """
+    Up to 8 weeks of real weekly price history per store for a shared
+    category, straight from price_observation -- powers the Item detail
+    screen's price-history chart. A store missing from the result (or
+    missing some weeks within it) simply didn't have a listing/observation
+    in that window -- not an error, just genuinely no data yet.
+    """
+    stores = run_with_db(lambda cur: fetch_price_history(cur, category))
+    return {"category": category, "stores": stores}
+
+
 @app.get("/stores")
 def list_stores():
     """
