@@ -7,8 +7,8 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 24 Sept 2026 (updated
-same day twice — real shopping-list feature added, then a second real
-screen, Browse, plus the app's first navigation).**
+same day three times — real shopping-list feature, then Browse + basic
+navigation, then a reliability fix for Render free-tier cold starts).**
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -81,7 +81,14 @@ screen, Browse, plus the app's first navigation).**
   covered by an automated test the way `check_crawl_freshness.py` is.
 - The API's CORS is still wide open (`allow_origins=["*"]`) and Render is
   still on the free tier (sleeps after 15 min idle, ~30-60s cold start) —
-  fine for testing, not for real users.
+  fine for testing, not for real users. Confirmed in real testing (24 Sept)
+  that a cold start can cause one of two simultaneous requests to fail with
+  a raw network error while the other succeeds — the app now retries once
+  automatically on that specific failure and no longer discards an
+  already-successful result just because a second, unrelated request
+  failed. The underlying free-tier sleep behavior itself is unchanged —
+  moving off the free tier is the real fix, this just makes the app
+  tolerate it better in the meantime.
 
 ## How to keep this file honest
 
