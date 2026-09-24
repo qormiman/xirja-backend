@@ -51,9 +51,9 @@ Compare screen, then a fix for the database connection pool going stale).**
   `psycopg2.OperationalError: SSL connection has been closed
   unexpectedly`. The helper now discards a connection that fails this way
   and retries the same request once with a fresh one, instead of letting
-  it crash — confirmed by reading the code path, not yet re-confirmed
-  against a fresh Render log showing the fix catch a real stale
-  connection in the wild.
+  it crash — confirmed both by reading the code path and by the app
+  working normally afterwards (My list, Browse, and Compare all confirmed
+  working again on 24 Sept, with no further "Not Found" errors).
 - **Database — list tables extended**: `migration_001_list_by_category.sql`
   (in `xirja-backend`) makes `app_list_item` support an item identified by
   shared category (`shopping_category`), not only a matched `product_id` —
