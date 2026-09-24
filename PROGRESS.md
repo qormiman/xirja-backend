@@ -7,9 +7,10 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 24 Sept 2026 (updated
-same day five times — real shopping-list feature, then Browse + basic
+same day six times — real shopping-list feature, then Browse + basic
 navigation, a reliability fix for Render free-tier cold starts, a real
-Compare screen, then a fix for the database connection pool going stale).**
+Compare screen, a fix for the database connection pool going stale, then a
+real Store lists screen).**
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -61,7 +62,7 @@ Compare screen, then a fix for the database connection pool going stale).**
   once against the real database before the list endpoints above work —
   confirm it's actually been run in Neon, this file only records that the
   migration was written and delivered.
-- **Mobile app — 3 real screens now, with basic navigation**: `App.js`
+- **Mobile app — 4 real screens now, with basic navigation**: `App.js`
   (`xirja-app` repo). "My list": search-and-add a category, change
   quantity, remove an item, pull to refresh. "Browse": scroll every
   category with a live price, tap to add. "Compare" (new): for each real
@@ -72,25 +73,37 @@ Compare screen, then a fix for the database connection pool going stale).**
   `storeTotal()` logic from the original prototype, now computed from real
   data rather than a hardcoded catalog, computed on the phone from data
   the list screen already has (see the comment above `computeStoreRanking`
-  in `App.js`) plus the new `/stores` endpoint. A simple three-tab bar
-  switches between all three screens — local state, not the React
-  Navigation library yet (fine for 3 screens, won't scale cleanly much
+  in `App.js`) plus the new `/stores` endpoint. "Store lists" (new): the
+  complementary strategy to Compare — instead of "everything from one
+  store," each item is assigned to its own individually cheapest store
+  (`item.cheapest`), then grouped into one card per store with its item
+  count, subtotal, and a preview of what's in it. Reached from a "Split
+  into N store lists" button at the bottom of Compare (only shown when
+  splitting would actually involve more than one store), with its own back
+  arrow rather than a fourth tab — mirrors exactly how the original
+  clickable prototype linked the two screens. A simple three-tab bar
+  switches between "My list"/"Browse"/"Compare" — local state, not the
+  React Navigation library yet (fine for 3 tabs, won't scale cleanly much
   further). Uses a random per-device id (`AsyncStorage`) in place of real
   accounts, which don't exist yet — documented in `xirja-app/SETUP.md` as a
   deliberate, swappable shortcut, not an oversight.
 
 ## Not started / explicitly designed-only (confirmed absent from the code)
 
-- Real code for 6 of the 9 designed screens (Item detail, Store lists,
-  Shopping mode, Trip summary, Settings, Onboarding) — these exist only in
-  the clickable `.dc.html` prototype. "My list", "Browse", and "Compare"
+- Real code for 5 of the 9 designed screens (Item detail, Shopping mode,
+  Trip summary, Settings, Onboarding) — these exist only in the clickable
+  `.dc.html` prototype. "My list", "Browse", "Compare", and "Store lists"
   are now real; everything else isn't yet.
-- Real navigation library (React Navigation or similar) — today's 3-screen
-  switch is a simple local-state toggle, fine for now, won't scale cleanly
-  much further.
-- Compare doesn't yet let you act on the ranking (e.g. "split into store
-  lists" like the original prototype) — it shows the real numbers, but
-  there's no next step from there yet.
+- Real navigation library (React Navigation or similar) — today's screen
+  switching is a simple local-state toggle (three tabs plus one sub-screen
+  reached by a button), fine for now, won't scale cleanly much further —
+  especially once Shopping mode needs to be reached FROM a specific store
+  list, which a local `useState` string can express but won't stay clean
+  for long.
+- Store lists is the end of that path for now — it shows what to buy where,
+  but there's no "check items off while shopping" screen yet (that's
+  Shopping mode, still prototype-only) and no way to save/revisit a split
+  once you leave the screen.
 - The price-correction workflow (`user_price` table, site-vs-mine trust
   logic) — designed in the prototype and spec, not ported to real code.
 - Legal / Terms-of-Service review for each chain — flagged as overdue in
