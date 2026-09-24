@@ -7,8 +7,9 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 24 Sept 2026 (updated
-same day three times — real shopping-list feature, then Browse + basic
-navigation, then a reliability fix for Render free-tier cold starts).**
+same day four times — real shopping-list feature, then Browse + basic
+navigation, a reliability fix for Render free-tier cold starts, then a
+real Compare screen).**
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -37,9 +38,10 @@ navigation, then a reliability fix for Render free-tier cold starts).**
   confirm this matches the live Render dashboard address). Endpoints:
   `GET /categories/{category}/prices` (cheapest current price per store),
   `GET /categories` (every category with a live price, for the app's
-  add-item search), and a full shopping-list CRUD set —
-  `GET /lists/{user_id}`, `POST /lists/{user_id}/items`,
-  `PATCH /lists/{user_id}/items/{item_id}`,
+  add-item search), `GET /stores` (every real store, for Compare — added
+  so a store carrying none of a list's items still appears in the
+  ranking), and a full shopping-list CRUD set — `GET /lists/{user_id}`,
+  `POST /lists/{user_id}/items`, `PATCH /lists/{user_id}/items/{item_id}`,
   `DELETE /lists/{user_id}/items/{item_id}`.
 - **Database — list tables extended**: `migration_001_list_by_category.sql`
   (in `xirja-backend`) makes `app_list_item` support an item identified by
@@ -48,26 +50,36 @@ navigation, then a reliability fix for Render free-tier cold starts).**
   once against the real database before the list endpoints above work —
   confirm it's actually been run in Neon, this file only records that the
   migration was written and delivered.
-- **Mobile app — 2 real screens now, with basic navigation**: `App.js`
+- **Mobile app — 3 real screens now, with basic navigation**: `App.js`
   (`xirja-app` repo). "My list": search-and-add a category, change
-  quantity, remove an item, pull to refresh. "Browse" (new): scroll every
-  category with a live price, tap to add, shows how many are already on
-  the list. A simple two-tab bar switches between them — local state, not
-  the React Navigation library yet (not needed until there are more than 2
-  screens). Both screens share one live connection to the real API/database.
-  Uses a random per-device id (`AsyncStorage`) in place of real accounts,
-  which don't exist yet — documented in `xirja-app/SETUP.md` as a
+  quantity, remove an item, pull to refresh. "Browse": scroll every
+  category with a live price, tap to add. "Compare" (new): for each real
+  store, the whole-basket total if everything on the list came from there
+  (its own prices plus whatever it doesn't carry, bought at wherever's
+  cheapest for that item) — ranked cheapest to most expensive, with a
+  headline "cheapest vs most expensive" saving figure. This is the actual
+  `storeTotal()` logic from the original prototype, now computed from real
+  data rather than a hardcoded catalog, computed on the phone from data
+  the list screen already has (see the comment above `computeStoreRanking`
+  in `App.js`) plus the new `/stores` endpoint. A simple three-tab bar
+  switches between all three screens — local state, not the React
+  Navigation library yet (fine for 3 screens, won't scale cleanly much
+  further). Uses a random per-device id (`AsyncStorage`) in place of real
+  accounts, which don't exist yet — documented in `xirja-app/SETUP.md` as a
   deliberate, swappable shortcut, not an oversight.
 
 ## Not started / explicitly designed-only (confirmed absent from the code)
 
-- Real code for 7 of the 9 designed screens (Compare, Item detail, Store
-  lists, Shopping mode, Trip summary, Settings, Onboarding) — these exist
-  only in the clickable `.dc.html` prototype. "My list" and "Browse" are
-  now real; everything else isn't yet.
-- Real navigation library (React Navigation or similar) — today's 2-screen
-  switch is a simple local-state toggle, fine for 2 screens, won't scale
-  cleanly much past that.
+- Real code for 6 of the 9 designed screens (Item detail, Store lists,
+  Shopping mode, Trip summary, Settings, Onboarding) — these exist only in
+  the clickable `.dc.html` prototype. "My list", "Browse", and "Compare"
+  are now real; everything else isn't yet.
+- Real navigation library (React Navigation or similar) — today's 3-screen
+  switch is a simple local-state toggle, fine for now, won't scale cleanly
+  much further.
+- Compare doesn't yet let you act on the ranking (e.g. "split into store
+  lists" like the original prototype) — it shows the real numbers, but
+  there's no next step from there yet.
 - The price-correction workflow (`user_price` table, site-vs-mine trust
   logic) — designed in the prototype and spec, not ported to real code.
 - Legal / Terms-of-Service review for each chain — flagged as overdue in
