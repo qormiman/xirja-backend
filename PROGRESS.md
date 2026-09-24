@@ -7,7 +7,8 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 24 Sept 2026 (updated
-same day — real shopping-list feature added).**
+same day twice — real shopping-list feature added, then a second real
+screen, Browse, plus the app's first navigation).**
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -47,19 +48,26 @@ same day — real shopping-list feature added).**
   once against the real database before the list endpoints above work —
   confirm it's actually been run in Neon, this file only records that the
   migration was written and delivered.
-- **Mobile app — first screen, now a real list**: `App.js` (`xirja-app`
-  repo) — search-and-add a category, change quantity, remove an item, pull
-  to refresh, all against the live API and database. Previous version only
-  showed 4 hardcoded categories with no way to change them. Uses a random
-  per-device id (`AsyncStorage`) in place of real accounts, which don't
-  exist yet — documented in `xirja-app/SETUP.md` as a deliberate, swappable
-  shortcut, not an oversight.
+- **Mobile app — 2 real screens now, with basic navigation**: `App.js`
+  (`xirja-app` repo). "My list": search-and-add a category, change
+  quantity, remove an item, pull to refresh. "Browse" (new): scroll every
+  category with a live price, tap to add, shows how many are already on
+  the list. A simple two-tab bar switches between them — local state, not
+  the React Navigation library yet (not needed until there are more than 2
+  screens). Both screens share one live connection to the real API/database.
+  Uses a random per-device id (`AsyncStorage`) in place of real accounts,
+  which don't exist yet — documented in `xirja-app/SETUP.md` as a
+  deliberate, swappable shortcut, not an oversight.
 
 ## Not started / explicitly designed-only (confirmed absent from the code)
 
-- Real navigation across the other 8 designed screens (Browse, Compare,
-  Item detail, Store lists, Shopping mode, Trip summary, Settings,
-  Onboarding) — these exist only in the clickable `.dc.html` prototype.
+- Real code for 7 of the 9 designed screens (Compare, Item detail, Store
+  lists, Shopping mode, Trip summary, Settings, Onboarding) — these exist
+  only in the clickable `.dc.html` prototype. "My list" and "Browse" are
+  now real; everything else isn't yet.
+- Real navigation library (React Navigation or similar) — today's 2-screen
+  switch is a simple local-state toggle, fine for 2 screens, won't scale
+  cleanly much past that.
 - The price-correction workflow (`user_price` table, site-vs-mine trust
   logic) — designed in the prototype and spec, not ported to real code.
 - Legal / Terms-of-Service review for each chain — flagged as overdue in
@@ -74,9 +82,6 @@ same day — real shopping-list feature added).**
 - The API's CORS is still wide open (`allow_origins=["*"]`) and Render is
   still on the free tier (sleeps after 15 min idle, ~30-60s cold start) —
   fine for testing, not for real users.
-- Real navigation across the other 8 designed screens is still untouched —
-  this update only makes the existing "My list" screen real, it doesn't
-  add any new screens.
 
 ## How to keep this file honest
 
