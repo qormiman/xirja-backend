@@ -40,6 +40,7 @@ Render's side.
 import os
 from contextlib import asynccontextmanager
 
+import psycopg2
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -63,6 +64,55 @@ def get_pool():
             1, 5, database_url, connect_timeout=30
         )
     return _pool
+
+
+def run_with_db(work, write=False):
+    """
+    Runs `work(cur)` against a connection borrowed from the pool, and always
+    hands the connection back afterwards -- the single place every endpoint
+    below goes through, instead of each repeating its own
+    getconn/try/finally/putconn block.
+
+    The reason this exists: a connection sitting in the pool can go stale
+    without anything here doing anything wrong -- Render's free tier puts
+    the whole server to sleep after 15 idle minutes, and Neon can also
+    close a connection it decides has been idle too long. Either way, the
+    pool doesn't know the connection is dead until something tries to use
+    it, at which point psycopg2 raises OperationalError (e.g. "SSL
+    connection has been closed unexpectedly") -- previously this crashed
+    the request outright. Now: throw that one connection away (closed, not
+    returned to the pool, so it can never be handed out again) and retry
+    the whole `work` call exactly once with a freshly opened connection.
+    A second failure in a row is treated as a real problem, not a stale
+    connection, and is allowed to raise normally.
+
+    `write=True` commits after `work` succeeds -- for the shopping-list
+    endpoints, which insert/update/delete. Read-only endpoints leave it
+    False (nothing to commit).
+    """
+    pool = get_pool()
+    for attempt in (1, 2):
+        conn = pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                result = work(cur)
+            if write:
+                conn.commit()
+            pool.putconn(conn)
+            return result
+        except psycopg2.OperationalError:
+            # The connection itself is bad -- close it rather than
+            # returning it to the pool, then give it one more try with a
+            # brand new connection.
+            pool.putconn(conn, close=True)
+            if attempt == 2:
+                raise
+        except Exception:
+            # A normal error (e.g. a 404 for "item not found") -- the
+            # connection itself is fine, so it goes back to the pool as
+            # usual, and the error is re-raised unchanged.
+            pool.putconn(conn)
+            raise
 
 
 @asynccontextmanager
@@ -215,14 +265,12 @@ def health():
     automated check) confirm the server is running AND can reach the
     database, separately from any real feature actually working.
     """
-    conn = get_pool().getconn()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1")
-            cur.fetchone()
+    def work(cur):
+        cur.execute("SELECT 1")
+        cur.fetchone()
         return {"status": "ok"}
-    finally:
-        get_pool().putconn(conn)
+
+    return run_with_db(work)
 
 
 @app.get("/categories/{category}/prices")
@@ -237,12 +285,7 @@ def category_prices(category: str):
     milk" is the question a shopper is actually asking, not "which exact
     branch."
     """
-    conn = get_pool().getconn()
-    try:
-        with conn.cursor() as cur:
-            result = fetch_cheapest_for_category(cur, category)
-    finally:
-        get_pool().putconn(conn)
+    result = run_with_db(lambda cur: fetch_cheapest_for_category(cur, category))
 
     if result is None:
         raise HTTPException(
@@ -263,13 +306,11 @@ def list_stores():
     still show up in the comparison (as "everything bought elsewhere"),
     not silently vanish from the ranking.
     """
-    conn = get_pool().getconn()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id, name, short_code, color FROM store ORDER BY name ASC")
-            rows = cur.fetchall()
-    finally:
-        get_pool().putconn(conn)
+    def work(cur):
+        cur.execute("SELECT id, name, short_code, color FROM store ORDER BY name ASC")
+        return cur.fetchall()
+
+    rows = run_with_db(work)
 
     return {
         "stores": [
@@ -303,13 +344,11 @@ def list_categories():
         GROUP BY l.shopping_category
         ORDER BY l.shopping_category ASC
     """
-    conn = get_pool().getconn()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(sql)
-            rows = cur.fetchall()
-    finally:
-        get_pool().putconn(conn)
+    def work(cur):
+        cur.execute(sql)
+        return cur.fetchall()
+
+    rows = run_with_db(work)
 
     return {
         "categories": [
@@ -389,14 +428,12 @@ def get_list(user_id: str):
     they're seen), with each item's real, current cheapest price attached
     -- the app never has to make a second round-trip per item.
     """
-    conn = get_pool().getconn()
-    try:
-        with conn.cursor() as cur:
-            list_id = get_or_create_list(cur, user_id)
-            items = serialize_items(cur, list_id)
-        conn.commit()
-    finally:
-        get_pool().putconn(conn)
+    def work(cur):
+        list_id = get_or_create_list(cur, user_id)
+        items = serialize_items(cur, list_id)
+        return list_id, items
+
+    list_id, items = run_with_db(work, write=True)
 
     return {"list_id": str(list_id), "items": items}
 
@@ -409,38 +446,36 @@ def add_item(user_id: str, body: AddItemBody):
     same category -- "add Milk" twice should mean "2 milk", not two
     separate Milk rows.
     """
-    conn = get_pool().getconn()
-    try:
-        with conn.cursor() as cur:
-            list_id = get_or_create_list(cur, user_id)
+    def work(cur):
+        list_id = get_or_create_list(cur, user_id)
 
+        cur.execute(
+            """
+            SELECT id, quantity FROM app_list_item
+            WHERE list_id = %s AND shopping_category = %s
+            """,
+            (list_id, body.category),
+        )
+        existing = cur.fetchone()
+        if existing:
+            item_id, current_qty = existing
+            cur.execute(
+                "UPDATE app_list_item SET quantity = %s WHERE id = %s",
+                (float(current_qty) + body.quantity, item_id),
+            )
+        else:
             cur.execute(
                 """
-                SELECT id, quantity FROM app_list_item
-                WHERE list_id = %s AND shopping_category = %s
+                INSERT INTO app_list_item (list_id, shopping_category, quantity)
+                VALUES (%s, %s, %s)
                 """,
-                (list_id, body.category),
+                (list_id, body.category, body.quantity),
             )
-            existing = cur.fetchone()
-            if existing:
-                item_id, current_qty = existing
-                cur.execute(
-                    "UPDATE app_list_item SET quantity = %s WHERE id = %s",
-                    (float(current_qty) + body.quantity, item_id),
-                )
-            else:
-                cur.execute(
-                    """
-                    INSERT INTO app_list_item (list_id, shopping_category, quantity)
-                    VALUES (%s, %s, %s)
-                    """,
-                    (list_id, body.category, body.quantity),
-                )
 
-            items = serialize_items(cur, list_id)
-        conn.commit()
-    finally:
-        get_pool().putconn(conn)
+        items = serialize_items(cur, list_id)
+        return list_id, items
+
+    list_id, items = run_with_db(work, write=True)
 
     return {"list_id": str(list_id), "items": items}
 
@@ -448,42 +483,39 @@ def add_item(user_id: str, body: AddItemBody):
 @app.patch("/lists/{user_id}/items/{item_id}")
 def update_item(user_id: str, item_id: str, body: UpdateItemBody):
     """Changes an item's quantity. To remove an item entirely, use DELETE."""
-    conn = get_pool().getconn()
-    try:
-        with conn.cursor() as cur:
-            list_id = get_or_create_list(cur, user_id)
-            cur.execute(
-                """
-                UPDATE app_list_item SET quantity = %s
-                WHERE id = %s AND list_id = %s
-                """,
-                (body.quantity, item_id, list_id),
-            )
-            if cur.rowcount == 0:
-                raise HTTPException(status_code=404, detail="Item not found on this list.")
-            items = serialize_items(cur, list_id)
-        conn.commit()
-    finally:
-        get_pool().putconn(conn)
+
+    def work(cur):
+        list_id = get_or_create_list(cur, user_id)
+        cur.execute(
+            """
+            UPDATE app_list_item SET quantity = %s
+            WHERE id = %s AND list_id = %s
+            """,
+            (body.quantity, item_id, list_id),
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Item not found on this list.")
+        items = serialize_items(cur, list_id)
+        return list_id, items
+
+    list_id, items = run_with_db(work, write=True)
 
     return {"list_id": str(list_id), "items": items}
 
 
 @app.delete("/lists/{user_id}/items/{item_id}")
 def remove_item(user_id: str, item_id: str):
-    conn = get_pool().getconn()
-    try:
-        with conn.cursor() as cur:
-            list_id = get_or_create_list(cur, user_id)
-            cur.execute(
-                "DELETE FROM app_list_item WHERE id = %s AND list_id = %s",
-                (item_id, list_id),
-            )
-            if cur.rowcount == 0:
-                raise HTTPException(status_code=404, detail="Item not found on this list.")
-            items = serialize_items(cur, list_id)
-        conn.commit()
-    finally:
-        get_pool().putconn(conn)
+    def work(cur):
+        list_id = get_or_create_list(cur, user_id)
+        cur.execute(
+            "DELETE FROM app_list_item WHERE id = %s AND list_id = %s",
+            (item_id, list_id),
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Item not found on this list.")
+        items = serialize_items(cur, list_id)
+        return list_id, items
+
+    list_id, items = run_with_db(work, write=True)
 
     return {"list_id": str(list_id), "items": items}
