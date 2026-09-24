@@ -7,11 +7,12 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 24 Sept 2026 (updated
-same day seven times — real shopping-list feature, then Browse + basic
+same day eight times — real shopping-list feature, then Browse + basic
 navigation, a reliability fix for Render free-tier cold starts, a real
 Compare screen, a fix for the database connection pool going stale, a real
-Store lists screen, then a real Item detail screen with genuine price
-history — not yet confirmed working by the user, see below).**
+Store lists screen, a real Item detail screen with genuine price history,
+then a real Shopping mode — not yet confirmed working by the user, see
+below).**
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -68,7 +69,7 @@ history — not yet confirmed working by the user, see below).**
   once against the real database before the list endpoints above work —
   confirm it's actually been run in Neon, this file only records that the
   migration was written and delivered.
-- **Mobile app — 5 real screens now, with basic navigation**: `App.js`
+- **Mobile app — 6 real screens now, with basic navigation**: `App.js`
   (`xirja-app` repo). "My list": search-and-add a category, change
   quantity, remove an item, pull to refresh. "Browse": scroll every
   category with a live price, tap to add. "Compare" (new): for each real
@@ -93,32 +94,46 @@ history — not yet confirmed working by the user, see below).**
   list" to see its cheapest price, the full current price at every store
   that carries it, and a real 8-week price-history bar chart per store
   (switch stores via chips) pulled fresh from the new `/history` endpoint,
-  with a plain-language trend line ("Price is down 6% since Aug 4"). Not
-  yet confirmed working by the user — needs testing on Snack like every
-  other screen before this line can say so. A simple three-tab bar
+  with a plain-language trend line ("Price is down 6% since Aug 4").
+  Confirmed working end to end on 24 Sept (tap-through, current prices,
+  chips, chart, and back navigation all tested on Snack). "Shopping mode"
+  (new): tap a store card on Store lists to get a real checklist for that
+  stop — tick items off, watch the running total and a progress bar update,
+  switch between stores in the plan without detouring back through Store
+  lists, and jump straight to the next unfinished store once the current
+  one's done. Deliberately does NOT include the original prototype's
+  barcode scanning or "fix this price"/"swap store" actions — those need a
+  camera and the price-correction workflow respectively, neither of which
+  exist yet. Checked-off state lives only in memory (component state in
+  `App()`), not persisted — closing/reloading the app mid-trip loses your
+  checkmarks. That's a known, real gap, not an oversight: persisting it
+  (AsyncStorage, keyed by list_id) is a natural small follow-up once this
+  screen itself is confirmed working. Not yet confirmed working by the
+  user — needs testing on Snack like every other screen before this line
+  can say so. A simple three-tab bar
   switches between "My list"/"Browse"/"Compare" — local state, not the
-  React Navigation library yet (fine for 3 tabs plus 2 button/tap-reached
-  sub-screens, won't scale cleanly much further). Uses a random per-device
-  id (`AsyncStorage`) in place of real accounts, which don't exist yet —
-  documented in `xirja-app/SETUP.md` as a deliberate, swappable shortcut,
+  React Navigation library yet (fine for 3 tabs plus a few tap/button-
+  reached sub-screens, won't scale cleanly much further). Uses a random
+  per-device id (`AsyncStorage`) in place of real accounts, which don't
+  exist yet — documented in `xirja-app/SETUP.md` as a deliberate, swappable
+  shortcut,
   not an oversight.
 
 ## Not started / explicitly designed-only (confirmed absent from the code)
 
-- Real code for 4 of the 9 designed screens (Shopping mode, Trip summary,
-  Settings, Onboarding) — these exist only in the clickable `.dc.html`
-  prototype. "My list", "Browse", "Compare", "Store lists", and "Item
-  detail" are now real; everything else isn't yet.
+- Real code for 3 of the 9 designed screens (Trip summary, Settings,
+  Onboarding) — these exist only in the clickable `.dc.html` prototype.
+  "My list", "Browse", "Compare", "Store lists", "Item detail", and
+  "Shopping mode" are now real; everything else isn't yet.
 - Real navigation library (React Navigation or similar) — today's screen
-  switching is a simple local-state toggle (three tabs plus two
-  button/tap-reached sub-screens), fine for now, won't scale cleanly much
-  further — especially once Shopping mode needs to be reached FROM a
-  specific store list, which a local `useState` string can express but
-  won't stay clean for long.
-- Store lists is the end of that path for now — it shows what to buy where,
-  but there's no "check items off while shopping" screen yet (that's
-  Shopping mode, still prototype-only) and no way to save/revisit a split
-  once you leave the screen.
+  switching is a simple local-state toggle (three tabs plus a chain of
+  button/tap-reached sub-screens: My list → Item detail, Compare → Store
+  lists → Shopping mode), fine for now but visibly starting to strain —
+  worth doing before adding Trip summary on top.
+- Shopping mode's checked-off state is in-memory only (see `App.js`'s top
+  comment and the note in the mobile-app section above) — no "Trip
+  summary" screen yet to land on once every store's fully checked off, and
+  no persistence if the app closes mid-trip.
 - The price-correction workflow (`user_price` table, site-vs-mine trust
   logic) — designed in the prototype and spec, not ported to real code.
 - Legal / Terms-of-Service review for each chain — flagged as overdue in
