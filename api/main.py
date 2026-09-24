@@ -253,6 +253,32 @@ def category_prices(category: str):
     return {"category": category, **result}
 
 
+@app.get("/stores")
+def list_stores():
+    """
+    Every real store (Greens, PAVI PAMA, Welbee's), regardless of whether
+    it happens to carry anything currently on a given list. The Compare
+    screen needs this rather than deriving "which stores exist" from a
+    list's own items, since a store carrying NONE of today's items should
+    still show up in the comparison (as "everything bought elsewhere"),
+    not silently vanish from the ranking.
+    """
+    conn = get_pool().getconn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, name, short_code, color FROM store ORDER BY name ASC")
+            rows = cur.fetchall()
+    finally:
+        get_pool().putconn(conn)
+
+    return {
+        "stores": [
+            {"store_id": sid, "name": name, "short_code": short_code, "color": color}
+            for sid, name, short_code, color in rows
+        ]
+    }
+
+
 @app.get("/categories")
 def list_categories():
     """
