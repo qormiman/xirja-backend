@@ -81,7 +81,9 @@ real Store lists screen).**
   into N store lists" button at the bottom of Compare (only shown when
   splitting would actually involve more than one store), with its own back
   arrow rather than a fourth tab — mirrors exactly how the original
-  clickable prototype linked the two screens. A simple three-tab bar
+  clickable prototype linked the two screens. Confirmed working end to end
+  on 24 Sept (button appears, screen renders real per-store cards, back
+  arrow returns to Compare). A simple three-tab bar
   switches between "My list"/"Browse"/"Compare" — local state, not the
   React Navigation library yet (fine for 3 tabs, won't scale cleanly much
   further). Uses a random per-device id (`AsyncStorage`) in place of real
