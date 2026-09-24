@@ -7,10 +7,11 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 24 Sept 2026 (updated
-same day six times — real shopping-list feature, then Browse + basic
+same day seven times — real shopping-list feature, then Browse + basic
 navigation, a reliability fix for Render free-tier cold starts, a real
-Compare screen, a fix for the database connection pool going stale, then a
-real Store lists screen).**
+Compare screen, a fix for the database connection pool going stale, a real
+Store lists screen, then a real Item detail screen with genuine price
+history — not yet confirmed working by the user, see below).**
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -41,7 +42,12 @@ real Store lists screen).**
   `GET /categories` (every category with a live price, for the app's
   add-item search), `GET /stores` (every real store, for Compare — added
   so a store carrying none of a list's items still appears in the
-  ranking), and a full shopping-list CRUD set — `GET /lists/{user_id}`,
+  ranking), `GET /categories/{category}/history` (new — up to 8 weeks of
+  REAL weekly price history per store, bucketed from the actual
+  `price_observation` rows the crawlers have been collecting all along;
+  the first endpoint that looks further back than "the single latest
+  price," powers Item detail's chart), and a full shopping-list CRUD set —
+  `GET /lists/{user_id}`,
   `POST /lists/{user_id}/items`, `PATCH /lists/{user_id}/items/{item_id}`,
   `DELETE /lists/{user_id}/items/{item_id}`. Every endpoint now goes
   through one shared helper (`run_with_db`) instead of repeating its own
@@ -62,7 +68,7 @@ real Store lists screen).**
   once against the real database before the list endpoints above work —
   confirm it's actually been run in Neon, this file only records that the
   migration was written and delivered.
-- **Mobile app — 4 real screens now, with basic navigation**: `App.js`
+- **Mobile app — 5 real screens now, with basic navigation**: `App.js`
   (`xirja-app` repo). "My list": search-and-add a category, change
   quantity, remove an item, pull to refresh. "Browse": scroll every
   category with a live price, tap to add. "Compare" (new): for each real
@@ -83,25 +89,32 @@ real Store lists screen).**
   arrow rather than a fourth tab — mirrors exactly how the original
   clickable prototype linked the two screens. Confirmed working end to end
   on 24 Sept (button appears, screen renders real per-store cards, back
-  arrow returns to Compare). A simple three-tab bar
+  arrow returns to Compare). "Item detail" (new): tap any item on "My
+  list" to see its cheapest price, the full current price at every store
+  that carries it, and a real 8-week price-history bar chart per store
+  (switch stores via chips) pulled fresh from the new `/history` endpoint,
+  with a plain-language trend line ("Price is down 6% since Aug 4"). Not
+  yet confirmed working by the user — needs testing on Snack like every
+  other screen before this line can say so. A simple three-tab bar
   switches between "My list"/"Browse"/"Compare" — local state, not the
-  React Navigation library yet (fine for 3 tabs, won't scale cleanly much
-  further). Uses a random per-device id (`AsyncStorage`) in place of real
-  accounts, which don't exist yet — documented in `xirja-app/SETUP.md` as a
-  deliberate, swappable shortcut, not an oversight.
+  React Navigation library yet (fine for 3 tabs plus 2 button/tap-reached
+  sub-screens, won't scale cleanly much further). Uses a random per-device
+  id (`AsyncStorage`) in place of real accounts, which don't exist yet —
+  documented in `xirja-app/SETUP.md` as a deliberate, swappable shortcut,
+  not an oversight.
 
 ## Not started / explicitly designed-only (confirmed absent from the code)
 
-- Real code for 5 of the 9 designed screens (Item detail, Shopping mode,
-  Trip summary, Settings, Onboarding) — these exist only in the clickable
-  `.dc.html` prototype. "My list", "Browse", "Compare", and "Store lists"
-  are now real; everything else isn't yet.
+- Real code for 4 of the 9 designed screens (Shopping mode, Trip summary,
+  Settings, Onboarding) — these exist only in the clickable `.dc.html`
+  prototype. "My list", "Browse", "Compare", "Store lists", and "Item
+  detail" are now real; everything else isn't yet.
 - Real navigation library (React Navigation or similar) — today's screen
-  switching is a simple local-state toggle (three tabs plus one sub-screen
-  reached by a button), fine for now, won't scale cleanly much further —
-  especially once Shopping mode needs to be reached FROM a specific store
-  list, which a local `useState` string can express but won't stay clean
-  for long.
+  switching is a simple local-state toggle (three tabs plus two
+  button/tap-reached sub-screens), fine for now, won't scale cleanly much
+  further — especially once Shopping mode needs to be reached FROM a
+  specific store list, which a local `useState` string can express but
+  won't stay clean for long.
 - Store lists is the end of that path for now — it shows what to buy where,
   but there's no "check items off while shopping" screen yet (that's
   Shopping mode, still prototype-only) and no way to save/revisit a split
