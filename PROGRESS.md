@@ -19,15 +19,44 @@ the tabs" bug, then a root-stack restructure that fixed that, then a
 second real bug the restructure exposed — a half-cut-off tab bar, caused by
 a missing `SafeAreaProvider`, then discovering the Snack project itself
 runs Expo SDK 54, not the SDK 51 `package.json` had been pinned to this
-whole time — all of that CONFIRMED fixed by the user on Snack — and most
-recently persisting Shopping mode's checked-off state, the second of three
-agreed steps toward a permanent personal-use Android install — see below).**
+whole time — all of that CONFIRMED fixed by the user on Snack — persisting
+Shopping mode's checked-off state, the second of three agreed steps toward
+a permanent personal-use Android install, ALSO confirmed working by the
+user on Snack — and most recently the config + step-by-step instructions
+for the third and final step, an EAS build to a sideloadable `.apk` — see
+below; NOT yet run by the user as of this writing).**
 
 **On the personal-use deployment plan, updated**: (1) real navigation —
 done and confirmed working on Snack, including the two follow-up bugs
-above. (2) persisting Shopping mode's checked-off state — done this
-update, NOT yet confirmed by the user. (3) EAS build → sideloadable `.apk`
-— not started, the next and final step once (2) is confirmed.
+above. (2) persisting Shopping mode's checked-off state — done and
+confirmed working on Snack. (3) EAS build → sideloadable `.apk` — config
+files and a full walkthrough delivered this update (see below); the user
+hasn't run through it yet, so this is NOT yet a working install as of this
+writing — the plan's "personal use" goal isn't done until this step is
+actually completed and the app is installed and opened at least once
+outside Snack/a dev server.
+
+**On the EAS build step (new, this update)**: two new files —
+`app.json` (added `android.package: "com.xirja.app"`, the unique id
+Android needs to identify the app; the user confirmed no strong opinion
+either way, chosen a reasonable placeholder) and `eas.json` (a `preview`
+build profile producing a plain installable `.apk` rather than the `.aab`
+format the Play Store wants — deliberately NOT a production/Play Store
+profile, since that's a separate, later decision with real business/legal
+considerations, not a technical one to make casually). A new
+`EAS_BUILD.md` walks through the rest step by step: checking for/
+installing Node.js (confirmed with the user as NOT already checked as of
+this writing), creating a free Expo account (confirmed with the user as
+NOT yet created), installing `eas-cli`, `eas login`, `eas init` (this is
+the one part of the setup that has to happen on the user's own machine
+under their own account — it can't be done from here), then
+`eas build --platform android --profile preview`, and finally getting the
+resulting `.apk` onto the phone and sideloading it (allowing installs from
+outside the Play Store, a normal step for any non-Play-Store app, not a
+red flag). None of this has been run yet — genuinely unverified beyond
+"these are the standard, documented EAS steps," since actually running an
+EAS build requires the user's own Expo account and can't be tested from
+this environment.
 
 **On persisting Shopping mode (new, this update)**: `checkedItemIds` (which
 items are ticked off) now survives closing the app mid-trip, the same way
@@ -44,10 +73,9 @@ undone the entire point of this change, so it's worth remembering if this
 code gets touched again. Verified the same way as the navigation changes
 (re-cloned the live repo and diffed — confirms only this change, nothing
 else touched — plus the manual bracket-balance and styles-used-vs-defined
-checks; still no real JS/JSX parser available in this sandbox). NOT yet
-tested on Snack: check off a couple of items in Shopping mode, force-close
-the Snack preview (or just navigate away and back for a lighter test), and
-confirm the checkmarks are still there.
+checks; still no real JS/JSX parser available in this sandbox), AND
+confirmed working end to end by the user on Snack (25 Sept): checked items
+in Shopping mode, reloaded, checkmarks were still there.
 
 **A third real discrepancy, found via Snack's own dependency-check panel
 rather than by reading code**: `package.json` had been pinned to Expo SDK
@@ -230,10 +258,10 @@ the highlighted bar on Compare.
   barcode scanning or "fix this price"/"swap store" actions — those need a
   camera and the price-correction workflow respectively, neither of which
   exist yet. Checked-off state now survives closing/reloading the app
-  mid-trip (new, 25 Sept) — persisted to `AsyncStorage`, keyed per device
-  the same way the device id itself is; see the "On persisting Shopping
-  mode" note near the top of this file. NOT yet confirmed on Snack as of
-  this writing. The numbers ("X of N checked",
+  mid-trip (new, 25 Sept, confirmed working by the user on Snack) —
+  persisted to `AsyncStorage`, keyed per device the same way the device id
+  itself is; see the "On persisting Shopping mode" note near the top of
+  this file. The numbers ("X of N checked",
   running total) were confirmed correct on first testing (24 Sept), but the
   visual progress bar itself stayed blank. Root cause turned out to be
   upstream in the DATA, not the bar's code — see the `migration_002`
