@@ -33,7 +33,10 @@ database column, via `migration_002_hex_store_colors.sql` — not by
 special-casing color handling in the app, so every screen that uses a
 store's color is fixed by the same one change. Lesson: when something
 renders as "blank" rather than visibly wrong, check the DATA feeding it
-before rewriting the code that displays it.
+before rewriting the code that displays it. Confirmed fixed by the user on
+25 Sept — real color now shows throughout: the Shopping mode progress bar,
+item ribbons on My list, store chips on Item detail and Store lists, and
+the highlighted bar on Compare.
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -148,8 +151,9 @@ before rewriting the code that displays it.
   percentage width along the way (a genuine, separate improvement — more
   reliable when a screen stays mounted while its own state changes, rather
   than being freshly re-rendered from a list each time — but not itself
-  what was hiding the color). Not yet re-confirmed by the user since the
-  real (migration_002) fix. A simple three-tab bar
+  what was hiding the color). Confirmed fully working end to end on 25
+  Sept, colors included, after `migration_002_hex_store_colors.sql` was run.
+  A simple three-tab bar
   switches between "My list"/"Browse"/"Compare" — local state, not the
   React Navigation library yet (fine for 3 tabs plus a few tap/button-
   reached sub-screens, won't scale cleanly much further). Uses a random
