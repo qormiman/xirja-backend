@@ -7,7 +7,7 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 25 Sept 2026 (updated
-thirteen times across 24–25 Sept — real shopping-list feature, then Browse +
+fourteen times across 24–25 Sept — real shopping-list feature, then Browse +
 basic navigation, a reliability fix for Render free-tier cold starts, a
 real Compare screen, a fix for the database connection pool going stale, a
 real Store lists screen, a real Item detail screen with genuine price
@@ -17,9 +17,37 @@ which real React Native doesn't render — see below, then a React
 Navigation migration whose first version had a real "stuck, no way back to
 the tabs" bug, then a root-stack restructure that fixed that, then a
 second real bug the restructure exposed — a half-cut-off tab bar, caused by
-a missing `SafeAreaProvider` — see below, and finally discovering the
-Snack project itself runs Expo SDK 54, not the SDK 51 `package.json` had
-been pinned to this whole time — see below).**
+a missing `SafeAreaProvider`, then discovering the Snack project itself
+runs Expo SDK 54, not the SDK 51 `package.json` had been pinned to this
+whole time — all of that CONFIRMED fixed by the user on Snack — and most
+recently persisting Shopping mode's checked-off state, the second of three
+agreed steps toward a permanent personal-use Android install — see below).**
+
+**On the personal-use deployment plan, updated**: (1) real navigation —
+done and confirmed working on Snack, including the two follow-up bugs
+above. (2) persisting Shopping mode's checked-off state — done this
+update, NOT yet confirmed by the user. (3) EAS build → sideloadable `.apk`
+— not started, the next and final step once (2) is confirmed.
+
+**On persisting Shopping mode (new, this update)**: `checkedItemIds` (which
+items are ticked off) now survives closing the app mid-trip, the same way
+the device id itself does — `AsyncStorage`, keyed per device
+(`xirja_checked_item_ids_<deviceId>`). Restored once on app start (before
+the list itself finishes loading), pruned automatically whenever an item
+is removed from the list or drops out on a refresh (so a stale id doesn't
+linger in storage forever, though it was harmless either way), and saved
+on every real change — cheap enough (a handful of ids) not to need
+debouncing. A `checkedItemsHydrated` flag guards the save effect so it
+can't fire with the initial empty Set and clobber a real saved one before
+the restore has actually completed — that ordering bug would have silently
+undone the entire point of this change, so it's worth remembering if this
+code gets touched again. Verified the same way as the navigation changes
+(re-cloned the live repo and diffed — confirms only this change, nothing
+else touched — plus the manual bracket-balance and styles-used-vs-defined
+checks; still no real JS/JSX parser available in this sandbox). NOT yet
+tested on Snack: check off a couple of items in Shopping mode, force-close
+the Snack preview (or just navigate away and back for a lighter test), and
+confirm the checkmarks are still there.
 
 **A third real discrepancy, found via Snack's own dependency-check panel
 rather than by reading code**: `package.json` had been pinned to Expo SDK
@@ -201,11 +229,11 @@ the highlighted bar on Compare.
   one's done. Deliberately does NOT include the original prototype's
   barcode scanning or "fix this price"/"swap store" actions — those need a
   camera and the price-correction workflow respectively, neither of which
-  exist yet. Checked-off state lives only in memory (component state in
-  `App()`), not persisted — closing/reloading the app mid-trip loses your
-  checkmarks. That's a known, real gap, not an oversight: persisting it
-  (AsyncStorage, keyed by list_id) is a natural small follow-up once this
-  screen itself is confirmed working. The numbers ("X of N checked",
+  exist yet. Checked-off state now survives closing/reloading the app
+  mid-trip (new, 25 Sept) — persisted to `AsyncStorage`, keyed per device
+  the same way the device id itself is; see the "On persisting Shopping
+  mode" note near the top of this file. NOT yet confirmed on Snack as of
+  this writing. The numbers ("X of N checked",
   running total) were confirmed correct on first testing (24 Sept), but the
   visual progress bar itself stayed blank. Root cause turned out to be
   upstream in the DATA, not the bar's code — see the `migration_002`
@@ -262,16 +290,14 @@ the highlighted bar on Compare.
   Onboarding) — these exist only in the clickable `.dc.html` prototype.
   "My list", "Browse", "Compare", "Store lists", "Item detail", and
   "Shopping mode" are now real; everything else isn't yet.
-- Shopping mode's checked-off state is in-memory only (see `App.js`'s top
-  comment and the note in the mobile-app section above) — no "Trip
-  summary" screen yet to land on once every store's fully checked off, and
-  no persistence if the app closes mid-trip. This is the next of the three
-  agreed personal-use deployment steps (navigation is now done — see the
-  mobile-app section above).
+- No "Trip summary" screen yet to land on once every store's fully checked
+  off in Shopping mode — the checked-off state itself now persists (see
+  above), but there's nothing that celebrates/summarizes finishing the
+  whole trip across every store.
 - EAS build → sideloadable Android `.apk` for a permanent personal install
-  — not started (third of the three agreed steps). Needs `app.json`/
-  `eas.json` config, an app icon/splash, an Expo account, and running
-  `eas build`.
+  — not started (third and final of the three agreed steps, once Shopping
+  mode's persistence is confirmed on Snack). Needs `app.json`/`eas.json`
+  config, an app icon/splash, an Expo account, and running `eas build`.
 - The price-correction workflow (`user_price` table, site-vs-mine trust
   logic) — designed in the prototype and spec, not ported to real code.
 - Legal / Terms-of-Service review for each chain — flagged as overdue in
