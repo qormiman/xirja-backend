@@ -461,34 +461,68 @@ features rather than deferring them:
     `user_price` table, new API endpoints, site-vs-mine trust logic, plus
     the UI hook in Shopping mode.
 
-**Task 1 — "My list" — DONE, 25 Sept.** Four gaps closed in `App.js`
-(`xirja-app` repo), verified by re-cloning the live repo and diffing (diff
-contains only the additive changes below, nothing else touched), plus the
-manual bracket-balance and styles-used-vs-defined checks (still no real
-JS/JSX parser available in this sandbox — `npm install` for one is blocked
-here by the registry returning 403; `acorn`'s CLI is present but doesn't
-support JSX). Not yet confirmed by the owner on-device — that confirmation
-is the actual close-out for this task.
-- **Per-item savings**: `ListRow` now shows "save €X.XX" under the price,
+**Task 1 — "My list" — DONE, 25 Sept**, including a follow-up round of
+fixes after the owner tested the first version on a real device. Verified
+both rounds by re-cloning the live repo and diffing (each diff contains
+only the intended additive changes, nothing else touched), plus the manual
+bracket-balance and styles-used-vs-defined checks (still no real JS/JSX
+parser available in this sandbox — `npm install` for one is blocked here
+by the registry returning 403; `acorn`'s CLI is present but doesn't support
+JSX). First round:
+- **Per-item savings**: `ListRow` shows "save €X.XX" under the price,
   computed as `(most expensive listed store's price − cheapest price) ×
   quantity`, only when an item is actually priced at more than one store.
-  The list header's subtitle-area CTA (see below) also shows the list's
-  total potential savings the same way.
 - **"Browse" shortcut**: a small button next to the add-item input,
   navigates straight to the Browse tab (`navigation.navigate("Browse")`).
 - **"Find the best prices →" bottom CTA**: a button pinned under the list
   (shown once it has at least one item) that jumps straight to Compare
-  (`navigation.navigate("CompareTab")`), and includes the total potential
-  savings figure when there is one.
+  (`navigation.navigate("CompareTab")`), and includes the list's total
+  potential savings figure when there is one.
 - **Editable list label**: a new, purely cosmetic, LOCAL-ONLY label (e.g.
   "WEEKLY SHOP") shown under the "My list" title, tap-to-edit, persisted
   via `AsyncStorage` per device (`xirja_list_label_<deviceId>`) the same
   way Shopping mode's checked-off state is — deliberately NOT synced to
   the backend, since there's still only one unnamed list per device in the
   real data model (`app_list`/`app_list_item`), so a per-device cosmetic
-  label needs no schema or API change. Defaults to "WEEKLY SHOP" the first
-  time; hydrates before its own save effect can run, same guard pattern as
-  `checkedItemsHydrated`.
+  label needs no schema or API change.
+
+**Real discrepancy #7, found by the owner testing the real installed APK
+(not Snack)**: the header ("My list") rendered underneath the phone's own
+status bar (clock/wifi/battery), and the bottom tab bar showed broken/blank
+icon glyphs above each label. Root cause of the header bug: `SafeAreaView`
+was being imported from `"react-native"` itself, not from
+`"react-native-safe-area-context"`. The plain React Native `SafeAreaView`
+only does anything on iOS — on Android it's a no-op plain `View` that
+reserves zero space for the status bar, so nothing before this ever
+actually protected the header on Android; Snack's web preview has no real
+status bar to overlap, which is why this was invisible until the app was
+actually installed on a phone. Fixed by importing `SafeAreaView` from
+`"react-native-safe-area-context"` instead (already a dependency, already
+used for `SafeAreaProvider`) — that version pads correctly on both
+platforms. For the tab bar icons: `App.js` never actually defined any
+`tabBarIcon` — worth remembering that leaving it unset isn't a safe
+no-icon fallback across every React Navigation/Expo SDK combination, it
+can render broken placeholder glyphs instead. Fixed by adding a small
+`TabIcon` component built entirely from plain `View`s (a stacked-lines
+icon, a magnifying glass, a bar chart) — deliberately NOT an icon font
+library like `@expo/vector-icons`, since that needs to be resolved and
+bundled by Metro at build time and this project has already lost real
+build time twice to exactly that class of dependency-resolution problem
+(the SDK 51→54 drift, the missing `babel-preset-expo`). A few `View`s have
+no version to drift and nothing to fail to resolve.
+
+**Also fixed on the same pass, all owner-requested design tweaks**: removed
+"(e.g. Milk)" from the add-item placeholder (now just "Add an item…");
+removed the price total from the header entirely (no more "€X.XX at
+cheapest prices" line); the item count is now a bigger, bolder number on
+the right-hand side of the header instead of buried in a subtitle sentence;
+and the "Find the best prices" button is now a neutral dark color instead
+of the app's green — a deliberate placeholder, since a full color pass
+across the app is a separate, later decision once the design itself is
+settled, not something to get ahead of one button at a time.
+
+Not yet confirmed by the owner on-device after this second round — that
+confirmation is the actual close-out for this task.
 
 ## How to keep this file honest
 
