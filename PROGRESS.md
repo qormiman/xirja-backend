@@ -7,13 +7,26 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 25 Sept 2026 (updated
-ten times across 24–25 Sept — real shopping-list feature, then Browse +
+eleven times across 24–25 Sept — real shopping-list feature, then Browse +
 basic navigation, a reliability fix for Render free-tier cold starts, a
 real Compare screen, a fix for the database connection pool going stale, a
 real Store lists screen, a real Item detail screen with genuine price
 history, a real Shopping mode, a first (incomplete) attempt at its blank
 progress bar, then the real fix: `store.color` was seeded as `oklch(...)`,
-which real React Native doesn't render — see below).**
+which real React Native doesn't render — see below, and most recently a
+real React Navigation migration, the first of three agreed steps toward a
+permanent personal-use Android install — see below).**
+
+**On the personal-use deployment plan (agreed 25 Sept)**: three technical
+steps remain before a permanent install on your own Android phone —
+(1) a real navigation library (done, this update), (2) persisting Shopping
+mode's checked-off state so it survives an app close/reload, and (3) an EAS
+build turned into a sideloadable `.apk`. Doing them in this order on
+purpose: navigation first because Shopping mode's persistence and any
+future "Trip summary" screen both build on top of real navigation state
+(e.g. route params) rather than the old local-state screen string; then
+persistence; then the build step, once there's nothing left to rebuild
+around.
 
 **A note on that last one, because it's a useful lesson for future
 debugging in this app**: the progress bar looked blank, so the first fix
@@ -153,14 +166,39 @@ the highlighted bar on Compare.
   than being freshly re-rendered from a list each time — but not itself
   what was hiding the color). Confirmed fully working end to end on 25
   Sept, colors included, after `migration_002_hex_store_colors.sql` was run.
-  A simple three-tab bar
-  switches between "My list"/"Browse"/"Compare" — local state, not the
-  React Navigation library yet (fine for 3 tabs plus a few tap/button-
-  reached sub-screens, won't scale cleanly much further). Uses a random
+  Navigation is now REAL (new, 25 Sept): a bottom tab navigator (`My
+  list`/`Browse`/`Compare`) where "My list" and "Compare" are each their
+  own native-stack navigator, so "Item detail" (pushed from "My list") and
+  "Store lists" → "Shopping mode" (pushed from "Compare") get genuine
+  push/back navigation, including the Android hardware back button,
+  instead of the old hand-rolled `screen` string plus a manual render
+  branch. The tab bar hides itself automatically while one of those pushed
+  screens is on screen (`getTabBarVisibility`, keyed off the focused route
+  name), matching how the original clickable prototype behaved. Shared app
+  state (the list, categories, stores, loading/error flags, and the
+  handler functions) is threaded through a `AppStateContext` rather than
+  passed as navigator props — deliberately, because a `Tab.Screen`'s
+  `component` must be a stable function reference or React Navigation
+  remounts it (losing navigation state) on every re-render; passing state
+  as inline render-prop `children` instead would have recreated a new
+  function every time `App()`'s own state changed (e.g. every quantity
+  tap). Needs 3 new packages that weren't in `package.json` before this
+  update — `@react-navigation/native`, `@react-navigation/bottom-tabs`,
+  `@react-navigation/native-stack` — plus their peer dependencies
+  `react-native-screens`, `react-native-safe-area-context`,
+  `react-native-gesture-handler`, all pinned to versions that match this
+  app's Expo SDK 51 / React Native 0.74.5. Verified by re-cloning the live
+  `xirja-app` repo and diffing against it (confirms exactly the intended
+  change: the old `TabBar` component removed, the new navigator/route
+  code added, nothing else touched) and by a manual bracket-balance +
+  styles-used-vs-defined check of the whole file (no real JS/JSX parser is
+  available in this environment — `npm install` is blocked by the sandbox's
+  network policy, confirmed again this session — so this is done with a
+  small custom script; NOT yet confirmed by actually running the app on a
+  device, since this hasn't been tested on Snack yet). Uses a random
   per-device id (`AsyncStorage`) in place of real accounts, which don't
   exist yet — documented in `xirja-app/SETUP.md` as a deliberate, swappable
-  shortcut,
-  not an oversight.
+  shortcut, not an oversight.
 
 ## Not started / explicitly designed-only (confirmed absent from the code)
 
@@ -168,15 +206,16 @@ the highlighted bar on Compare.
   Onboarding) — these exist only in the clickable `.dc.html` prototype.
   "My list", "Browse", "Compare", "Store lists", "Item detail", and
   "Shopping mode" are now real; everything else isn't yet.
-- Real navigation library (React Navigation or similar) — today's screen
-  switching is a simple local-state toggle (three tabs plus a chain of
-  button/tap-reached sub-screens: My list → Item detail, Compare → Store
-  lists → Shopping mode), fine for now but visibly starting to strain —
-  worth doing before adding Trip summary on top.
 - Shopping mode's checked-off state is in-memory only (see `App.js`'s top
   comment and the note in the mobile-app section above) — no "Trip
   summary" screen yet to land on once every store's fully checked off, and
-  no persistence if the app closes mid-trip.
+  no persistence if the app closes mid-trip. This is the next of the three
+  agreed personal-use deployment steps (navigation is now done — see the
+  mobile-app section above).
+- EAS build → sideloadable Android `.apk` for a permanent personal install
+  — not started (third of the three agreed steps). Needs `app.json`/
+  `eas.json` config, an app icon/splash, an Expo account, and running
+  `eas build`.
 - The price-correction workflow (`user_price` table, site-vs-mine trust
   logic) — designed in the prototype and spec, not ported to real code.
 - Legal / Terms-of-Service review for each chain — flagged as overdue in
