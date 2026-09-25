@@ -7,12 +7,11 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 24 Sept 2026 (updated
-same day eight times — real shopping-list feature, then Browse + basic
+same day nine times — real shopping-list feature, then Browse + basic
 navigation, a reliability fix for Render free-tier cold starts, a real
 Compare screen, a fix for the database connection pool going stale, a real
-Store lists screen, a real Item detail screen with genuine price history,
-then a real Shopping mode — not yet confirmed working by the user, see
-below).**
+Store lists screen, a real Item detail screen with genuine price history, a
+real Shopping mode, then a fix for its progress bar not visually updating).**
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -108,9 +107,19 @@ below).**
   `App()`), not persisted — closing/reloading the app mid-trip loses your
   checkmarks. That's a known, real gap, not an oversight: persisting it
   (AsyncStorage, keyed by list_id) is a natural small follow-up once this
-  screen itself is confirmed working. Not yet confirmed working by the
-  user — needs testing on Snack like every other screen before this line
-  can say so. A simple three-tab bar
+  screen itself is confirmed working. The numbers ("X of N checked",
+  running total) were confirmed correct on first testing (24 Sept), but
+  the visual progress bar itself stayed blank and didn't move as items
+  were checked — a real React Native quirk, not a data bug: the bar was
+  originally built the same way as Compare's and Store lists' bars (a
+  percentage `width` string on a single filled child), which works fine on
+  screens whose list re-renders fresh each time, but didn't reliably
+  reflow on THIS screen because it stays mounted in place while you check
+  items off one at a time. Fixed by rebuilding it as two flex-weighted
+  children in a row instead of a percentage width — flex proportions
+  recompute every render, a cached percentage measurement sometimes
+  doesn't. Not yet re-confirmed by the user since that fix. A simple
+  three-tab bar
   switches between "My list"/"Browse"/"Compare" — local state, not the
   React Navigation library yet (fine for 3 tabs plus a few tap/button-
   reached sub-screens, won't scale cleanly much further). Uses a random
