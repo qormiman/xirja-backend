@@ -17,7 +17,28 @@ which real React Native doesn't render — see below, then a React
 Navigation migration whose first version had a real "stuck, no way back to
 the tabs" bug, then a root-stack restructure that fixed that, then a
 second real bug the restructure exposed — a half-cut-off tab bar, caused by
-a missing `SafeAreaProvider` — see below).**
+a missing `SafeAreaProvider` — see below, and finally discovering the
+Snack project itself runs Expo SDK 54, not the SDK 51 `package.json` had
+been pinned to this whole time — see below).**
+
+**A third real discrepancy, found via Snack's own dependency-check panel
+rather than by reading code**: `package.json` had been pinned to Expo SDK
+51 (`expo: ~51.0.28`, React Native 0.74.5) since before this session, but
+the actual Snack project this app runs in is on SDK 54. Snack flagged five
+packages (`@react-native-async-storage/async-storage`,
+`expo-status-bar`, `react-native-gesture-handler`,
+`react-native-safe-area-context`, `react-native-screens`) as pinned to
+versions that don't match SDK 54, each with its own "Update to X" button.
+`package.json` is now updated to SDK 54-compatible versions throughout
+(`expo: ~54.0.0`, `react: 19.1.0`, `react-native: 0.81.4`, plus the five
+flagged packages at the versions Snack itself recommended) so this
+shouldn't resurface. The three `@react-navigation/*` packages weren't
+flagged by Snack and were left as they were — they aren't part of Expo's
+version-locked SDK bundle the way the other five are. Worth remembering:
+whatever SDK a given Snack project is actually running can drift from
+what's recorded in this repo's `package.json` — Snack's own Problems panel
+is the source of truth for that, not this file or the text of the file
+itself.
 
 **A second lesson-learned note, on the navigation bugs (two, found one at a
 time by actually using the app on Snack, not from re-reading the code)**:
