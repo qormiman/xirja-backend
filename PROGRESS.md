@@ -6,35 +6,43 @@ doesn't remember — read this file (and the actual code) before trusting any
 recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
-**Last verified against the actual code/deployment: 25 Sept 2026 (updated
-fourteen times across 24–25 Sept — real shopping-list feature, then Browse +
-basic navigation, a reliability fix for Render free-tier cold starts, a
-real Compare screen, a fix for the database connection pool going stale, a
-real Store lists screen, a real Item detail screen with genuine price
-history, a real Shopping mode, a first (incomplete) attempt at its blank
-progress bar, then the real fix: `store.color` was seeded as `oklch(...)`,
-which real React Native doesn't render — see below, then a React
-Navigation migration whose first version had a real "stuck, no way back to
-the tabs" bug, then a root-stack restructure that fixed that, then a
-second real bug the restructure exposed — a half-cut-off tab bar, caused by
-a missing `SafeAreaProvider`, then discovering the Snack project itself
-runs Expo SDK 54, not the SDK 51 `package.json` had been pinned to this
-whole time — all of that CONFIRMED fixed by the user on Snack — persisting
-Shopping mode's checked-off state, the second of three agreed steps toward
-a permanent personal-use Android install, ALSO confirmed working by the
-user on Snack — and most recently the config + step-by-step instructions
-for the third and final step, an EAS build to a sideloadable `.apk` — see
-below; NOT yet run by the user as of this writing).**
+**Last verified against the actual code/deployment: 25 Sept 2026. THE
+PERSONAL-USE DEPLOYMENT GOAL IS DONE**: Xirja is now a real, permanent app
+installed on the owner's own Android phone via a genuine EAS build,
+confirmed opened and running there. That's the finish line for the plan
+agreed earlier in this file (real navigation → persisted Shopping mode →
+EAS build), all three steps done and confirmed. Full history of how it got
+there (real shopping-list feature, Browse + basic navigation, a Render
+cold-start reliability fix, a real Compare screen, a stale-connection-pool
+fix, Store lists, Item detail with real price history, Shopping mode, the
+`oklch()` color bug, the React Navigation migration and its two follow-up
+bugs (a "stuck, no way back to tabs" bug fixed by a root-stack restructure,
+then a half-cut-off tab bar fixed by adding `SafeAreaProvider`), an Expo
+SDK 51→54 package.json correction, Shopping mode's persistence, and
+finally the EAS build itself — including a locked-down work laptop forcing
+a pivot to GitHub Codespaces, a broken browser-based `eas login` forcing a
+pivot to an `EXPO_TOKEN` instead, and a missing `babel-preset-expo`
+dependency that failed the first real build attempt) is preserved below,
+in the order it actually happened — worth reading if a similar step (a
+real build, a new dev environment, an unfamiliar CLI tool) comes up again,
+since several of these were genuinely non-obvious the first time.
 
-**On the personal-use deployment plan, updated**: (1) real navigation —
-done and confirmed working on Snack, including the two follow-up bugs
-above. (2) persisting Shopping mode's checked-off state — done and
-confirmed working on Snack. (3) EAS build → sideloadable `.apk` — config
-files and a full walkthrough delivered this update (see below); the user
-hasn't run through it yet, so this is NOT yet a working install as of this
-writing — the plan's "personal use" goal isn't done until this step is
-actually completed and the app is installed and opened at least once
-outside Snack/a dev server.
+**On the personal-use deployment plan — COMPLETE**: (1) real navigation —
+done and confirmed working. (2) persisting Shopping mode's checked-off
+state — done and confirmed working. (3) EAS build → sideloadable `.apk` —
+DONE: built successfully via GitHub Codespaces + `EXPO_TOKEN` auth,
+downloaded and installed on the owner's own Android phone via the
+`.apk` link, confirmed opened and running there without issues (25 Sept).
+The app no longer depends on Snack, a dev server, or a cable to open day
+to day.
+
+**One real loose end from getting here — needs closing before the next
+Codespace/build session**: the `babel-preset-expo` fix (see below) was
+applied by hand directly inside the Codespace's `package.json`, NOT yet
+pushed back to the actual `xirja-app` GitHub repo. Until that upload
+happens, a fresh clone or a fresh Codespace would hit the exact same build
+failure again. The corrected `package.json` needs to go to GitHub before
+this is considered fully settled, not just "worked once."
 
 **On the EAS build step (new, this update; revised once already — see
 below)**: two new files — `app.json` (added `android.package:
@@ -68,12 +76,58 @@ laptop at all -- it's a browser tab, the same as Snack has been throughout
 this whole project. The rest of the steps (Expo account, `npm install`,
 `eas-cli`, `eas login`/`eas init`, the build itself, sideloading the
 resulting `.apk`) are unchanged, just run from the Codespace's terminal
-instead of a local PowerShell. Not yet attempted by the user as of this
-writing -- Codespaces itself is a reasonable, standard choice for this
-exact "locked-down work machine" situation, but hasn't been verified to
-work smoothly for this specific project (e.g. whether the free Codespaces
-tier's resources are sufficient, whether `eas build` behaves identically
-from there) since it can't be tested from this environment either.
+instead of a local PowerShell. CONFIRMED this worked well: the Codespace
+opened cleanly on the `xirja-app` repo with Node.js 20.20.2 already
+present, no laptop install needed at any point.
+
+**Real discrepancy #5: `eas login`'s browser flow doesn't work from a
+Codespace (or any remote/cloud terminal)**. `eas login` opens a browser tab
+for OAuth and expects the browser to redirect back to `localhost:<port>` on
+the SAME machine running the CLI -- but from a Codespace, "localhost" in
+the user's own browser is their Windows laptop, not the remote container
+actually running `eas`, so the redirect always fails with
+`ERR_CONNECTION_REFUSED` no matter how many times it's retried. This isn't
+a Codespaces-specific bug -- it's a structural mismatch that would hit any
+remote/cloud terminal (SSH, a container, CI). Fixed by skipping interactive
+login entirely: created a personal access token on expo.dev (Account
+settings → Access Tokens), then `export EXPO_TOKEN=<token>` in the
+Codespace terminal before running any `eas` command -- `eas whoami`
+confirmed it worked immediately, no browser involved. Worth remembering
+for next time a Codespace (or similar) is used for this project: skip
+`eas login` and go straight to `EXPO_TOKEN`.
+
+**Real discrepancy #6, the one that actually failed a full build**: first
+`eas build --platform android --profile preview` attempt got all the way
+through queuing, uploading, and starting the Android build, then failed at
+the "Bundle JavaScript" phase with a generic "Unknown error." Reproducing
+the exact failing command locally (`npx expo export:embed --eager
+--platform android --dev false`) surfaced the real error underneath:
+`Cannot find module 'babel-preset-expo'`. Root cause: `babel.config.js`
+has always required `babel-preset-expo` (`presets: ['babel-preset-expo']`)
+but `package.json` never listed it as a dependency -- probably true since
+before this session even, since Snack doesn't use the project's own
+`babel.config.js`/`package.json` at all and so never exercised this path.
+This is exactly the class of gap Snack testing structurally cannot catch,
+no matter how carefully `App.js` itself is reviewed. Fixed by adding
+`"babel-preset-expo": "~54.0.0"` to `package.json`'s `devDependencies`.
+Before the retry, did a full audit of every import in `App.js` against
+`package.json` (all present), `babel.config.js` (fine), and both `app.json`
+and `eas.json` (valid JSON, no other issues) specifically to avoid another
+wasted ~20-minute build-queue cycle on a second silly gap -- found nothing
+else missing. The retry succeeded. **This fix was applied by hand directly
+inside the Codespace's `package.json` and has NOT been pushed back to the
+actual `xirja-app` GitHub repo yet** -- see the note near the top of this
+file. A fresh clone or a fresh Codespace today would still hit this exact
+same failure until that upload happens.
+
+**Outcome, confirmed 25 Sept**: the build succeeded, produced a
+downloadable `.apk`, the user downloaded and installed it directly on
+their Android phone (allowing installs from outside the Play Store when
+prompted, as expected), and confirmed it opened and ran without issues.
+This is the actual, real completion of the "personal use" deployment goal
+first discussed earlier in this file -- not just "the steps are written
+down" but "the app is installed and working on the phone it was meant
+for."
 
 **On persisting Shopping mode (new, this update)**: `checkedItemIds` (which
 items are ticked off) now survives closing the app mid-trip, the same way
