@@ -6,12 +6,34 @@ doesn't remember — read this file (and the actual code) before trusting any
 recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
-**Last verified against the actual code/deployment: 24 Sept 2026 (updated
-same day nine times — real shopping-list feature, then Browse + basic
-navigation, a reliability fix for Render free-tier cold starts, a real
-Compare screen, a fix for the database connection pool going stale, a real
-Store lists screen, a real Item detail screen with genuine price history, a
-real Shopping mode, then a fix for its progress bar not visually updating).**
+**Last verified against the actual code/deployment: 25 Sept 2026 (updated
+ten times across 24–25 Sept — real shopping-list feature, then Browse +
+basic navigation, a reliability fix for Render free-tier cold starts, a
+real Compare screen, a fix for the database connection pool going stale, a
+real Store lists screen, a real Item detail screen with genuine price
+history, a real Shopping mode, a first (incomplete) attempt at its blank
+progress bar, then the real fix: `store.color` was seeded as `oklch(...)`,
+which real React Native doesn't render — see below).**
+
+**A note on that last one, because it's a useful lesson for future
+debugging in this app**: the progress bar looked blank, so the first fix
+assumed the bug was in the progress-bar CODE (a percentage-width React
+Native quirk) and rebuilt it a more robust way. That was a real
+improvement but not the actual cause — the bar's code was fine all along.
+The real bug was upstream, in the DATA: `store.color` in the database was
+seeded with values like `oklch(0.55 0.12 152)`, which is valid CSS that
+any browser renders fine, but which React Native's own color parser does
+not understand at all on a real device — it silently drops the color
+instead of erroring, so any UI element using a store's color as a real
+background (this progress bar, item ribbons, store chips, the Compare/
+Store lists bars) rendered nothing. It likely affected those other spots
+too in a subtler, easier-to-miss way; only this screen's big, obviously-
+blank bar made it impossible to overlook. Fixed at the source — the
+database column, via `migration_002_hex_store_colors.sql` — not by
+special-casing color handling in the app, so every screen that uses a
+store's color is fixed by the same one change. Lesson: when something
+renders as "blank" rather than visibly wrong, check the DATA feeding it
+before rewriting the code that displays it.
 
 ## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
 
@@ -68,6 +90,15 @@ real Shopping mode, then a fix for its progress bar not visually updating).**
   once against the real database before the list endpoints above work —
   confirm it's actually been run in Neon, this file only records that the
   migration was written and delivered.
+- **Database — store colors fixed to real hex**:
+  `migration_002_hex_store_colors.sql` (in `xirja-backend`) converts
+  `store.color` from `oklch(...)` (set in the original `seed.sql`, valid
+  CSS but not something React Native renders on a real device) to real hex
+  equivalents — same colors, a format every platform actually understands.
+  `seed.sql` itself is also fixed for any future fresh database. Must be
+  run once against the real database (same way migration_001 was) before
+  the app's colors — the Shopping mode progress bar, item ribbons, store
+  chips — actually show up.
 - **Mobile app — 6 real screens now, with basic navigation**: `App.js`
   (`xirja-app` repo). "My list": search-and-add a category, change
   quantity, remove an item, pull to refresh. "Browse": scroll every
@@ -108,18 +139,17 @@ real Shopping mode, then a fix for its progress bar not visually updating).**
   checkmarks. That's a known, real gap, not an oversight: persisting it
   (AsyncStorage, keyed by list_id) is a natural small follow-up once this
   screen itself is confirmed working. The numbers ("X of N checked",
-  running total) were confirmed correct on first testing (24 Sept), but
-  the visual progress bar itself stayed blank and didn't move as items
-  were checked — a real React Native quirk, not a data bug: the bar was
-  originally built the same way as Compare's and Store lists' bars (a
-  percentage `width` string on a single filled child), which works fine on
-  screens whose list re-renders fresh each time, but didn't reliably
-  reflow on THIS screen because it stays mounted in place while you check
-  items off one at a time. Fixed by rebuilding it as two flex-weighted
-  children in a row instead of a percentage width — flex proportions
-  recompute every render, a cached percentage measurement sometimes
-  doesn't. Not yet re-confirmed by the user since that fix. A simple
-  three-tab bar
+  running total) were confirmed correct on first testing (24 Sept), but the
+  visual progress bar itself stayed blank. Root cause turned out to be
+  upstream in the DATA, not the bar's code — see the `migration_002`
+  entry above and the note at the top of this file: `store.color` was
+  seeded as `oklch(...)`, which React Native doesn't render on a real
+  device. The bar was also rebuilt to use flex proportions instead of a
+  percentage width along the way (a genuine, separate improvement — more
+  reliable when a screen stays mounted while its own state changes, rather
+  than being freshly re-rendered from a list each time — but not itself
+  what was hiding the color). Not yet re-confirmed by the user since the
+  real (migration_002) fix. A simple three-tab bar
   switches between "My list"/"Browse"/"Compare" — local state, not the
   React Navigation library yet (fine for 3 tabs plus a few tap/button-
   reached sub-screens, won't scale cleanly much further). Uses a random
