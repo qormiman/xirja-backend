@@ -36,13 +36,22 @@ downloaded and installed on the owner's own Android phone via the
 The app no longer depends on Snack, a dev server, or a cable to open day
 to day.
 
-**One real loose end from getting here — needs closing before the next
-Codespace/build session**: the `babel-preset-expo` fix (see below) was
-applied by hand directly inside the Codespace's `package.json`, NOT yet
-pushed back to the actual `xirja-app` GitHub repo. Until that upload
-happens, a fresh clone or a fresh Codespace would hit the exact same build
-failure again. The corrected `package.json` needs to go to GitHub before
-this is considered fully settled, not just "worked once."
+**Update, 25 Sept**: the `babel-preset-expo` fix and the earlier SDK 54
+`package.json` correction have both since been confirmed pushed to the
+real `xirja-app` GitHub repo (verified by re-cloning it fresh) — the loose
+end previously noted here is closed. A fresh clone or fresh Codespace today
+builds correctly with no manual patching needed.
+
+**Now underway: closing the gap between the 6 "real" screens and the
+original design mockups.** After the personal-use deployment finished, the
+owner compared the running app against the original design screenshots for
+all 6 real screens (My list, Browse, Compare, Item detail, Store lists,
+Shopping mode) and found each one missing pieces the design called for.
+Decision made explicitly by the owner: fix ALL of it, screen by screen —
+including the three large, backend-touching pieces (offline mode, barcode
+scanning, the price-correction workflow) — rather than deferring the big
+ones. See "Design-vs-implementation gap-closing (started 25 Sept)" below
+for the full task list and progress.
 
 **On the EAS build step (new, this update; revised once already — see
 below)**: two new files — `app.json` (added `android.package:
@@ -392,13 +401,10 @@ the highlighted bar on Compare.
 - No "Trip summary" screen yet to land on once every store's fully checked
   off in Shopping mode — the checked-off state itself now persists (see
   above), but there's nothing that celebrates/summarizes finishing the
-  whole trip across every store.
-- EAS build → sideloadable Android `.apk` for a permanent personal install
-  — not started (third and final of the three agreed steps, once Shopping
-  mode's persistence is confirmed on Snack). Needs `app.json`/`eas.json`
-  config, an app icon/splash, an Expo account, and running `eas build`.
+  whole trip across every store. (Task #7 of the gap-closing list below.)
 - The price-correction workflow (`user_price` table, site-vs-mine trust
   logic) — designed in the prototype and spec, not ported to real code.
+  (Task #11 of the gap-closing list below.)
 - Legal / Terms-of-Service review for each chain — flagged as overdue in
   the original spec, no evidence it's been done.
 - The LIDL / crowdsourced-pricing product decision — still explicitly
@@ -423,6 +429,66 @@ the highlighted bar on Compare.
   (see `run_with_db` in `api/main.py`). Both fixes make the free tier's
   rough edges tolerable, not solved — moving off the free tier is still
   the real fix for the underlying sleep/idle behavior itself.
+
+## Design-vs-implementation gap-closing (started 25 Sept)
+
+After the personal-use deployment was confirmed done, the owner compared
+the app's 6 real screens against the original design mockup screenshots
+and found real gaps in every one of them. Explicit decision: work through
+ALL of it, screen by screen, in this order, including the three large
+features rather than deferring them:
+
+1. **My list** — DONE (see below).
+2. Browse — department category filter chips; show "from €X" per row.
+3. Compare — 3-way strategy toggle ("Cheapest each" / "2 stores" / "One
+   store") inside Compare itself, a new "2 stores" optimal-split
+   algorithm, and an expandable item-by-item breakdown.
+4. Item detail — per-store freshness timestamp, unit/source subtitle.
+5. Store lists — outlet locality/address, per-store progress on the card,
+   a "Trip summary" link.
+6. Shopping mode — category-grouped item list, circular progress ring.
+7. New "Trip summary" screen.
+8. New "Settings" screen + a 4-tab bar (List, Compare, Shop, Settings)
+   with Shopping mode promoted to its own tab.
+9. Offline mode — cache last-successful list/categories/stores to
+   AsyncStorage, show cached data with an offline badge on a failed fetch.
+   Scope still to be pinned down: the design implies read-write sync
+   ("corrections sync when you're back on data"), which is considerably
+   more work than a read-only cache — needs a decision before starting.
+10. Barcode scanning in Shopping mode — needs a camera module (e.g.
+    `expo-camera`) plus a new backend barcode-lookup endpoint/schema work.
+11. Price-correction workflow ("Price different? Fix it") — new
+    `user_price` table, new API endpoints, site-vs-mine trust logic, plus
+    the UI hook in Shopping mode.
+
+**Task 1 — "My list" — DONE, 25 Sept.** Four gaps closed in `App.js`
+(`xirja-app` repo), verified by re-cloning the live repo and diffing (diff
+contains only the additive changes below, nothing else touched), plus the
+manual bracket-balance and styles-used-vs-defined checks (still no real
+JS/JSX parser available in this sandbox — `npm install` for one is blocked
+here by the registry returning 403; `acorn`'s CLI is present but doesn't
+support JSX). Not yet confirmed by the owner on-device — that confirmation
+is the actual close-out for this task.
+- **Per-item savings**: `ListRow` now shows "save €X.XX" under the price,
+  computed as `(most expensive listed store's price − cheapest price) ×
+  quantity`, only when an item is actually priced at more than one store.
+  The list header's subtitle-area CTA (see below) also shows the list's
+  total potential savings the same way.
+- **"Browse" shortcut**: a small button next to the add-item input,
+  navigates straight to the Browse tab (`navigation.navigate("Browse")`).
+- **"Find the best prices →" bottom CTA**: a button pinned under the list
+  (shown once it has at least one item) that jumps straight to Compare
+  (`navigation.navigate("CompareTab")`), and includes the total potential
+  savings figure when there is one.
+- **Editable list label**: a new, purely cosmetic, LOCAL-ONLY label (e.g.
+  "WEEKLY SHOP") shown under the "My list" title, tap-to-edit, persisted
+  via `AsyncStorage` per device (`xirja_list_label_<deviceId>`) the same
+  way Shopping mode's checked-off state is — deliberately NOT synced to
+  the backend, since there's still only one unnamed list per device in the
+  real data model (`app_list`/`app_list_item`), so a per-device cosmetic
+  label needs no schema or API change. Defaults to "WEEKLY SHOP" the first
+  time; hydrates before its own save effect can run, same guard pattern as
+  `checkedItemsHydrated`.
 
 ## How to keep this file honest
 
