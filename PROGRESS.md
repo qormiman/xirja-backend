@@ -36,27 +36,44 @@ writing — the plan's "personal use" goal isn't done until this step is
 actually completed and the app is installed and opened at least once
 outside Snack/a dev server.
 
-**On the EAS build step (new, this update)**: two new files —
-`app.json` (added `android.package: "com.xirja.app"`, the unique id
-Android needs to identify the app; the user confirmed no strong opinion
-either way, chosen a reasonable placeholder) and `eas.json` (a `preview`
-build profile producing a plain installable `.apk` rather than the `.aab`
-format the Play Store wants — deliberately NOT a production/Play Store
-profile, since that's a separate, later decision with real business/legal
-considerations, not a technical one to make casually). A new
-`EAS_BUILD.md` walks through the rest step by step: checking for/
-installing Node.js (confirmed with the user as NOT already checked as of
-this writing), creating a free Expo account (confirmed with the user as
-NOT yet created), installing `eas-cli`, `eas login`, `eas init` (this is
-the one part of the setup that has to happen on the user's own machine
-under their own account — it can't be done from here), then
+**On the EAS build step (new, this update; revised once already — see
+below)**: two new files — `app.json` (added `android.package:
+"com.xirja.app"`, the unique id Android needs to identify the app; the
+user confirmed no strong opinion either way, chosen as a reasonable
+placeholder) and `eas.json` (a `preview` build profile producing a plain
+installable `.apk` rather than the `.aab` format the Play Store wants —
+deliberately NOT a production/Play Store profile, since that's a separate,
+later decision with real business/legal considerations, not a technical
+one to make casually). A new `EAS_BUILD.md` walks through the rest step by
+step: creating a free Expo account, `npm install`, installing `eas-cli`,
+`eas login`, `eas init` (this is the one part of the setup that has to
+happen under the user's own account — it can't be done from here), then
 `eas build --platform android --profile preview`, and finally getting the
 resulting `.apk` onto the phone and sideloading it (allowing installs from
 outside the Play Store, a normal step for any non-Play-Store app, not a
-red flag). None of this has been run yet — genuinely unverified beyond
-"these are the standard, documented EAS steps," since actually running an
-EAS build requires the user's own Expo account and can't be tested from
-this environment.
+red flag).
+
+**Real discrepancy #4, found immediately on the very first command**: the
+original version of `EAS_BUILD.md` assumed a normal personal computer and
+told the user to install Node.js directly. In reality this app's owner
+uses a WORK laptop with IT-locked-down installs -- `node -v` failed, and
+getting Node.js installed the normal way would need IT approval that's
+"very unlikely to be given." This blocks the plain nodejs.org-installer
+path entirely, not just as an inconvenience -- worth remembering for any
+future step that assumes a normal, unrestricted personal computer.
+`EAS_BUILD.md` is now rewritten around **GitHub Codespaces** instead: a
+free, browser-based dev environment tied to the user's GitHub account,
+with Node.js already installed there, so nothing installs on the work
+laptop at all -- it's a browser tab, the same as Snack has been throughout
+this whole project. The rest of the steps (Expo account, `npm install`,
+`eas-cli`, `eas login`/`eas init`, the build itself, sideloading the
+resulting `.apk`) are unchanged, just run from the Codespace's terminal
+instead of a local PowerShell. Not yet attempted by the user as of this
+writing -- Codespaces itself is a reasonable, standard choice for this
+exact "locked-down work machine" situation, but hasn't been verified to
+work smoothly for this specific project (e.g. whether the free Codespaces
+tier's resources are sufficient, whether `eas build` behaves identically
+from there) since it can't be tested from this environment either.
 
 **On persisting Shopping mode (new, this update)**: `checkedItemIds` (which
 items are ticked off) now survives closing the app mid-trip, the same way
