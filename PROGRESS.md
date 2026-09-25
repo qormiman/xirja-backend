@@ -7,15 +7,35 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 25 Sept 2026 (updated
-eleven times across 24–25 Sept — real shopping-list feature, then Browse +
+twelve times across 24–25 Sept — real shopping-list feature, then Browse +
 basic navigation, a reliability fix for Render free-tier cold starts, a
 real Compare screen, a fix for the database connection pool going stale, a
 real Store lists screen, a real Item detail screen with genuine price
 history, a real Shopping mode, a first (incomplete) attempt at its blank
 progress bar, then the real fix: `store.color` was seeded as `oklch(...)`,
-which real React Native doesn't render — see below, and most recently a
-real React Navigation migration, the first of three agreed steps toward a
-permanent personal-use Android install — see below).**
+which real React Native doesn't render — see below, then a React
+Navigation migration whose first version had a real "stuck, no way back to
+the tabs" bug, then the actual fix for that — a root-stack restructure —
+see below).**
+
+**A second lesson-learned note, on the navigation bug**: the first React
+Navigation version nested "Item detail" inside "My list"'s own stack and
+"Store lists"/"Shopping mode" inside "Compare"'s own stack, and hid the tab
+bar dynamically by matching each tab's currently-focused nested route name
+against a list of "hide the bar on these" names — the pattern React
+Navigation's own docs recommend for this. It looked right and passed a
+manual code review, but the real device experience was worse than before:
+going Store lists <-> Shopping mode worked, but there was genuinely no way
+back to the three main tabs. Fixed by removing that dynamic-hiding logic
+entirely rather than debugging it further: "Item detail", "Store lists" and
+"Shopping mode" now live as their own screens on ONE root-level stack, with
+a single "Tabs" screen (the actual tab bar) as a sibling screen on that
+same stack, instead of being nested inside a tab's own stack. The tab bar
+now simply doesn't exist outside the "Tabs" screen — there's no per-render
+route-name matching left to get wrong, so there's no way to end up
+"stuck": every back arrow is one plain stack `goBack()` away from the tabs.
+Not yet re-confirmed on a real device as of this writing — this fix hasn't
+been tested on Snack yet, unlike everything else in this file.
 
 **On the personal-use deployment plan (agreed 25 Sept)**: three technical
 steps remain before a permanent install on your own Android phone —
@@ -166,39 +186,44 @@ the highlighted bar on Compare.
   than being freshly re-rendered from a list each time — but not itself
   what was hiding the color). Confirmed fully working end to end on 25
   Sept, colors included, after `migration_002_hex_store_colors.sql` was run.
-  Navigation is now REAL (new, 25 Sept): a bottom tab navigator (`My
-  list`/`Browse`/`Compare`) where "My list" and "Compare" are each their
-  own native-stack navigator, so "Item detail" (pushed from "My list") and
-  "Store lists" → "Shopping mode" (pushed from "Compare") get genuine
-  push/back navigation, including the Android hardware back button,
-  instead of the old hand-rolled `screen` string plus a manual render
-  branch. The tab bar hides itself automatically while one of those pushed
-  screens is on screen (`getTabBarVisibility`, keyed off the focused route
-  name), matching how the original clickable prototype behaved. Shared app
-  state (the list, categories, stores, loading/error flags, and the
-  handler functions) is threaded through a `AppStateContext` rather than
-  passed as navigator props — deliberately, because a `Tab.Screen`'s
-  `component` must be a stable function reference or React Navigation
-  remounts it (losing navigation state) on every re-render; passing state
-  as inline render-prop `children` instead would have recreated a new
-  function every time `App()`'s own state changed (e.g. every quantity
-  tap). Needs 3 new packages that weren't in `package.json` before this
-  update — `@react-navigation/native`, `@react-navigation/bottom-tabs`,
-  `@react-navigation/native-stack` — plus their peer dependencies
-  `react-native-screens`, `react-native-safe-area-context`,
-  `react-native-gesture-handler`, all pinned to versions that match this
-  app's Expo SDK 51 / React Native 0.74.5. Verified by re-cloning the live
-  `xirja-app` repo and diffing against it (confirms exactly the intended
-  change: the old `TabBar` component removed, the new navigator/route
-  code added, nothing else touched) and by a manual bracket-balance +
-  styles-used-vs-defined check of the whole file (no real JS/JSX parser is
-  available in this environment — `npm install` is blocked by the sandbox's
-  network policy, confirmed again this session — so this is done with a
-  small custom script; NOT yet confirmed by actually running the app on a
-  device, since this hasn't been tested on Snack yet). Uses a random
-  per-device id (`AsyncStorage`) in place of real accounts, which don't
-  exist yet — documented in `xirja-app/SETUP.md` as a deliberate, swappable
-  shortcut, not an oversight.
+  Navigation is now REAL (new, 25 Sept, and fixed once already — see the
+  lesson-learned note above): a root-level stack holds one "Tabs" screen
+  (the actual three-tab bar — "My list"/"Browse"/"Compare") plus "Item
+  detail", "Store lists" and "Shopping mode" as sibling screens on that
+  SAME root stack, pushed on top of "Tabs" rather than nested inside a
+  tab's own stack. This gets genuine push/back navigation, including the
+  Android hardware back button, instead of the old hand-rolled `screen`
+  string plus a manual render branch — and the tab bar is simply absent on
+  the pushed screens (nothing dynamic to get wrong: it only exists on the
+  "Tabs" screen at all), matching how the original clickable prototype
+  behaved. Shared app state (the list, categories, stores, loading/error
+  flags, and the handler functions) is threaded through an
+  `AppStateContext` rather than passed as navigator props — deliberately,
+  because a `Tab.Screen`/`RootStack.Screen`'s `component` must be a stable
+  function reference or React Navigation remounts it (losing navigation
+  state) on every re-render; passing state as inline render-prop `children`
+  instead would have recreated a new function every time `App()`'s own
+  state changed (e.g. every quantity tap). Needs 3 new packages that
+  weren't in `package.json` before this update — `@react-navigation/native`,
+  `@react-navigation/bottom-tabs`, `@react-navigation/native-stack` — plus
+  their peer dependencies `react-native-screens`,
+  `react-native-safe-area-context`, `react-native-gesture-handler`, all
+  pinned to versions that match this app's Expo SDK 51 / React Native
+  0.74.5. Verified by re-cloning the live `xirja-app` repo and diffing
+  against it (confirms exactly the intended change and nothing else
+  touched) and by a manual bracket-balance + styles-used-vs-defined check
+  of the whole file (no real JS/JSX parser is available in this
+  environment — `npm install` is blocked by the sandbox's network policy,
+  confirmed again this session — so this is done with a small custom
+  script). NOT yet confirmed on a real device/Snack as of this writing —
+  the first version of this migration passed the same kind of check and
+  still had the "stuck, no way back to the tabs" bug once actually used,
+  so treat this specific screen-navigation behavior as unconfirmed until
+  you've tapped through it yourself: My list → an item → back; Compare →
+  Split into store lists → a store → Shopping mode → back → back. Uses a
+  random per-device id (`AsyncStorage`) in place of real accounts, which
+  don't exist yet — documented in `xirja-app/SETUP.md` as a deliberate,
+  swappable shortcut, not an oversight.
 
 ## Not started / explicitly designed-only (confirmed absent from the code)
 
