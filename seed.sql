@@ -2,10 +2,16 @@
 -- Seed data: the stores and outlets we know about so far.
 -- Run this once, after schema.sql, before running the crawler for the first
 -- time.
+--
+-- Store colors are real hex (not the oklch(...) this file originally used)
+-- -- see migration_002_hex_store_colors.sql for why: React Native doesn't
+-- understand oklch() on a real device, even though any browser does. A
+-- database seeded from this file today already gets the working colors;
+-- migration_002 exists for a database that was seeded before this fix.
 -- ============================================================================
 
 INSERT INTO store (id, name, brand, short_code, color) VALUES
-    ('greens', 'Greens Supermarket', 'Greens', 'GR', 'oklch(0.55 0.12 152)');
+    ('greens', 'Greens Supermarket', 'Greens', 'GR', '#2e854d');
 
 -- Mriehel's source_code was originally guessed as 'MR' and confirmed wrong
 -- by a real crawl (valid token, but zero products in every category) --
@@ -23,7 +29,7 @@ INSERT INTO outlet (id, store_id, name, locality, source_code) VALUES
 -- Qormi), not a different catalogue or different prices. So this is one
 -- shared price list, seeded here as a single outlet rather than two.
 INSERT INTO store (id, name, brand, short_code, color) VALUES
-    ('pavipama', 'PAVI PAMA', 'PAVI PAMA', 'PP', 'oklch(0.58 0.15 40)');
+    ('pavipama', 'PAVI PAMA', 'PAVI PAMA', 'PP', '#c1552c');
 
 INSERT INTO outlet (id, store_id, name, locality, source_code) VALUES
     ('pavipama', 'pavipama', 'PAVI PAMA', NULL, 'PP');
@@ -34,7 +40,7 @@ INSERT INTO outlet (id, store_id, name, locality, source_code) VALUES
 -- "one shared price list" situation as PAVI PAMA, now confirmed rather than
 -- assumed. Seeded here as a single outlet, same pattern as PAVI PAMA.
 INSERT INTO store (id, name, brand, short_code, color) VALUES
-    ('welbees', 'Welbee''s Supermarket', 'Welbee''s', 'WB', 'oklch(0.52 0.10 300)');
+    ('welbees', 'Welbee''s Supermarket', 'Welbee''s', 'WB', '#725b9a');
 
 INSERT INTO outlet (id, store_id, name, locality, source_code) VALUES
     ('welbees', 'welbees', 'Welbee''s', NULL, 'WB');
