@@ -7,7 +7,7 @@ recap, including one I might give you in a new session. Update the "Last
 verified" line and the relevant section whenever real progress happens.
 
 **Last verified against the actual code/deployment: 25 Sept 2026 (updated
-twelve times across 24–25 Sept — real shopping-list feature, then Browse +
+thirteen times across 24–25 Sept — real shopping-list feature, then Browse +
 basic navigation, a reliability fix for Render free-tier cold starts, a
 real Compare screen, a fix for the database connection pool going stale, a
 real Store lists screen, a real Item detail screen with genuine price
@@ -15,27 +15,37 @@ history, a real Shopping mode, a first (incomplete) attempt at its blank
 progress bar, then the real fix: `store.color` was seeded as `oklch(...)`,
 which real React Native doesn't render — see below, then a React
 Navigation migration whose first version had a real "stuck, no way back to
-the tabs" bug, then the actual fix for that — a root-stack restructure —
-see below).**
+the tabs" bug, then a root-stack restructure that fixed that, then a
+second real bug the restructure exposed — a half-cut-off tab bar, caused by
+a missing `SafeAreaProvider` — see below).**
 
-**A second lesson-learned note, on the navigation bug**: the first React
-Navigation version nested "Item detail" inside "My list"'s own stack and
-"Store lists"/"Shopping mode" inside "Compare"'s own stack, and hid the tab
-bar dynamically by matching each tab's currently-focused nested route name
-against a list of "hide the bar on these" names — the pattern React
-Navigation's own docs recommend for this. It looked right and passed a
-manual code review, but the real device experience was worse than before:
-going Store lists <-> Shopping mode worked, but there was genuinely no way
-back to the three main tabs. Fixed by removing that dynamic-hiding logic
-entirely rather than debugging it further: "Item detail", "Store lists" and
-"Shopping mode" now live as their own screens on ONE root-level stack, with
-a single "Tabs" screen (the actual tab bar) as a sibling screen on that
-same stack, instead of being nested inside a tab's own stack. The tab bar
-now simply doesn't exist outside the "Tabs" screen — there's no per-render
-route-name matching left to get wrong, so there's no way to end up
-"stuck": every back arrow is one plain stack `goBack()` away from the tabs.
-Not yet re-confirmed on a real device as of this writing — this fix hasn't
-been tested on Snack yet, unlike everything else in this file.
+**A second lesson-learned note, on the navigation bugs (two, found one at a
+time by actually using the app on Snack, not from re-reading the code)**:
+the first React Navigation version nested "Item detail" inside "My list"'s
+own stack and "Store lists"/"Shopping mode" inside "Compare"'s own stack,
+and hid the tab bar dynamically by matching each tab's currently-focused
+nested route name against a list of "hide the bar on these" names — the
+pattern React Navigation's own docs recommend for this. It looked right and
+passed a manual code review, but going Store lists <-> Shopping mode worked
+while there was genuinely no way back to the three main tabs. Fixed by
+removing that dynamic-hiding logic entirely: "Item detail", "Store lists"
+and "Shopping mode" now live as their own screens on ONE root-level stack,
+with a single "Tabs" screen (the actual tab bar) as a sibling screen on
+that same stack. Confirmed by the user this actually fixed the "stuck"
+problem — but revealed a second, real bug: back on the tabs, the tab bar
+itself rendered half cut off at the bottom (screenshot confirmed on Snack's
+Web preview). Cause: React Navigation's bottom tab bar reads its own bottom
+inset from `react-native-safe-area-context` (`useSafeAreaInsets`) to size
+and pad itself against the real device safe area — that package was
+already a dependency (added as a required peer of `@react-navigation/
+bottom-tabs`) but the app was never actually wrapped in its
+`SafeAreaProvider`, only in the unrelated plain `SafeAreaView` from
+"react-native" (which only pads its own children away from a notch/status
+bar and provides none of this context). Without a real provider, the hook
+had nothing to read and fell back to bad values. Fixed by wrapping the
+whole app in `SafeAreaProvider` (outermost, per React Navigation's own
+setup docs) in addition to the existing `SafeAreaView`. Not yet
+re-confirmed by the user as of this writing.
 
 **On the personal-use deployment plan (agreed 25 Sept)**: three technical
 steps remain before a permanent install on your own Android phone —
