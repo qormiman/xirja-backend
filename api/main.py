@@ -400,18 +400,30 @@ def list_stores():
 def list_categories():
     """
     Every shared category that currently has at least one real, in-stock
-    price behind it, with how many stores carry it -- what the app's "add
-    an item" screen searches/browses against. Deliberately reads from real
-    listing + price data (not a fixed list somewhere in code), so it can
-    never show a category that would then come back empty when added to a
-    list.
+    price behind it, with how many stores carry it and its cheapest current
+    price anywhere -- what the app's "add an item" screen searches/browses
+    against, and what Browse's "from €X" per row (added for the
+    design-vs-implementation gap-closing pass) needs. Deliberately reads
+    from real listing + price data (not a fixed list somewhere in code), so
+    it can never show a category that would then come back empty when added
+    to a list.
+
+    `min_price` here is deliberately just "the single cheapest current
+    price across every store," NOT the same per-store cheapest-price
+    breakdown `fetch_cheapest_for_category` computes -- Browse only needs a
+    quick "from €X" per row, not a full by-store list, and this stays a
+    single cheap GROUP BY instead of running the heavier per-category query
+    for every row of a list that can have 100+ categories in it at once.
     """
     sql = """
-        SELECT l.shopping_category, COUNT(DISTINCT o.store_id) AS store_count
+        SELECT
+            l.shopping_category,
+            COUNT(DISTINCT o.store_id) AS store_count,
+            MIN(latest.price) AS min_price
         FROM listing l
         JOIN outlet o ON o.id = l.outlet_id
         JOIN LATERAL (
-            SELECT 1 FROM price_observation po
+            SELECT price FROM price_observation po
             WHERE po.listing_id = l.id
             ORDER BY po.observed_at DESC
             LIMIT 1
@@ -428,7 +440,12 @@ def list_categories():
 
     return {
         "categories": [
-            {"category": name, "store_count": count} for name, count in rows
+            {
+                "category": name,
+                "store_count": count,
+                "min_price": float(min_price) if min_price is not None else None,
+            }
+            for name, count, min_price in rows
         ]
     }
 
