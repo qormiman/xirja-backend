@@ -439,7 +439,7 @@ ALL of it, screen by screen, in this order, including the three large
 features rather than deferring them:
 
 1. **My list** — DONE (see below).
-2. Browse — department category filter chips; show "from €X" per row.
+2. **Browse** — DONE (see below).
 3. Compare — 3-way strategy toggle ("Cheapest each" / "2 stores" / "One
    store") inside Compare itself, a new "2 stores" optimal-split
    algorithm, and an expandable item-by-item breakdown.
@@ -521,8 +521,38 @@ of the app's green — a deliberate placeholder, since a full color pass
 across the app is a separate, later decision once the design itself is
 settled, not something to get ahead of one button at a time.
 
-Not yet confirmed by the owner on-device after this second round — that
-confirmation is the actual close-out for this task.
+**Confirmed by the owner on the real device, 25 Sept**: all of the above
+looks right — task fully closed.
+
+**Task 2 — "Browse" — DONE, 25 Sept.** Two gaps closed, one of which
+touched the backend. Verified the same way as Task 1: `api/main.py`
+checked with `python3 -m py_compile` (no real pytest suite exists for this
+endpoint yet — see the "Not started" section's note on test coverage) and
+diffed against a fresh clone (only the intended change); `App.js` checked
+with the manual bracket-balance / styles-used-vs-defined scripts and
+diffed against a fresh clone the same way. Not yet confirmed by the owner
+on-device.
+- **"from €X" per row**: `GET /categories` (`xirja-backend`) now also
+  returns `min_price` per category — the single cheapest current price for
+  that category across every store, computed with one extra `MIN()` in the
+  same query (not the heavier per-store breakdown
+  `fetch_cheapest_for_category` does — Browse only needs one number per
+  row, and this list can have 100+ rows). `BrowseRow` (`xirja-app`) shows
+  it as "from €X.XX ·" ahead of the existing store-count text.
+- **Department filter chips**: a horizontally scrolling row of chips (All /
+  Fruit & veg / Bakery / Dairy & chilled / Meat & fish / Drinks / Pantry /
+  Other) above the category list, combined with the existing text filter
+  (both apply together). There is no real "department" concept anywhere in
+  the data model — the ~150+ real shopping categories
+  (`category_taxonomy.py`) are already fine-grained (e.g. "Milk",
+  "Yoghurt", "Cheese" are three separate categories, not one "Dairy"
+  bucket) — so this is deliberately a CLIENT-ONLY keyword classifier
+  (`classifyDepartment` in `App.js`), not a backend/schema change: same
+  "first draft from real category names, not a perfectly reviewed
+  taxonomy" spirit as that file's own name-based fallback classification.
+  Worth remembering if a category gets miscategorized later: fix the
+  keyword list in `classifyDepartment`, nothing in the database needs to
+  change for this.
 
 ## How to keep this file honest
 
