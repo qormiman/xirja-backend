@@ -1,618 +1,708 @@
-"""
-Xirja -- price API.
-
-What this does, in plain terms:
-  A small web server that sits between the app (on someone's phone) and the
-  database. The phone app is never allowed to talk to Postgres directly --
-  that would mean shipping your database password inside the app, which
-  anyone who downloaded the app could then read out. Instead, the app calls
-  this server over a normal web address, and this server is the only thing
-  that ever holds the real database credentials.
-
-  Started with exactly one endpoint -- the minimum needed to prove the whole
-  chain works end to end: real prices, from the real database, reachable
-  over the internet. This now adds the second real feature: a genuinely
-  usable shopping list (add an item by category, see its cheapest current
-  price, remove it, change quantity) -- the previous "My list" screen only
-  showed 4 hardcoded categories with no way to change them.
-
-  Still ahead: browsing by category, the price-correction workflow. Add
-  those the same way this one was added -- one proven slice at a time.
-
-Run locally:
-    cd api
-    pip install -r requirements.txt
-    export DATABASE_URL="postgres://...same one the crawlers use..."
-    uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-  Then open http://127.0.0.1:8000/docs in a browser -- FastAPI builds that
-  page automatically, and it lets you try every endpoint by hand before the
-  app ever calls it.
-
-Deploy: see ../SETUP.md -> "Running the API online (Render)" for the
-step-by-step walkthrough (no server administration experience needed).
-Re-deploying an update: Render redeploys automatically on every push to
-this repo's main branch (or every file upload through GitHub's web
-interface, which creates a commit the same way) -- nothing extra to do on
-Render's side.
-"""
-
-import os
-from contextlib import asynccontextmanager
-
-import psycopg2
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from psycopg2 import pool as pg_pool
-
-# A small, reusable pool of database connections, opened once when the
-# server starts. Opening a brand new connection to Neon on every single
-# request adds a noticeable delay (it's a security handshake with a
-# database that may be on the other side of the world) -- a pool instead
-# keeps a handful of connections open and hands them out as requests come
-# in, the same way a restaurant keeps a few tables set rather than building
-# a new one for every guest.
-_pool = None
-
-
-def get_pool():
-    global _pool
-    if _pool is None:
-        database_url = os.environ["DATABASE_URL"]
-        _pool = pg_pool.SimpleConnectionPool(
-            1, 5, database_url, connect_timeout=30
-        )
-    return _pool
-
-
-def run_with_db(work, write=False):
-    """
-    Runs `work(cur)` against a connection borrowed from the pool, and always
-    hands the connection back afterwards -- the single place every endpoint
-    below goes through, instead of each repeating its own
-    getconn/try/finally/putconn block.
-
-    The reason this exists: a connection sitting in the pool can go stale
-    without anything here doing anything wrong -- Render's free tier puts
-    the whole server to sleep after 15 idle minutes, and Neon can also
-    close a connection it decides has been idle too long. Either way, the
-    pool doesn't know the connection is dead until something tries to use
-    it, at which point psycopg2 raises OperationalError (e.g. "SSL
-    connection has been closed unexpectedly") -- previously this crashed
-    the request outright. Now: throw that one connection away (closed, not
-    returned to the pool, so it can never be handed out again) and retry
-    the whole `work` call exactly once with a freshly opened connection.
-    A second failure in a row is treated as a real problem, not a stale
-    connection, and is allowed to raise normally.
-
-    `write=True` commits after `work` succeeds -- for the shopping-list
-    endpoints, which insert/update/delete. Read-only endpoints leave it
-    False (nothing to commit).
-    """
-    pool = get_pool()
-    for attempt in (1, 2):
-        conn = pool.getconn()
-        try:
-            with conn.cursor() as cur:
-                result = work(cur)
-            if write:
-                conn.commit()
-            pool.putconn(conn)
-            return result
-        except psycopg2.OperationalError:
-            # The connection itself is bad -- close it rather than
-            # returning it to the pool, then give it one more try with a
-            # brand new connection.
-            pool.putconn(conn, close=True)
-            if attempt == 2:
-                raise
-        except Exception:
-            # A normal error (e.g. a 404 for "item not found") -- the
-            # connection itself is fine, so it goes back to the pool as
-            # usual, and the error is re-raised unchanged.
-            pool.putconn(conn)
-            raise
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    get_pool()  # open the pool as the server starts, so the very first
-                # real request isn't the one stuck paying the setup cost
-    yield
-    if _pool is not None:
-        _pool.closeall()
-
-
-app = FastAPI(title="Xirja API", lifespan=lifespan)
-
-# Wide open for now -- every endpoint here is either public shelf-price
-# information or a shopping list keyed by a random per-device id with
-# nothing personally identifying in it (see "On user_id" below). Narrow
-# this to the app's real domain once there's a production app to protect
-# and something worth protecting it from (e.g. a competitor scraping this
-# API instead of the chains' own sites, or someone guessing another
-# device's list id).
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["*"],
-)
-
-
-# ============================================================================
-# Shared helpers
-# ============================================================================
-
-# Finds the cheapest CURRENT price per store for a shared category, e.g.
-# "Milk". Written as: first narrow down to just the listings in that
-# category (a few hundred rows at most), THEN look up only those listings'
-# latest price -- rather than sorting the entire, ever-growing
-# price_observation table on every request. The LATERAL join lets Postgres
-# use the existing (listing_id, observed_at DESC) index to fetch each
-# listing's newest row directly, instead of scanning history it doesn't
-# need.
-CHEAPEST_PER_CATEGORY_SQL = """
-    WITH category_listings AS (
-        SELECT
-            l.id AS listing_id,
-            o.store_id,
-            s.name AS store_name,
-            s.short_code,
-            s.color,
-            o.id AS outlet_id,
-            o.name AS outlet_name,
-            o.locality AS outlet_locality,
-            l.chain_product_name
-        FROM listing l
-        JOIN outlet o ON o.id = l.outlet_id
-        JOIN store s ON s.id = o.store_id
-        WHERE l.shopping_category = %s
-    )
-    SELECT
-        cl.store_id,
-        cl.store_name,
-        cl.short_code,
-        cl.color,
-        cl.outlet_id,
-        cl.outlet_name,
-        cl.outlet_locality,
-        cl.chain_product_name,
-        latest.price,
-        latest.price_per_unit,
-        latest.price_per_unit_measure,
-        latest.observed_at
-    FROM category_listings cl
-    JOIN LATERAL (
-        SELECT price, price_per_unit, price_per_unit_measure, observed_at
-        FROM price_observation po
-        WHERE po.listing_id = cl.listing_id
-        ORDER BY po.observed_at DESC
-        LIMIT 1
-    ) latest ON TRUE
-    WHERE latest.price IS NOT NULL
-    ORDER BY cl.store_id, latest.price ASC
-"""
-
-
-def group_cheapest_per_store(rows):
-    """
-    Pure logic, deliberately kept separate from the database call above it:
-    given the raw rows the SQL query returns (already ordered cheapest-first
-    within each store), collapse them down to one entry per store -- its
-    single cheapest current listing in this category.
-
-    Kept as a standalone function (rather than inlined into the endpoint)
-    specifically so it can be unit-tested with plain Python data, without
-    needing a real database connection.
-    """
-    by_store = {}
-    for (
-        store_id,
-        store_name,
-        short_code,
-        color,
-        outlet_id,
-        outlet_name,
-        outlet_locality,
-        product_name,
-        price,
-        price_per_unit,
-        price_per_unit_measure,
-        observed_at,
-    ) in rows:
-        # Rows arrive cheapest-first within each store (see the SQL's
-        # ORDER BY), so the first time a store_id shows up here is already
-        # its cheapest current listing in this category.
-        if store_id in by_store:
-            continue
-        by_store[store_id] = {
-            "store_id": store_id,
-            "store_name": store_name,
-            "short_code": short_code,
-            "color": color,
-            "outlet_id": outlet_id,
-            "outlet_name": outlet_name,
-            "outlet_locality": outlet_locality,
-            "product_name": product_name,
-            "price": float(price),
-            "price_per_unit": (
-                float(price_per_unit) if price_per_unit is not None else None
-            ),
-            "price_per_unit_measure": price_per_unit_measure,
-            "observed_at": observed_at.isoformat(),
-        }
-
-    return sorted(by_store.values(), key=lambda s: s["price"])
-
-
-def fetch_cheapest_for_category(cur, category):
-    """
-    Shared by both /categories/{category}/prices and the list endpoints, so
-    "what's the cheapest price for this item" is computed exactly one way
-    everywhere in the app -- never two slightly different versions of the
-    same logic drifting apart.
-    """
-    cur.execute(CHEAPEST_PER_CATEGORY_SQL, (category,))
-    rows = cur.fetchall()
-    if not rows:
-        return None
-    stores = group_cheapest_per_store(rows)
-    return {"cheapest": stores[0], "by_store": stores}
-
-
-@app.get("/health")
-def health():
-    """
-    A trivial endpoint with no real data in it -- lets you (or, later, an
-    automated check) confirm the server is running AND can reach the
-    database, separately from any real feature actually working.
-    """
-    def work(cur):
-        cur.execute("SELECT 1")
-        cur.fetchone()
-        return {"status": "ok"}
-
-    return run_with_db(work)
-
-
-@app.get("/categories/{category}/prices")
-def category_prices(category: str):
-    """
-    The cheapest current price for a shared category (e.g. "Milk"), at
-    each store that carries it right now.
-
-    Returns the single cheapest listing PER STORE, not per outlet -- if a
-    chain has three branches, this collapses to whichever of the three
-    currently has the lowest price, since "which store is cheapest for
-    milk" is the question a shopper is actually asking, not "which exact
-    branch."
-    """
-    result = run_with_db(lambda cur: fetch_cheapest_for_category(cur, category))
-
-    if result is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No listings found for category '{category}'.",
-        )
-
-    return {"category": category, **result}
-
-
-# ----------------------------------------------------------------------------
-# Price history -- a genuinely different question from everything above.
-# Every other endpoint in this file only ever looks at the SINGLE latest
-# price_observation row per listing ("what does it cost right now"). This
-# is the first one that looks BACK through that table's real history,
-# which every crawler run has been quietly building up in the background
-# since the very first one. Bucketed into calendar weeks (not one point
-# per crawl) because crawls run far more often than prices actually
-# change, and a week-by-week trend is what a shopper actually wants to
-# see, not a jagged line of "same price, sampled 40 times."
-# ----------------------------------------------------------------------------
-
-PRICE_HISTORY_SQL = """
-    WITH category_listings AS (
-        SELECT l.id AS listing_id, o.store_id
-        FROM listing l
-        JOIN outlet o ON o.id = l.outlet_id
-        WHERE l.shopping_category = %s
-    ),
-    weekly AS (
-        SELECT
-            cl.store_id,
-            date_trunc('week', po.observed_at)::date AS week_start,
-            MIN(po.price) AS price
-        FROM category_listings cl
-        JOIN price_observation po ON po.listing_id = cl.listing_id
-        WHERE po.observed_at >= now() - interval '8 weeks'
-        GROUP BY cl.store_id, week_start
-    )
-    SELECT w.store_id, s.name, s.short_code, s.color, w.week_start, w.price
-    FROM weekly w
-    JOIN store s ON s.id = w.store_id
-    ORDER BY w.store_id, w.week_start ASC
-"""
-
-
-def fetch_price_history(cur, category):
-    """
-    Same "lowest price that period" idea as fetch_cheapest_for_category
-    above, just applied once per calendar week over the last 8 weeks
-    instead of once for right now -- kept as its own function (like that
-    one) so it can be reasoned about and tested on its own.
-    """
-    cur.execute(PRICE_HISTORY_SQL, (category,))
-    rows = cur.fetchall()
-
-    by_store = {}
-    for store_id, name, short_code, color, week_start, price in rows:
-        if store_id not in by_store:
-            by_store[store_id] = {
-                "store_id": store_id,
-                "store_name": name,
-                "short_code": short_code,
-                "color": color,
-                "weeks": [],
-            }
-        by_store[store_id]["weeks"].append(
-            {"week_start": week_start.isoformat(), "price": float(price)}
-        )
-
-    return list(by_store.values())
-
-
-@app.get("/categories/{category}/history")
-def category_history(category: str):
-    """
-    Up to 8 weeks of real weekly price history per store for a shared
-    category, straight from price_observation -- powers the Item detail
-    screen's price-history chart. A store missing from the result (or
-    missing some weeks within it) simply didn't have a listing/observation
-    in that window -- not an error, just genuinely no data yet.
-    """
-    stores = run_with_db(lambda cur: fetch_price_history(cur, category))
-    return {"category": category, "stores": stores}
-
-
-@app.get("/stores")
-def list_stores():
-    """
-    Every real store (Greens, PAVI PAMA, Welbee's), regardless of whether
-    it happens to carry anything currently on a given list. The Compare
-    screen needs this rather than deriving "which stores exist" from a
-    list's own items, since a store carrying NONE of today's items should
-    still show up in the comparison (as "everything bought elsewhere"),
-    not silently vanish from the ranking.
-    """
-    def work(cur):
-        cur.execute("SELECT id, name, short_code, color FROM store ORDER BY name ASC")
-        return cur.fetchall()
-
-    rows = run_with_db(work)
-
-    return {
-        "stores": [
-            {"store_id": sid, "name": name, "short_code": short_code, "color": color}
-            for sid, name, short_code, color in rows
-        ]
-    }
-
-
-@app.get("/categories")
-def list_categories():
-    """
-    Every shared category that currently has at least one real, in-stock
-    price behind it, with how many stores carry it and its cheapest current
-    price anywhere -- what the app's "add an item" screen searches/browses
-    against, and what Browse's "from €X" per row (added for the
-    design-vs-implementation gap-closing pass) needs. Deliberately reads
-    from real listing + price data (not a fixed list somewhere in code), so
-    it can never show a category that would then come back empty when added
-    to a list.
-
-    `min_price` here is deliberately just "the single cheapest current
-    price across every store," NOT the same per-store cheapest-price
-    breakdown `fetch_cheapest_for_category` computes -- Browse only needs a
-    quick "from €X" per row, not a full by-store list, and this stays a
-    single cheap GROUP BY instead of running the heavier per-category query
-    for every row of a list that can have 100+ categories in it at once.
-    """
-    sql = """
-        SELECT
-            l.shopping_category,
-            COUNT(DISTINCT o.store_id) AS store_count,
-            MIN(latest.price) AS min_price
-        FROM listing l
-        JOIN outlet o ON o.id = l.outlet_id
-        JOIN LATERAL (
-            SELECT price FROM price_observation po
-            WHERE po.listing_id = l.id
-            ORDER BY po.observed_at DESC
-            LIMIT 1
-        ) latest ON TRUE
-        WHERE l.shopping_category IS NOT NULL
-        GROUP BY l.shopping_category
-        ORDER BY l.shopping_category ASC
-    """
-    def work(cur):
-        cur.execute(sql)
-        return cur.fetchall()
-
-    rows = run_with_db(work)
-
-    return {
-        "categories": [
-            {
-                "category": name,
-                "store_count": count,
-                "min_price": float(min_price) if min_price is not None else None,
-            }
-            for name, count, min_price in rows
-        ]
-    }
-
-
-# ============================================================================
-# Shopping list
-# ============================================================================
-#
-# On user_id: there's no real login system yet (the spec always intended
-# accounts to come later). Until then, the app generates one random id the
-# first time it opens and keeps it on the phone -- see the app's own code
-# for exactly how. That id is meaningless outside "which rows in app_list
-# belong together" -- it's not an email, a name, or anything else personal.
-# This is a deliberate, documented shortcut, not an oversight: swap it for
-# a real logged-in user_id later without changing anything about how lists
-# or items are stored.
-
-
-class AddItemBody(BaseModel):
-    category: str = Field(..., min_length=1)
-    quantity: float = Field(default=1, gt=0)
-
-
-class UpdateItemBody(BaseModel):
-    quantity: float = Field(..., gt=0)
-
-
-def get_or_create_list(cur, user_id: str):
-    cur.execute("SELECT id FROM app_list WHERE user_id = %s LIMIT 1", (user_id,))
-    row = cur.fetchone()
-    if row:
-        return row[0]
-    cur.execute(
-        "INSERT INTO app_list (user_id) VALUES (%s) RETURNING id", (user_id,)
-    )
-    return cur.fetchone()[0]
-
-
-def serialize_items(cur, list_id):
-    cur.execute(
-        """
-        SELECT id, shopping_category, quantity
-        FROM app_list_item
-        WHERE list_id = %s
-        ORDER BY id
-        """,
-        (list_id,),
-    )
-    rows = cur.fetchall()
-
-    items = []
-    for item_id, category, quantity in rows:
-        priced = fetch_cheapest_for_category(cur, category)
-        items.append(
-            {
-                "item_id": str(item_id),
-                "category": category,
-                "quantity": float(quantity),
-                # None when nothing's currently in stock/priced anywhere for
-                # this category -- the app shows "no price found" for this,
-                # same wording as the old hardcoded screen used.
-                "cheapest": priced["cheapest"] if priced else None,
-                "by_store": priced["by_store"] if priced else [],
-            }
-        )
-    return items
-
-
-@app.get("/lists/{user_id}")
-def get_list(user_id: str):
-    """
-    Returns this user's list (creating an empty one the very first time
-    they're seen), with each item's real, current cheapest price attached
-    -- the app never has to make a second round-trip per item.
-    """
-    def work(cur):
-        list_id = get_or_create_list(cur, user_id)
-        items = serialize_items(cur, list_id)
-        return list_id, items
-
-    list_id, items = run_with_db(work, write=True)
-
-    return {"list_id": str(list_id), "items": items}
-
-
-@app.post("/lists/{user_id}/items")
-def add_item(user_id: str, body: AddItemBody):
-    """
-    Adds a category to the list. If it's already on there, this bumps the
-    existing row's quantity instead of creating a duplicate row for the
-    same category -- "add Milk" twice should mean "2 milk", not two
-    separate Milk rows.
-    """
-    def work(cur):
-        list_id = get_or_create_list(cur, user_id)
-
-        cur.execute(
-            """
-            SELECT id, quantity FROM app_list_item
-            WHERE list_id = %s AND shopping_category = %s
-            """,
-            (list_id, body.category),
-        )
-        existing = cur.fetchone()
-        if existing:
-            item_id, current_qty = existing
-            cur.execute(
-                "UPDATE app_list_item SET quantity = %s WHERE id = %s",
-                (float(current_qty) + body.quantity, item_id),
-            )
-        else:
-            cur.execute(
-                """
-                INSERT INTO app_list_item (list_id, shopping_category, quantity)
-                VALUES (%s, %s, %s)
-                """,
-                (list_id, body.category, body.quantity),
-            )
-
-        items = serialize_items(cur, list_id)
-        return list_id, items
-
-    list_id, items = run_with_db(work, write=True)
-
-    return {"list_id": str(list_id), "items": items}
-
-
-@app.patch("/lists/{user_id}/items/{item_id}")
-def update_item(user_id: str, item_id: str, body: UpdateItemBody):
-    """Changes an item's quantity. To remove an item entirely, use DELETE."""
-
-    def work(cur):
-        list_id = get_or_create_list(cur, user_id)
-        cur.execute(
-            """
-            UPDATE app_list_item SET quantity = %s
-            WHERE id = %s AND list_id = %s
-            """,
-            (body.quantity, item_id, list_id),
-        )
-        if cur.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Item not found on this list.")
-        items = serialize_items(cur, list_id)
-        return list_id, items
-
-    list_id, items = run_with_db(work, write=True)
-
-    return {"list_id": str(list_id), "items": items}
-
-
-@app.delete("/lists/{user_id}/items/{item_id}")
-def remove_item(user_id: str, item_id: str):
-    def work(cur):
-        list_id = get_or_create_list(cur, user_id)
-        cur.execute(
-            "DELETE FROM app_list_item WHERE id = %s AND list_id = %s",
-            (item_id, list_id),
-        )
-        if cur.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Item not found on this list.")
-        items = serialize_items(cur, list_id)
-        return list_id, items
-
-    list_id, items = run_with_db(work, write=True)
-
-    return {"list_id": str(list_id), "items": items}
+# Xirja — progress record
+
+This file is the source of truth for where the project stands. Unlike a
+chat conversation, this survives regardless of what any AI session does or
+doesn't remember — read this file (and the actual code) before trusting any
+recap, including one I might give you in a new session. Update the "Last
+verified" line and the relevant section whenever real progress happens.
+
+**Last verified against the actual code/deployment: 25 Sept 2026. THE
+PERSONAL-USE DEPLOYMENT GOAL IS DONE**: Xirja is now a real, permanent app
+installed on the owner's own Android phone via a genuine EAS build,
+confirmed opened and running there. That's the finish line for the plan
+agreed earlier in this file (real navigation → persisted Shopping mode →
+EAS build), all three steps done and confirmed. Full history of how it got
+there (real shopping-list feature, Browse + basic navigation, a Render
+cold-start reliability fix, a real Compare screen, a stale-connection-pool
+fix, Store lists, Item detail with real price history, Shopping mode, the
+`oklch()` color bug, the React Navigation migration and its two follow-up
+bugs (a "stuck, no way back to tabs" bug fixed by a root-stack restructure,
+then a half-cut-off tab bar fixed by adding `SafeAreaProvider`), an Expo
+SDK 51→54 package.json correction, Shopping mode's persistence, and
+finally the EAS build itself — including a locked-down work laptop forcing
+a pivot to GitHub Codespaces, a broken browser-based `eas login` forcing a
+pivot to an `EXPO_TOKEN` instead, and a missing `babel-preset-expo`
+dependency that failed the first real build attempt) is preserved below,
+in the order it actually happened — worth reading if a similar step (a
+real build, a new dev environment, an unfamiliar CLI tool) comes up again,
+since several of these were genuinely non-obvious the first time.
+
+**On the personal-use deployment plan — COMPLETE**: (1) real navigation —
+done and confirmed working. (2) persisting Shopping mode's checked-off
+state — done and confirmed working. (3) EAS build → sideloadable `.apk` —
+DONE: built successfully via GitHub Codespaces + `EXPO_TOKEN` auth,
+downloaded and installed on the owner's own Android phone via the
+`.apk` link, confirmed opened and running there without issues (25 Sept).
+The app no longer depends on Snack, a dev server, or a cable to open day
+to day.
+
+**Update, 25 Sept**: the `babel-preset-expo` fix and the earlier SDK 54
+`package.json` correction have both since been confirmed pushed to the
+real `xirja-app` GitHub repo (verified by re-cloning it fresh) — the loose
+end previously noted here is closed. A fresh clone or fresh Codespace today
+builds correctly with no manual patching needed.
+
+**Now underway: closing the gap between the 6 "real" screens and the
+original design mockups.** After the personal-use deployment finished, the
+owner compared the running app against the original design screenshots for
+all 6 real screens (My list, Browse, Compare, Item detail, Store lists,
+Shopping mode) and found each one missing pieces the design called for.
+Decision made explicitly by the owner: fix ALL of it, screen by screen —
+including the three large, backend-touching pieces (offline mode, barcode
+scanning, the price-correction workflow) — rather than deferring the big
+ones. See "Design-vs-implementation gap-closing (started 25 Sept)" below
+for the full task list and progress.
+
+**On the EAS build step (new, this update; revised once already — see
+below)**: two new files — `app.json` (added `android.package:
+"com.xirja.app"`, the unique id Android needs to identify the app; the
+user confirmed no strong opinion either way, chosen as a reasonable
+placeholder) and `eas.json` (a `preview` build profile producing a plain
+installable `.apk` rather than the `.aab` format the Play Store wants —
+deliberately NOT a production/Play Store profile, since that's a separate,
+later decision with real business/legal considerations, not a technical
+one to make casually). A new `EAS_BUILD.md` walks through the rest step by
+step: creating a free Expo account, `npm install`, installing `eas-cli`,
+`eas login`, `eas init` (this is the one part of the setup that has to
+happen under the user's own account — it can't be done from here), then
+`eas build --platform android --profile preview`, and finally getting the
+resulting `.apk` onto the phone and sideloading it (allowing installs from
+outside the Play Store, a normal step for any non-Play-Store app, not a
+red flag).
+
+**Real discrepancy #4, found immediately on the very first command**: the
+original version of `EAS_BUILD.md` assumed a normal personal computer and
+told the user to install Node.js directly. In reality this app's owner
+uses a WORK laptop with IT-locked-down installs -- `node -v` failed, and
+getting Node.js installed the normal way would need IT approval that's
+"very unlikely to be given." This blocks the plain nodejs.org-installer
+path entirely, not just as an inconvenience -- worth remembering for any
+future step that assumes a normal, unrestricted personal computer.
+`EAS_BUILD.md` is now rewritten around **GitHub Codespaces** instead: a
+free, browser-based dev environment tied to the user's GitHub account,
+with Node.js already installed there, so nothing installs on the work
+laptop at all -- it's a browser tab, the same as Snack has been throughout
+this whole project. The rest of the steps (Expo account, `npm install`,
+`eas-cli`, `eas login`/`eas init`, the build itself, sideloading the
+resulting `.apk`) are unchanged, just run from the Codespace's terminal
+instead of a local PowerShell. CONFIRMED this worked well: the Codespace
+opened cleanly on the `xirja-app` repo with Node.js 20.20.2 already
+present, no laptop install needed at any point.
+
+**Real discrepancy #5: `eas login`'s browser flow doesn't work from a
+Codespace (or any remote/cloud terminal)**. `eas login` opens a browser tab
+for OAuth and expects the browser to redirect back to `localhost:<port>` on
+the SAME machine running the CLI -- but from a Codespace, "localhost" in
+the user's own browser is their Windows laptop, not the remote container
+actually running `eas`, so the redirect always fails with
+`ERR_CONNECTION_REFUSED` no matter how many times it's retried. This isn't
+a Codespaces-specific bug -- it's a structural mismatch that would hit any
+remote/cloud terminal (SSH, a container, CI). Fixed by skipping interactive
+login entirely: created a personal access token on expo.dev (Account
+settings → Access Tokens), then `export EXPO_TOKEN=<token>` in the
+Codespace terminal before running any `eas` command -- `eas whoami`
+confirmed it worked immediately, no browser involved. Worth remembering
+for next time a Codespace (or similar) is used for this project: skip
+`eas login` and go straight to `EXPO_TOKEN`.
+
+**Real discrepancy #6, the one that actually failed a full build**: first
+`eas build --platform android --profile preview` attempt got all the way
+through queuing, uploading, and starting the Android build, then failed at
+the "Bundle JavaScript" phase with a generic "Unknown error." Reproducing
+the exact failing command locally (`npx expo export:embed --eager
+--platform android --dev false`) surfaced the real error underneath:
+`Cannot find module 'babel-preset-expo'`. Root cause: `babel.config.js`
+has always required `babel-preset-expo` (`presets: ['babel-preset-expo']`)
+but `package.json` never listed it as a dependency -- probably true since
+before this session even, since Snack doesn't use the project's own
+`babel.config.js`/`package.json` at all and so never exercised this path.
+This is exactly the class of gap Snack testing structurally cannot catch,
+no matter how carefully `App.js` itself is reviewed. Fixed by adding
+`"babel-preset-expo": "~54.0.0"` to `package.json`'s `devDependencies`.
+Before the retry, did a full audit of every import in `App.js` against
+`package.json` (all present), `babel.config.js` (fine), and both `app.json`
+and `eas.json` (valid JSON, no other issues) specifically to avoid another
+wasted ~20-minute build-queue cycle on a second silly gap -- found nothing
+else missing. The retry succeeded. **This fix was applied by hand directly
+inside the Codespace's `package.json` and has NOT been pushed back to the
+actual `xirja-app` GitHub repo yet** -- see the note near the top of this
+file. A fresh clone or a fresh Codespace today would still hit this exact
+same failure until that upload happens.
+
+**Outcome, confirmed 25 Sept**: the build succeeded, produced a
+downloadable `.apk`, the user downloaded and installed it directly on
+their Android phone (allowing installs from outside the Play Store when
+prompted, as expected), and confirmed it opened and ran without issues.
+This is the actual, real completion of the "personal use" deployment goal
+first discussed earlier in this file -- not just "the steps are written
+down" but "the app is installed and working on the phone it was meant
+for."
+
+**On persisting Shopping mode (new, this update)**: `checkedItemIds` (which
+items are ticked off) now survives closing the app mid-trip, the same way
+the device id itself does — `AsyncStorage`, keyed per device
+(`xirja_checked_item_ids_<deviceId>`). Restored once on app start (before
+the list itself finishes loading), pruned automatically whenever an item
+is removed from the list or drops out on a refresh (so a stale id doesn't
+linger in storage forever, though it was harmless either way), and saved
+on every real change — cheap enough (a handful of ids) not to need
+debouncing. A `checkedItemsHydrated` flag guards the save effect so it
+can't fire with the initial empty Set and clobber a real saved one before
+the restore has actually completed — that ordering bug would have silently
+undone the entire point of this change, so it's worth remembering if this
+code gets touched again. Verified the same way as the navigation changes
+(re-cloned the live repo and diffed — confirms only this change, nothing
+else touched — plus the manual bracket-balance and styles-used-vs-defined
+checks; still no real JS/JSX parser available in this sandbox), AND
+confirmed working end to end by the user on Snack (25 Sept): checked items
+in Shopping mode, reloaded, checkmarks were still there.
+
+**A third real discrepancy, found via Snack's own dependency-check panel
+rather than by reading code**: `package.json` had been pinned to Expo SDK
+51 (`expo: ~51.0.28`, React Native 0.74.5) since before this session, but
+the actual Snack project this app runs in is on SDK 54. Snack flagged five
+packages (`@react-native-async-storage/async-storage`,
+`expo-status-bar`, `react-native-gesture-handler`,
+`react-native-safe-area-context`, `react-native-screens`) as pinned to
+versions that don't match SDK 54, each with its own "Update to X" button.
+`package.json` is now updated to SDK 54-compatible versions throughout
+(`expo: ~54.0.0`, `react: 19.1.0`, `react-native: 0.81.4`, plus the five
+flagged packages at the versions Snack itself recommended) so this
+shouldn't resurface. The three `@react-navigation/*` packages weren't
+flagged by Snack and were left as they were — they aren't part of Expo's
+version-locked SDK bundle the way the other five are. Worth remembering:
+whatever SDK a given Snack project is actually running can drift from
+what's recorded in this repo's `package.json` — Snack's own Problems panel
+is the source of truth for that, not this file or the text of the file
+itself.
+
+**A second lesson-learned note, on the navigation bugs (two, found one at a
+time by actually using the app on Snack, not from re-reading the code)**:
+the first React Navigation version nested "Item detail" inside "My list"'s
+own stack and "Store lists"/"Shopping mode" inside "Compare"'s own stack,
+and hid the tab bar dynamically by matching each tab's currently-focused
+nested route name against a list of "hide the bar on these" names — the
+pattern React Navigation's own docs recommend for this. It looked right and
+passed a manual code review, but going Store lists <-> Shopping mode worked
+while there was genuinely no way back to the three main tabs. Fixed by
+removing that dynamic-hiding logic entirely: "Item detail", "Store lists"
+and "Shopping mode" now live as their own screens on ONE root-level stack,
+with a single "Tabs" screen (the actual tab bar) as a sibling screen on
+that same stack. Confirmed by the user this actually fixed the "stuck"
+problem — but revealed a second, real bug: back on the tabs, the tab bar
+itself rendered half cut off at the bottom (screenshot confirmed on Snack's
+Web preview). Cause: React Navigation's bottom tab bar reads its own bottom
+inset from `react-native-safe-area-context` (`useSafeAreaInsets`) to size
+and pad itself against the real device safe area — that package was
+already a dependency (added as a required peer of `@react-navigation/
+bottom-tabs`) but the app was never actually wrapped in its
+`SafeAreaProvider`, only in the unrelated plain `SafeAreaView` from
+"react-native" (which only pads its own children away from a notch/status
+bar and provides none of this context). Without a real provider, the hook
+had nothing to read and fell back to bad values. Fixed by wrapping the
+whole app in `SafeAreaProvider` (outermost, per React Navigation's own
+setup docs) in addition to the existing `SafeAreaView`. Not yet
+re-confirmed by the user as of this writing.
+
+**On the personal-use deployment plan (agreed 25 Sept)**: three technical
+steps remain before a permanent install on your own Android phone —
+(1) a real navigation library (done, this update), (2) persisting Shopping
+mode's checked-off state so it survives an app close/reload, and (3) an EAS
+build turned into a sideloadable `.apk`. Doing them in this order on
+purpose: navigation first because Shopping mode's persistence and any
+future "Trip summary" screen both build on top of real navigation state
+(e.g. route params) rather than the old local-state screen string; then
+persistence; then the build step, once there's nothing left to rebuild
+around.
+
+**A note on that last one, because it's a useful lesson for future
+debugging in this app**: the progress bar looked blank, so the first fix
+assumed the bug was in the progress-bar CODE (a percentage-width React
+Native quirk) and rebuilt it a more robust way. That was a real
+improvement but not the actual cause — the bar's code was fine all along.
+The real bug was upstream, in the DATA: `store.color` in the database was
+seeded with values like `oklch(0.55 0.12 152)`, which is valid CSS that
+any browser renders fine, but which React Native's own color parser does
+not understand at all on a real device — it silently drops the color
+instead of erroring, so any UI element using a store's color as a real
+background (this progress bar, item ribbons, store chips, the Compare/
+Store lists bars) rendered nothing. It likely affected those other spots
+too in a subtler, easier-to-miss way; only this screen's big, obviously-
+blank bar made it impossible to overlook. Fixed at the source — the
+database column, via `migration_002_hex_store_colors.sql` — not by
+special-casing color handling in the app, so every screen that uses a
+store's color is fixed by the same one change. Lesson: when something
+renders as "blank" rather than visibly wrong, check the DATA feeding it
+before rewriting the code that displays it. Confirmed fixed by the user on
+25 Sept — real color now shows throughout: the Shopping mode progress bar,
+item ribbons on My list, store chips on Item detail and Store lists, and
+the highlighted bar on Compare.
+
+## What's built and confirmed real (verified by reading the actual code/repo, not from memory)
+
+- **Price crawlers — all 3 chains**: `greens_crawler.py`, `pavipama_crawler.py`,
+  `welbees_crawler.py` all exist and are substantial, real, working scripts.
+- **Crawl scheduling**: Greens and PAVI PAMA run automatically via GitHub
+  Actions, with an adaptive scheduler (`plan_crawl_schedule.py` /
+  `check_and_trigger_crawl.py`) — confirmed active as recently as the week
+  of 21 Sept 2026. Welbee's GitHub Actions nightly run is deliberately
+  disabled (Welbee's blocks GitHub's cloud IPs via Cloudflare) — it instead
+  runs from a home computer via `run_welbees.ps1` + a watchdog script,
+  confirmed working via `schedule_log.txt`.
+- **Database**: `schema.sql` / `seed.sql` exist and match the intended data
+  model (store / outlet / listing / price_observation, etc).
+- **Category taxonomy**: `category_taxonomy.py` + `categorize_listings.py` —
+  extensively tuned across 10 rounds; open collisions reduced from an
+  initial large backlog to 4 residual instances (2 pairs), all verified
+  against the full ~96k-name catalog using production matching logic.
+- **Cross-chain product matching**: `product_matcher.py` +
+  `export_medium_matches.py` / `apply_reviewed_matches.py` — a real
+  barcode/fuzzy-match system with a human review workflow for
+  medium-confidence matches, deployed as GitHub Actions
+  (`match-products.yml`, `apply-review.yml`, `export-review.yml`).
+- **Price API**: `api/main.py` — real FastAPI service, deployed on Render
+  (`https://xirja-backend.onrender.com` per the mobile app's config —
+  confirm this matches the live Render dashboard address). Endpoints:
+  `GET /categories/{category}/prices` (cheapest current price per store),
+  `GET /categories` (every category with a live price, for the app's
+  add-item search), `GET /stores` (every real store, for Compare — added
+  so a store carrying none of a list's items still appears in the
+  ranking), `GET /categories/{category}/history` (new — up to 8 weeks of
+  REAL weekly price history per store, bucketed from the actual
+  `price_observation` rows the crawlers have been collecting all along;
+  the first endpoint that looks further back than "the single latest
+  price," powers Item detail's chart), and a full shopping-list CRUD set —
+  `GET /lists/{user_id}`,
+  `POST /lists/{user_id}/items`, `PATCH /lists/{user_id}/items/{item_id}`,
+  `DELETE /lists/{user_id}/items/{item_id}`. Every endpoint now goes
+  through one shared helper (`run_with_db`) instead of repeating its own
+  connection-handling: found via a real Render log (24 Sept), a pooled
+  database connection can go stale without warning (Render's free tier
+  sleeping after 15 idle minutes, or Neon closing a connection it decides
+  has been idle too long), and using a stale one crashed the request with
+  `psycopg2.OperationalError: SSL connection has been closed
+  unexpectedly`. The helper now discards a connection that fails this way
+  and retries the same request once with a fresh one, instead of letting
+  it crash — confirmed both by reading the code path and by the app
+  working normally afterwards (My list, Browse, and Compare all confirmed
+  working again on 24 Sept, with no further "Not Found" errors).
+- **Database — list tables extended**: `migration_001_list_by_category.sql`
+  (in `xirja-backend`) makes `app_list_item` support an item identified by
+  shared category (`shopping_category`), not only a matched `product_id` —
+  needed because product-matching coverage is still partial. Must be run
+  once against the real database before the list endpoints above work —
+  confirm it's actually been run in Neon, this file only records that the
+  migration was written and delivered.
+- **Database — store colors fixed to real hex**:
+  `migration_002_hex_store_colors.sql` (in `xirja-backend`) converts
+  `store.color` from `oklch(...)` (set in the original `seed.sql`, valid
+  CSS but not something React Native renders on a real device) to real hex
+  equivalents — same colors, a format every platform actually understands.
+  `seed.sql` itself is also fixed for any future fresh database. Must be
+  run once against the real database (same way migration_001 was) before
+  the app's colors — the Shopping mode progress bar, item ribbons, store
+  chips — actually show up.
+- **Mobile app — 6 real screens now, with basic navigation**: `App.js`
+  (`xirja-app` repo). "My list": search-and-add a category, change
+  quantity, remove an item, pull to refresh. "Browse": scroll every
+  category with a live price, tap to add. "Compare" (new): for each real
+  store, the whole-basket total if everything on the list came from there
+  (its own prices plus whatever it doesn't carry, bought at wherever's
+  cheapest for that item) — ranked cheapest to most expensive, with a
+  headline "cheapest vs most expensive" saving figure. This is the actual
+  `storeTotal()` logic from the original prototype, now computed from real
+  data rather than a hardcoded catalog, computed on the phone from data
+  the list screen already has (see the comment above `computeStoreRanking`
+  in `App.js`) plus the new `/stores` endpoint. "Store lists" (new): the
+  complementary strategy to Compare — instead of "everything from one
+  store," each item is assigned to its own individually cheapest store
+  (`item.cheapest`), then grouped into one card per store with its item
+  count, subtotal, and a preview of what's in it. Reached from a "Split
+  into N store lists" button at the bottom of Compare (only shown when
+  splitting would actually involve more than one store), with its own back
+  arrow rather than a fourth tab — mirrors exactly how the original
+  clickable prototype linked the two screens. Confirmed working end to end
+  on 24 Sept (button appears, screen renders real per-store cards, back
+  arrow returns to Compare). "Item detail" (new): tap any item on "My
+  list" to see its cheapest price, the full current price at every store
+  that carries it, and a real 8-week price-history bar chart per store
+  (switch stores via chips) pulled fresh from the new `/history` endpoint,
+  with a plain-language trend line ("Price is down 6% since Aug 4").
+  Confirmed working end to end on 24 Sept (tap-through, current prices,
+  chips, chart, and back navigation all tested on Snack). "Shopping mode"
+  (new): tap a store card on Store lists to get a real checklist for that
+  stop — tick items off, watch the running total and a progress bar update,
+  switch between stores in the plan without detouring back through Store
+  lists, and jump straight to the next unfinished store once the current
+  one's done. Deliberately does NOT include the original prototype's
+  barcode scanning or "fix this price"/"swap store" actions — those need a
+  camera and the price-correction workflow respectively, neither of which
+  exist yet. Checked-off state now survives closing/reloading the app
+  mid-trip (new, 25 Sept, confirmed working by the user on Snack) —
+  persisted to `AsyncStorage`, keyed per device the same way the device id
+  itself is; see the "On persisting Shopping mode" note near the top of
+  this file. The numbers ("X of N checked",
+  running total) were confirmed correct on first testing (24 Sept), but the
+  visual progress bar itself stayed blank. Root cause turned out to be
+  upstream in the DATA, not the bar's code — see the `migration_002`
+  entry above and the note at the top of this file: `store.color` was
+  seeded as `oklch(...)`, which React Native doesn't render on a real
+  device. The bar was also rebuilt to use flex proportions instead of a
+  percentage width along the way (a genuine, separate improvement — more
+  reliable when a screen stays mounted while its own state changes, rather
+  than being freshly re-rendered from a list each time — but not itself
+  what was hiding the color). Confirmed fully working end to end on 25
+  Sept, colors included, after `migration_002_hex_store_colors.sql` was run.
+  Navigation is now REAL (new, 25 Sept, and fixed once already — see the
+  lesson-learned note above): a root-level stack holds one "Tabs" screen
+  (the actual three-tab bar — "My list"/"Browse"/"Compare") plus "Item
+  detail", "Store lists" and "Shopping mode" as sibling screens on that
+  SAME root stack, pushed on top of "Tabs" rather than nested inside a
+  tab's own stack. This gets genuine push/back navigation, including the
+  Android hardware back button, instead of the old hand-rolled `screen`
+  string plus a manual render branch — and the tab bar is simply absent on
+  the pushed screens (nothing dynamic to get wrong: it only exists on the
+  "Tabs" screen at all), matching how the original clickable prototype
+  behaved. Shared app state (the list, categories, stores, loading/error
+  flags, and the handler functions) is threaded through an
+  `AppStateContext` rather than passed as navigator props — deliberately,
+  because a `Tab.Screen`/`RootStack.Screen`'s `component` must be a stable
+  function reference or React Navigation remounts it (losing navigation
+  state) on every re-render; passing state as inline render-prop `children`
+  instead would have recreated a new function every time `App()`'s own
+  state changed (e.g. every quantity tap). Needs 3 new packages that
+  weren't in `package.json` before this update — `@react-navigation/native`,
+  `@react-navigation/bottom-tabs`, `@react-navigation/native-stack` — plus
+  their peer dependencies `react-native-screens`,
+  `react-native-safe-area-context`, `react-native-gesture-handler`, all
+  pinned to versions that match this app's Expo SDK 51 / React Native
+  0.74.5. Verified by re-cloning the live `xirja-app` repo and diffing
+  against it (confirms exactly the intended change and nothing else
+  touched) and by a manual bracket-balance + styles-used-vs-defined check
+  of the whole file (no real JS/JSX parser is available in this
+  environment — `npm install` is blocked by the sandbox's network policy,
+  confirmed again this session — so this is done with a small custom
+  script). NOT yet confirmed on a real device/Snack as of this writing —
+  the first version of this migration passed the same kind of check and
+  still had the "stuck, no way back to the tabs" bug once actually used,
+  so treat this specific screen-navigation behavior as unconfirmed until
+  you've tapped through it yourself: My list → an item → back; Compare →
+  Split into store lists → a store → Shopping mode → back → back. Uses a
+  random per-device id (`AsyncStorage`) in place of real accounts, which
+  don't exist yet — documented in `xirja-app/SETUP.md` as a deliberate,
+  swappable shortcut, not an oversight.
+
+## Not started / explicitly designed-only (confirmed absent from the code)
+
+- Real code for 3 of the 9 designed screens (Trip summary, Settings,
+  Onboarding) — these exist only in the clickable `.dc.html` prototype.
+  "My list", "Browse", "Compare", "Store lists", "Item detail", and
+  "Shopping mode" are now real; everything else isn't yet.
+- No "Trip summary" screen yet to land on once every store's fully checked
+  off in Shopping mode — the checked-off state itself now persists (see
+  above), but there's nothing that celebrates/summarizes finishing the
+  whole trip across every store. (Task #7 of the gap-closing list below.)
+- The price-correction workflow (`user_price` table, site-vs-mine trust
+  logic) — designed in the prototype and spec, not ported to real code.
+  (Task #11 of the gap-closing list below.)
+- Legal / Terms-of-Service review for each chain — flagged as overdue in
+  the original spec, no evidence it's been done.
+- The LIDL / crowdsourced-pricing product decision — still explicitly
+  unresolved.
+- Failure alerting beyond "the job crashed" — a job that runs but silently
+  stops finding prices isn't caught yet.
+- Automated tests for the new list endpoints (`get_or_create_list`,
+  `add_item`, etc) — written and manually reviewed for correctness, not
+  covered by an automated test the way `check_crawl_freshness.py` is.
+- The API's CORS is still wide open (`allow_origins=["*"]`) and Render is
+  still on the free tier (sleeps after 15 min idle, ~30-60s cold start) —
+  fine for testing, not for real users. Confirmed in real testing (24 Sept)
+  that a cold start can cause one of two simultaneous requests to fail with
+  a raw network error while the other succeeds — the app now retries once
+  automatically on that specific failure and no longer discards an
+  already-successful result just because a second, unrelated request
+  failed. Also found via a real Render log (24 Sept): the same free-tier
+  sleep (or a Neon-side idle timeout) can leave a stale connection sitting
+  in the server's connection pool, which used to crash the request with
+  `psycopg2.OperationalError` instead of recovering — the server now
+  detects that specific failure and retries once with a fresh connection
+  (see `run_with_db` in `api/main.py`). Both fixes make the free tier's
+  rough edges tolerable, not solved — moving off the free tier is still
+  the real fix for the underlying sleep/idle behavior itself.
+
+## Design-vs-implementation gap-closing (started 25 Sept)
+
+After the personal-use deployment was confirmed done, the owner compared
+the app's 6 real screens against the original design mockup screenshots
+and found real gaps in every one of them. Explicit decision: work through
+ALL of it, screen by screen, in this order, including the three large
+features rather than deferring them:
+
+1. **My list** — DONE (see below).
+2. **Browse** — DONE (see below).
+3. **Compare** — DONE (see below).
+4. **Item detail** — DONE (see below).
+5. **Store lists** — DONE except the "Trip summary" link, which has
+   nowhere to point yet (see below and Task 7).
+6. Shopping mode — category-grouped item list, circular progress ring.
+7. New "Trip summary" screen.
+8. New "Settings" screen + a 4-tab bar (List, Compare, Shop, Settings)
+   with Shopping mode promoted to its own tab.
+9. Offline mode — cache last-successful list/categories/stores to
+   AsyncStorage, show cached data with an offline badge on a failed fetch.
+   Scope still to be pinned down: the design implies read-write sync
+   ("corrections sync when you're back on data"), which is considerably
+   more work than a read-only cache — needs a decision before starting.
+10. Barcode scanning in Shopping mode — needs a camera module (e.g.
+    `expo-camera`) plus a new backend barcode-lookup endpoint/schema work.
+11. Price-correction workflow ("Price different? Fix it") — new
+    `user_price` table, new API endpoints, site-vs-mine trust logic, plus
+    the UI hook in Shopping mode.
+
+**Task 1 — "My list" — DONE, 25 Sept**, including a follow-up round of
+fixes after the owner tested the first version on a real device. Verified
+both rounds by re-cloning the live repo and diffing (each diff contains
+only the intended additive changes, nothing else touched), plus the manual
+bracket-balance and styles-used-vs-defined checks (still no real JS/JSX
+parser available in this sandbox — `npm install` for one is blocked here
+by the registry returning 403; `acorn`'s CLI is present but doesn't support
+JSX). First round:
+- **Per-item savings**: `ListRow` shows "save €X.XX" under the price,
+  computed as `(most expensive listed store's price − cheapest price) ×
+  quantity`, only when an item is actually priced at more than one store.
+- **"Browse" shortcut**: a small button next to the add-item input,
+  navigates straight to the Browse tab (`navigation.navigate("Browse")`).
+- **"Find the best prices →" bottom CTA**: a button pinned under the list
+  (shown once it has at least one item) that jumps straight to Compare
+  (`navigation.navigate("CompareTab")`), and includes the list's total
+  potential savings figure when there is one.
+- **Editable list label**: a new, purely cosmetic, LOCAL-ONLY label (e.g.
+  "WEEKLY SHOP") shown under the "My list" title, tap-to-edit, persisted
+  via `AsyncStorage` per device (`xirja_list_label_<deviceId>`) the same
+  way Shopping mode's checked-off state is — deliberately NOT synced to
+  the backend, since there's still only one unnamed list per device in the
+  real data model (`app_list`/`app_list_item`), so a per-device cosmetic
+  label needs no schema or API change.
+
+**Real discrepancy #7, found by the owner testing the real installed APK
+(not Snack)**: the header ("My list") rendered underneath the phone's own
+status bar (clock/wifi/battery), and the bottom tab bar showed broken/blank
+icon glyphs above each label. Root cause of the header bug: `SafeAreaView`
+was being imported from `"react-native"` itself, not from
+`"react-native-safe-area-context"`. The plain React Native `SafeAreaView`
+only does anything on iOS — on Android it's a no-op plain `View` that
+reserves zero space for the status bar, so nothing before this ever
+actually protected the header on Android; Snack's web preview has no real
+status bar to overlap, which is why this was invisible until the app was
+actually installed on a phone. Fixed by importing `SafeAreaView` from
+`"react-native-safe-area-context"` instead (already a dependency, already
+used for `SafeAreaProvider`) — that version pads correctly on both
+platforms. For the tab bar icons: `App.js` never actually defined any
+`tabBarIcon` — worth remembering that leaving it unset isn't a safe
+no-icon fallback across every React Navigation/Expo SDK combination, it
+can render broken placeholder glyphs instead. Fixed by adding a small
+`TabIcon` component built entirely from plain `View`s (a stacked-lines
+icon, a magnifying glass, a bar chart) — deliberately NOT an icon font
+library like `@expo/vector-icons`, since that needs to be resolved and
+bundled by Metro at build time and this project has already lost real
+build time twice to exactly that class of dependency-resolution problem
+(the SDK 51→54 drift, the missing `babel-preset-expo`). A few `View`s have
+no version to drift and nothing to fail to resolve.
+
+**Also fixed on the same pass, all owner-requested design tweaks**: removed
+"(e.g. Milk)" from the add-item placeholder (now just "Add an item…");
+removed the price total from the header entirely (no more "€X.XX at
+cheapest prices" line); the item count is now a bigger, bolder number on
+the right-hand side of the header instead of buried in a subtitle sentence;
+and the "Find the best prices" button is now a neutral dark color instead
+of the app's green — a deliberate placeholder, since a full color pass
+across the app is a separate, later decision once the design itself is
+settled, not something to get ahead of one button at a time.
+
+**Confirmed by the owner on the real device, 25 Sept**: all of the above
+looks right — task fully closed.
+
+**Task 2 — "Browse" — DONE, 25 Sept.** Two gaps closed, one of which
+touched the backend. Verified the same way as Task 1: `api/main.py`
+checked with `python3 -m py_compile` (no real pytest suite exists for this
+endpoint yet — see the "Not started" section's note on test coverage) and
+diffed against a fresh clone (only the intended change); `App.js` checked
+with the manual bracket-balance / styles-used-vs-defined scripts and
+diffed against a fresh clone the same way.
+- **"from €X" per row**: `GET /categories` (`xirja-backend`) now also
+  returns `min_price` per category — the single cheapest current price for
+  that category across every store, computed with one extra `MIN()` in the
+  same query (not the heavier per-store breakdown
+  `fetch_cheapest_for_category` does — Browse only needs one number per
+  row, and this list can have 100+ rows). `BrowseRow` (`xirja-app`) shows
+  it as "from €X.XX ·" ahead of the existing store-count text.
+- **Department filter chips**: a horizontally scrolling row of chips (All /
+  Fruit & veg / Bakery / Dairy & chilled / Meat & fish / Drinks / Pantry /
+  Other) above the category list, combined with the existing text filter
+  (both apply together). There is no real "department" concept anywhere in
+  the data model — the ~150+ real shopping categories
+  (`category_taxonomy.py`) are already fine-grained (e.g. "Milk",
+  "Yoghurt", "Cheese" are three separate categories, not one "Dairy"
+  bucket) — so this is deliberately a CLIENT-ONLY keyword classifier
+  (`classifyDepartment` in `App.js`), not a backend/schema change: same
+  "first draft from real category names, not a perfectly reviewed
+  taxonomy" spirit as that file's own name-based fallback classification.
+  Worth remembering if a category gets miscategorized later: fix the
+  keyword list in `classifyDepartment`, nothing in the database needs to
+  change for this.
+
+**Real discrepancy #8, found by the owner testing on-device (took two
+attempts to actually close out)**: the department chip row rendered as a
+barely-visible sliver instead of proper pill-shaped chips. First attempt:
+diagnosed as the horizontal `ScrollView` holding the chips having no
+explicit height and being left to size itself from its children — a known
+Android/Yoga quirk where a row-direction `ScrollView`'s content container
+defaults to stretching against a not-yet-determined cross-axis size and
+collapses instead of sizing to content. Fixed by giving the row an
+explicit `height: 44` — but the owner's next screenshot showed it STILL
+visibly clipped (chip text cut off), just less severely. Rather than keep
+guessing at ScrollView-specific Android sizing behavior blind (this
+sandbox has no way to actually render/screenshot real RN layout to confirm
+a fix before shipping it — a real limitation worth remembering for any
+future layout bug, not just this one), the second fix removes the
+`ScrollView` entirely: the 8 department chips now sit in a plain `View`
+with `flexWrap: "wrap"`, wrapping to a second line instead of scrolling
+horizontally. No cross-axis sizing left to get wrong, identical behavior
+on every platform. Same general lesson as Real discrepancy #7's
+`SafeAreaView` bug: Android-only layout gaps that Snack's web preview
+cannot catch keep being the real risk in this app, more than anything
+Snack itself flags.
+
+**Confirmed by the owner on the real device, 29 Sept**: chips render
+correctly now — Task 2 fully closed.
+
+**Task 3 — "Compare" — DONE, 29 Sept.** Entirely client-side (`App.js`,
+`xirja-app` repo) — no backend change, since every number it needs
+(`item.by_store`, `item.cheapest`) was already being fetched. Verified with
+the manual bracket-balance / styles-used-vs-defined scripts and by diffing
+against a fresh clone (only this screen's code touched). Not yet confirmed
+by the owner on-device.
+- **3-way strategy toggle** ("Cheapest each" / "2 stores" / "One store")
+  at the top of Compare, replacing the single whole-basket ranking that
+  was the only view before:
+  - "One store" is the pre-existing ranked-list view, unchanged in
+    substance (buy everything at one store, its own gaps filled in at
+    whichever other store is cheapest for that item).
+  - "Cheapest each" is a single headline total: every item from its own
+    individually cheapest store, whatever that means for stop count — the
+    same total the "Split into N store lists" button already implied, now
+    shown as its own comparison point instead of only reachable by tapping
+    through to Store lists.
+  - "2 stores" is new: `computeBestTwoStores` brute-forces every real pair
+    of stores (cheap even at real-world store counts — this app has 3) and
+    picks the pair that minimizes total cost, buying each item from
+    whichever of the two is cheaper (or, for an item neither carries,
+    falling back to wherever it's cheapest anywhere, flagged as a third
+    stop in the breakdown).
+- **Expandable item-by-item breakdown**: in "One store" mode, tapping any
+  store's row expands a per-item list showing which items come from that
+  store vs. "elsewhere." In "Cheapest each" and "2 stores" mode, a "Show
+  item-by-item breakdown" toggle beneath the headline card does the same
+  for that strategy's assignment. All three modes share one
+  `CompareBreakdown` renderer and one `buildBreakdownRows` helper — only
+  the "which store does this item come from" resolver function differs per
+  mode — specifically so the three views can't quietly drift into three
+  different-looking breakdowns over time.
+
+**Confirmed by the owner on the real device, 29 Sept**: looks good — Task 3
+fully closed.
+
+**Task 4 — "Item detail" — DONE, 29 Sept.** Entirely client-side (`App.js`)
+— NO backend change needed, which only became clear by actually reading
+`api/main.py` rather than assuming: `fetch_cheapest_for_category` (shared
+by every endpoint that returns a priced item, including
+`GET /lists/{user_id}`) was already selecting `product_name`,
+`price_per_unit`, `price_per_unit_measure`, and `observed_at` for every
+offer — the app was just never displaying them. Worth remembering for a
+future gap: check what a shared query already returns before assuming a
+new field needs a backend change. Verified with the manual bracket-balance
+/ styles-used-vs-defined scripts and diffed against a fresh clone (only
+Item detail's code touched). Not yet confirmed by the owner on-device.
+- **Per-store freshness timestamp**: each store row under "All stores" now
+  shows "updated today HH:MM" / "updated yesterday HH:MM" / "updated Nd
+  ago" / a short date, from that offer's real `observed_at` — deliberately
+  coarse (a shopper cares whether a price is stale, not the exact crawl
+  minute). Same timestamp shown on the "Cheapest right now" card for its
+  store.
+- **Unit/source subtitle**: the header now shows the cheapest offer's
+  `product_name` (e.g. the exact product a category resolved to) and its
+  unit price (e.g. "€1.20/l", from `price_per_unit`/`price_per_unit_measure`)
+  under the existing store-count line. Each store row in "All stores" also
+  gets its own product name / unit price / freshness line, since these can
+  differ between stores for what's nominally "the same" shared category.
+  Both `price_per_unit` and `observed_at` can be null (a crawler couldn't
+  work out a per-unit figure, or there's simply no history) -- handled by
+  omitting that piece rather than showing a broken "€NaN/undefined" or
+  "updated Invalid Date".
+
+**Real discrepancy #9, found by the owner testing on-device**: the "All
+stores" rows showed a real product name, unit price and freshness, but the
+owner's screenshot showed each one visibly cut off mid-word ("PINEAPPLE
+NECTAR 200ML · €1.50/l · upd..."). Root cause: all three pieces
+(product name, unit price, freshness) were joined into ONE string on ONE
+line, capped at `numberOfLines={1}` -- a real product name is often long
+enough on its own to fill that single line, silently pushing the unit
+price and freshness clean off the end with no visual cue anything was
+missing (an ellipsis, but no way to tell how much was cut or that a whole
+second and third piece of information was gone). Fixed by splitting into
+two separate lines: the product name on its own truncated line (the one
+piece actually long enough to need truncating), and unit price + freshness
+together on a second, always-short line beneath it that's never truncated.
+Same fix applied to the header's version of this (right under the item
+title), which had the identical bug. Worth remembering as a general
+pattern for this app: joining several pieces of real (unbounded-length)
+data into one truncated line hides information rather than fitting it --
+each piece that needs to always be visible belongs on its own line.
+
+**Confirmed by the owner on the real device, 29 Sept**: looks good — Task 4
+fully closed.
+
+**Task 5 — "Store lists" — two of three gaps DONE, 29 Sept; the third
+deliberately deferred.** One real backend change this time
+(`api/main.py`), the rest client-side (`App.js`). Verified with
+`python3 -m py_compile` + a fresh-clone diff for `main.py`, the manual
+bracket-balance / styles-used-vs-defined scripts + a fresh-clone diff for
+`App.js`. Not yet confirmed by the owner on-device.
+- **Outlet locality**: `outlet.locality` (a real column already in
+  `schema.sql` -- e.g. "Swieqi" -- just never selected by any query) is now
+  returned by `fetch_cheapest_for_category` (shared by every endpoint that
+  prices an item) as `outlet_locality`. Each store list card now shows a
+  locality line under the store name.
+  - Real wrinkle worth remembering: a store's cheapest price is resolved
+    PER CATEGORY, independently, by `fetch_cheapest_for_category` -- so
+    "Greens" on one stop can genuinely mean milk from its Swieqi branch and
+    bread from its Mosta branch, two different real outlets, if that's
+    honestly where each was cheapest. There is no single "the" outlet for
+    a store's whole list in the data as it exists today. `computeStoreLists`
+    now tallies every outlet actually hit per store and shows whichever one
+    covers the most of that stop's items as the card's locality, adding "+
+    other branches" when the stop truly does span more than one — rather
+    than silently showing a locality that's only correct for some of the
+    items on that card.
+- **Per-card progress**: each store list card already showed "N of M
+  checked" as text; now there's also a real progress bar (green when the
+  stop is fully checked, that store's own color otherwise) beneath the
+  existing cost-comparison bar, only shown once at least one item on that
+  stop has been checked off.
+- **"Trip summary" link — deliberately NOT added yet.** There is nowhere
+  for it to point to: the Trip summary screen itself is Task 7, still
+  pending. Adding a link to a screen that doesn't exist would either crash
+  navigation or need a placeholder that gets thrown away once Task 7 lands
+  -- neither is worth doing now. Revisit this specific piece once Task 7 is
+  done (the link itself is trivial at that point: `checkedItemIds` and
+  every store group's totals are already available where the card renders,
+  everything a Trip summary screen would need).
+
+## How to keep this file honest
+
+- Before believing any status claim (from a chat session, an old summary,
+  anything) — check it against the actual repo/deployment, the way this
+  file's contents were checked on 24 Sept 2026, not against what a
+  conversation "remembers."
+- Update this file at the end of any session where real progress happens,
+  and commit it in the same batch as the code change it describes.
