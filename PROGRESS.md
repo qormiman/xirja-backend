@@ -554,18 +554,27 @@ on-device.
   keyword list in `classifyDepartment`, nothing in the database needs to
   change for this.
 
-**Real discrepancy #8, found by the owner testing on-device**: the
-department chip row rendered as a barely-visible sliver instead of proper
-pill-shaped chips. Root cause: the horizontal `ScrollView` holding the
-chips had no explicit height and was left to size itself from its
-children — a known Android/Yoga quirk where a row-direction `ScrollView`'s
-content container defaults to stretching its children against a
-not-yet-determined cross-axis (height) size, and collapses instead of
-sizing to content the way it would on iOS or in a web preview (another
-Android-only layout gap Snack's web preview couldn't have caught, the same
-pattern as Real discrepancy #7's `SafeAreaView` bug). Fixed by giving the
-row an explicit `height: 44` and `alignItems: "center"` on its content,
-instead of relying on intrinsic sizing.
+**Real discrepancy #8, found by the owner testing on-device (took two
+attempts to actually close out)**: the department chip row rendered as a
+barely-visible sliver instead of proper pill-shaped chips. First attempt:
+diagnosed as the horizontal `ScrollView` holding the chips having no
+explicit height and being left to size itself from its children — a known
+Android/Yoga quirk where a row-direction `ScrollView`'s content container
+defaults to stretching against a not-yet-determined cross-axis size and
+collapses instead of sizing to content. Fixed by giving the row an
+explicit `height: 44` — but the owner's next screenshot showed it STILL
+visibly clipped (chip text cut off), just less severely. Rather than keep
+guessing at ScrollView-specific Android sizing behavior blind (this
+sandbox has no way to actually render/screenshot real RN layout to confirm
+a fix before shipping it — a real limitation worth remembering for any
+future layout bug, not just this one), the second fix removes the
+`ScrollView` entirely: the 8 department chips now sit in a plain `View`
+with `flexWrap: "wrap"`, wrapping to a second line instead of scrolling
+horizontally. No cross-axis sizing left to get wrong, identical behavior
+on every platform. Same general lesson as Real discrepancy #7's
+`SafeAreaView` bug: Android-only layout gaps that Snack's web preview
+cannot catch keep being the real risk in this app, more than anything
+Snack itself flags.
   change for this.
 
 ## How to keep this file honest
