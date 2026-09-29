@@ -442,8 +442,8 @@ features rather than deferring them:
 2. **Browse** — DONE (see below).
 3. **Compare** — DONE (see below).
 4. **Item detail** — DONE (see below).
-5. Store lists — outlet locality/address, per-store progress on the card,
-   a "Trip summary" link.
+5. **Store lists** — DONE except the "Trip summary" link, which has
+   nowhere to point yet (see below and Task 7).
 6. Shopping mode — category-grouped item list, circular progress ring.
 7. New "Trip summary" screen.
 8. New "Settings" screen + a 4-tab bar (List, Compare, Shop, Settings)
@@ -658,6 +658,45 @@ title), which had the identical bug. Worth remembering as a general
 pattern for this app: joining several pieces of real (unbounded-length)
 data into one truncated line hides information rather than fitting it --
 each piece that needs to always be visible belongs on its own line.
+
+**Confirmed by the owner on the real device, 29 Sept**: looks good — Task 4
+fully closed.
+
+**Task 5 — "Store lists" — two of three gaps DONE, 29 Sept; the third
+deliberately deferred.** One real backend change this time
+(`api/main.py`), the rest client-side (`App.js`). Verified with
+`python3 -m py_compile` + a fresh-clone diff for `main.py`, the manual
+bracket-balance / styles-used-vs-defined scripts + a fresh-clone diff for
+`App.js`. Not yet confirmed by the owner on-device.
+- **Outlet locality**: `outlet.locality` (a real column already in
+  `schema.sql` -- e.g. "Swieqi" -- just never selected by any query) is now
+  returned by `fetch_cheapest_for_category` (shared by every endpoint that
+  prices an item) as `outlet_locality`. Each store list card now shows a
+  locality line under the store name.
+  - Real wrinkle worth remembering: a store's cheapest price is resolved
+    PER CATEGORY, independently, by `fetch_cheapest_for_category` -- so
+    "Greens" on one stop can genuinely mean milk from its Swieqi branch and
+    bread from its Mosta branch, two different real outlets, if that's
+    honestly where each was cheapest. There is no single "the" outlet for
+    a store's whole list in the data as it exists today. `computeStoreLists`
+    now tallies every outlet actually hit per store and shows whichever one
+    covers the most of that stop's items as the card's locality, adding "+
+    other branches" when the stop truly does span more than one — rather
+    than silently showing a locality that's only correct for some of the
+    items on that card.
+- **Per-card progress**: each store list card already showed "N of M
+  checked" as text; now there's also a real progress bar (green when the
+  stop is fully checked, that store's own color otherwise) beneath the
+  existing cost-comparison bar, only shown once at least one item on that
+  stop has been checked off.
+- **"Trip summary" link — deliberately NOT added yet.** There is nowhere
+  for it to point to: the Trip summary screen itself is Task 7, still
+  pending. Adding a link to a screen that doesn't exist would either crash
+  navigation or need a placeholder that gets thrown away once Task 7 lands
+  -- neither is worth doing now. Revisit this specific piece once Task 7 is
+  done (the link itself is trivial at that point: `checkedItemIds` and
+  every store group's totals are already available where the card renders,
+  everything a Trip summary screen would need).
 
 ## How to keep this file honest
 
