@@ -554,6 +554,20 @@ on-device.
   keyword list in `classifyDepartment`, nothing in the database needs to
   change for this.
 
+**Real discrepancy #8, found by the owner testing on-device**: the
+department chip row rendered as a barely-visible sliver instead of proper
+pill-shaped chips. Root cause: the horizontal `ScrollView` holding the
+chips had no explicit height and was left to size itself from its
+children — a known Android/Yoga quirk where a row-direction `ScrollView`'s
+content container defaults to stretching its children against a
+not-yet-determined cross-axis (height) size, and collapses instead of
+sizing to content the way it would on iOS or in a web preview (another
+Android-only layout gap Snack's web preview couldn't have caught, the same
+pattern as Real discrepancy #7's `SafeAreaView` bug). Fixed by giving the
+row an explicit `height: 44` and `alignItems: "center"` on its content,
+instead of relying on intrinsic sizing.
+  change for this.
+
 ## How to keep this file honest
 
 - Before believing any status claim (from a chat session, an old summary,
