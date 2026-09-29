@@ -640,6 +640,25 @@ Item detail's code touched). Not yet confirmed by the owner on-device.
   omitting that piece rather than showing a broken "€NaN/undefined" or
   "updated Invalid Date".
 
+**Real discrepancy #9, found by the owner testing on-device**: the "All
+stores" rows showed a real product name, unit price and freshness, but the
+owner's screenshot showed each one visibly cut off mid-word ("PINEAPPLE
+NECTAR 200ML · €1.50/l · upd..."). Root cause: all three pieces
+(product name, unit price, freshness) were joined into ONE string on ONE
+line, capped at `numberOfLines={1}` -- a real product name is often long
+enough on its own to fill that single line, silently pushing the unit
+price and freshness clean off the end with no visual cue anything was
+missing (an ellipsis, but no way to tell how much was cut or that a whole
+second and third piece of information was gone). Fixed by splitting into
+two separate lines: the product name on its own truncated line (the one
+piece actually long enough to need truncating), and unit price + freshness
+together on a second, always-short line beneath it that's never truncated.
+Same fix applied to the header's version of this (right under the item
+title), which had the identical bug. Worth remembering as a general
+pattern for this app: joining several pieces of real (unbounded-length)
+data into one truncated line hides information rather than fitting it --
+each piece that needs to always be visible belongs on its own line.
+
 ## How to keep this file honest
 
 - Before believing any status claim (from a chat session, an old summary,
