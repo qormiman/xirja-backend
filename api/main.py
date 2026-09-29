@@ -163,6 +163,7 @@ CHEAPEST_PER_CATEGORY_SQL = """
             s.color,
             o.id AS outlet_id,
             o.name AS outlet_name,
+            o.locality AS outlet_locality,
             l.chain_product_name
         FROM listing l
         JOIN outlet o ON o.id = l.outlet_id
@@ -176,6 +177,7 @@ CHEAPEST_PER_CATEGORY_SQL = """
         cl.color,
         cl.outlet_id,
         cl.outlet_name,
+        cl.outlet_locality,
         cl.chain_product_name,
         latest.price,
         latest.price_per_unit,
@@ -213,6 +215,7 @@ def group_cheapest_per_store(rows):
         color,
         outlet_id,
         outlet_name,
+        outlet_locality,
         product_name,
         price,
         price_per_unit,
@@ -231,6 +234,7 @@ def group_cheapest_per_store(rows):
             "color": color,
             "outlet_id": outlet_id,
             "outlet_name": outlet_name,
+            "outlet_locality": outlet_locality,
             "product_name": product_name,
             "price": float(price),
             "price_per_unit": (
