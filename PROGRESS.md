@@ -718,8 +718,42 @@ line that must always show its full content at a fixed number of lines --
 either don't truncate it, or make sure only genuinely-safe-to-truncate
 content (never a flag like "+ other branches") is the part that can get
 cut. Verified with the manual bracket-balance / styles-used-vs-defined
-scripts and a fresh-clone diff for `App.js`; not yet confirmed by the owner
-on-device.
+scripts and a fresh-clone diff for `App.js`.
+
+**Confirmed by the owner, 29 Sept**: locality line looks good — Task 5
+fully closed.
+
+**Task 6 — "Shopping mode" — DONE, 29 Sept**, both agreed pieces, entirely
+client-side (`App.js`), no backend change. Verified with the manual
+bracket-balance / styles-used-vs-defined scripts and a fresh-clone diff for
+`App.js`. Not yet confirmed by the owner on-device.
+- **Department-grouped item list**: the checklist inside a stop is now
+  broken into section headers by department ("Bakery", "Dairy & chilled",
+  etc.), sections sorted alphabetically, via a new `groupItemsByDepartment`
+  helper that reuses Browse's existing `classifyDepartment` classifier --
+  deliberately the same taxonomy in both places rather than inventing a
+  second one that could quietly drift out of sync. `FlatList` was swapped
+  for React Native's built-in `SectionList` (no new dependency needed for
+  this part).
+- **Circular progress ring**: the old thin linear bar under the header was
+  replaced with a circular ring (new `CircularProgress` component) next to
+  the store name, showing "checked/total" in the middle, filled in that
+  store's own color.
+  - **Real, deliberate new dependency: `react-native-svg`.** Every other
+    icon/bar in this app is built from plain Views specifically to avoid
+    adding native dependencies (see the `TabIcon` comment) -- but a true,
+    smoothly-curved ring genuinely can't be drawn with plain Views/CSS in
+    React Native; it needs SVG. `react-native-svg` is a standard,
+    well-supported Expo library, so this was a deliberate exception, made
+    explicitly with the owner (asked first, since past dependency additions
+    caused real build pain -- see the `babel-preset-expo` story above).
+  - **This means before the next EAS build**: run
+    `npx expo install react-native-svg` in the project (same Codespaces
+    workflow as before) so Expo resolves the exact version this SDK (54)
+    expects, THEN commit/build. `package.json` already has a starting
+    version pinned (`15.12.1`) as a fallback, but `expo install` is what
+    should actually decide the final version -- don't skip that step and
+    trust the pinned number blindly.
 
 ## How to keep this file honest
 
