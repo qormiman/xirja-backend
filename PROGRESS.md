@@ -698,6 +698,29 @@ bracket-balance / styles-used-vs-defined scripts + a fresh-clone diff for
   every store group's totals are already available where the card renders,
   everything a Trip summary screen would need).
 
+**Real discrepancy #10, found by the owner testing on-device (same day,
+same bug class as #9)**: the owner's screenshot showed a store list card's
+locality line rendering as "Greens - Mriehel + other bra..." cut off right
+against the price. Two things stacked to cause it: (1) when
+`outlet_locality` is null for a given outlet row (it isn't backfilled for
+every real outlet yet), the code fell back to the outlet's full `name`
+field, e.g. "Greens - Mriehel" -- redundant, since the card already shows
+"Greens" as its own title, and long enough on its own to crowd out the "+
+other branches" flag; (2) that combined string was still capped at
+`numberOfLines={1}`, so exactly like #9, the important piece (the
+"+ other branches" flag) got silently cut with only an ellipsis as a clue.
+Fixed with a new `shortenOutletName(outletName, storeName)` helper that
+strips the redundant leading "<store name> - " (or "<store name> ") prefix
+off the fallback outlet name via a case-insensitive regex, and by removing
+`numberOfLines={1}` from the locality line entirely so it wraps instead of
+truncating. Same lesson as #9, restated because it recurred: never cap a
+line that must always show its full content at a fixed number of lines --
+either don't truncate it, or make sure only genuinely-safe-to-truncate
+content (never a flag like "+ other branches") is the part that can get
+cut. Verified with the manual bracket-balance / styles-used-vs-defined
+scripts and a fresh-clone diff for `App.js`; not yet confirmed by the owner
+on-device.
+
 ## How to keep this file honest
 
 - Before believing any status claim (from a chat session, an old summary,
