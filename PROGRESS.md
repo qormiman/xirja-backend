@@ -441,7 +441,7 @@ features rather than deferring them:
 1. **My list** — DONE (see below).
 2. **Browse** — DONE (see below).
 3. **Compare** — DONE (see below).
-4. Item detail — per-store freshness timestamp, unit/source subtitle.
+4. **Item detail** — DONE (see below).
 5. Store lists — outlet locality/address, per-store progress on the card,
    a "Trip summary" link.
 6. Shopping mode — category-grouped item list, circular progress ring.
@@ -608,6 +608,37 @@ by the owner on-device.
   the "which store does this item come from" resolver function differs per
   mode — specifically so the three views can't quietly drift into three
   different-looking breakdowns over time.
+
+**Confirmed by the owner on the real device, 29 Sept**: looks good — Task 3
+fully closed.
+
+**Task 4 — "Item detail" — DONE, 29 Sept.** Entirely client-side (`App.js`)
+— NO backend change needed, which only became clear by actually reading
+`api/main.py` rather than assuming: `fetch_cheapest_for_category` (shared
+by every endpoint that returns a priced item, including
+`GET /lists/{user_id}`) was already selecting `product_name`,
+`price_per_unit`, `price_per_unit_measure`, and `observed_at` for every
+offer — the app was just never displaying them. Worth remembering for a
+future gap: check what a shared query already returns before assuming a
+new field needs a backend change. Verified with the manual bracket-balance
+/ styles-used-vs-defined scripts and diffed against a fresh clone (only
+Item detail's code touched). Not yet confirmed by the owner on-device.
+- **Per-store freshness timestamp**: each store row under "All stores" now
+  shows "updated today HH:MM" / "updated yesterday HH:MM" / "updated Nd
+  ago" / a short date, from that offer's real `observed_at` — deliberately
+  coarse (a shopper cares whether a price is stale, not the exact crawl
+  minute). Same timestamp shown on the "Cheapest right now" card for its
+  store.
+- **Unit/source subtitle**: the header now shows the cheapest offer's
+  `product_name` (e.g. the exact product a category resolved to) and its
+  unit price (e.g. "€1.20/l", from `price_per_unit`/`price_per_unit_measure`)
+  under the existing store-count line. Each store row in "All stores" also
+  gets its own product name / unit price / freshness line, since these can
+  differ between stores for what's nominally "the same" shared category.
+  Both `price_per_unit` and `observed_at` can be null (a crawler couldn't
+  work out a per-unit figure, or there's simply no history) -- handled by
+  omitting that piece rather than showing a broken "€NaN/undefined" or
+  "updated Invalid Date".
 
 ## How to keep this file honest
 
