@@ -440,9 +440,7 @@ features rather than deferring them:
 
 1. **My list** — DONE (see below).
 2. **Browse** — DONE (see below).
-3. Compare — 3-way strategy toggle ("Cheapest each" / "2 stores" / "One
-   store") inside Compare itself, a new "2 stores" optimal-split
-   algorithm, and an expandable item-by-item breakdown.
+3. **Compare** — DONE (see below).
 4. Item detail — per-store freshness timestamp, unit/source subtitle.
 5. Store lists — outlet locality/address, per-store progress on the card,
    a "Trip summary" link.
@@ -530,8 +528,7 @@ checked with `python3 -m py_compile` (no real pytest suite exists for this
 endpoint yet — see the "Not started" section's note on test coverage) and
 diffed against a fresh clone (only the intended change); `App.js` checked
 with the manual bracket-balance / styles-used-vs-defined scripts and
-diffed against a fresh clone the same way. Not yet confirmed by the owner
-on-device.
+diffed against a fresh clone the same way.
 - **"from €X" per row**: `GET /categories` (`xirja-backend`) now also
   returns `min_price` per category — the single cheapest current price for
   that category across every store, computed with one extra `MIN()` in the
@@ -575,7 +572,42 @@ on every platform. Same general lesson as Real discrepancy #7's
 `SafeAreaView` bug: Android-only layout gaps that Snack's web preview
 cannot catch keep being the real risk in this app, more than anything
 Snack itself flags.
-  change for this.
+
+**Confirmed by the owner on the real device, 29 Sept**: chips render
+correctly now — Task 2 fully closed.
+
+**Task 3 — "Compare" — DONE, 29 Sept.** Entirely client-side (`App.js`,
+`xirja-app` repo) — no backend change, since every number it needs
+(`item.by_store`, `item.cheapest`) was already being fetched. Verified with
+the manual bracket-balance / styles-used-vs-defined scripts and by diffing
+against a fresh clone (only this screen's code touched). Not yet confirmed
+by the owner on-device.
+- **3-way strategy toggle** ("Cheapest each" / "2 stores" / "One store")
+  at the top of Compare, replacing the single whole-basket ranking that
+  was the only view before:
+  - "One store" is the pre-existing ranked-list view, unchanged in
+    substance (buy everything at one store, its own gaps filled in at
+    whichever other store is cheapest for that item).
+  - "Cheapest each" is a single headline total: every item from its own
+    individually cheapest store, whatever that means for stop count — the
+    same total the "Split into N store lists" button already implied, now
+    shown as its own comparison point instead of only reachable by tapping
+    through to Store lists.
+  - "2 stores" is new: `computeBestTwoStores` brute-forces every real pair
+    of stores (cheap even at real-world store counts — this app has 3) and
+    picks the pair that minimizes total cost, buying each item from
+    whichever of the two is cheaper (or, for an item neither carries,
+    falling back to wherever it's cheapest anywhere, flagged as a third
+    stop in the breakdown).
+- **Expandable item-by-item breakdown**: in "One store" mode, tapping any
+  store's row expands a per-item list showing which items come from that
+  store vs. "elsewhere." In "Cheapest each" and "2 stores" mode, a "Show
+  item-by-item breakdown" toggle beneath the headline card does the same
+  for that strategy's assignment. All three modes share one
+  `CompareBreakdown` renderer and one `buildBreakdownRows` helper — only
+  the "which store does this item come from" resolver function differs per
+  mode — specifically so the three views can't quietly drift into three
+  different-looking breakdowns over time.
 
 ## How to keep this file honest
 
