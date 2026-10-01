@@ -723,10 +723,11 @@ scripts and a fresh-clone diff for `App.js`.
 **Confirmed by the owner, 29 Sept**: locality line looks good — Task 5
 fully closed.
 
-**Task 6 — "Shopping mode" — DONE, 29 Sept**, both agreed pieces, entirely
+**Task 6 — "Shopping mode" — DONE, 30 Sept**, both agreed pieces, entirely
 client-side (`App.js`), no backend change. Verified with the manual
 bracket-balance / styles-used-vs-defined scripts and a fresh-clone diff for
-`App.js`. Not yet confirmed by the owner on-device.
+`App.js`, AND confirmed by the owner on the real device, 30 Sept: department
+sections and the circular ring both look good.
 - **Department-grouped item list**: the checklist inside a stop is now
   broken into section headers by department ("Bakery", "Dairy & chilled",
   etc.), sections sorted alphabetically, via a new `groupItemsByDepartment`
@@ -754,6 +755,60 @@ bracket-balance / styles-used-vs-defined scripts and a fresh-clone diff for
     version pinned (`15.12.1`) as a fallback, but `expo install` is what
     should actually decide the final version -- don't skip that step and
     trust the pinned number blindly.
+
+**Real discrepancy #11, a deployment-process one rather than a code bug:
+the very first Task 6 build "succeeded" but installed with NO visible
+changes at all -- not even Task 5's fix.** Root cause had nothing to do
+with the app code itself: the Codespace used for the build had a
+hand-edited, uncommitted `package.json` (an old local patch that happened
+to already include `react-native-svg`), and had never actually run
+`git pull` to bring in the real `App.js` update from GitHub. So the build
+compiled genuinely old app logic against new-looking dependencies -- it
+"succeeded" in the sense that the build pipeline had no errors, which gave
+false confidence that the deployed app was current. Fixed by running
+`git diff` to see the local-only edit, discarding it (`git checkout --
+package.json`, since GitHub's copy already had the same change plus the
+real `App.js` update), then `git pull`, then confirming with a plain
+`grep -c <a symbol only in the new code> App.js` that the working copy
+actually changed before rebuilding. **The general lesson: "the build
+succeeded" only proves the pipeline ran without errors -- it says nothing
+about whether the code it built from was actually current.** Before any
+future EAS build, confirm the Codespace's working copy really has the
+intended change (a quick `grep` for something new, same as this fix) --
+don't assume a successful build means the right code shipped. (A Codespace
+terminal resetting or looking "wiped" afterward is normal and unrelated --
+what matters is `git log`/`git status` showing the right commit, which
+survives a terminal restart fine as long as the change was actually
+committed/pulled, not just sitting locally uncommitted.)
+
+**Task 7 — "Trip summary" screen — DONE, 30 Sept**, a new screen, entirely
+client-side (`App.js`), no backend change -- built from data every other
+screen already computes (`computeStoreLists` for the per-store split,
+`checkedItemIds` for what's actually been checked off, `computeStoreRanking`
+-- the same "whole basket at one store" comparison Compare's "One store"
+tab shows -- for the savings baseline), rather than inventing anything new.
+Verified with the manual bracket-balance / styles-used-vs-defined scripts
+and a fresh-clone diff for `App.js`. Not yet confirmed by the owner
+on-device.
+- **Two entry points, as agreed with the owner**: a standing "View trip
+  summary" (or "Preview trip summary" before anything's checked off) link
+  at the top of Store lists, visible any time; and, in Shopping mode,
+  once a stop is finished AND no other stop has anything left either (the
+  whole trip, not just this stop), the bottom bar's old "Done -- back to
+  store lists" button becomes "Trip finished -- view summary" instead.
+- **Content, all three pieces the owner asked for**: a per-store card
+  showing what's actually been spent there so far (only checked-off items
+  count, with "of €X planned" shown alongside when the stop isn't finished
+  yet); a receipt-style list of the checked-off items under each store
+  (reusing the same row style as Compare's expandable breakdown --
+  `compareBreakdownRow` etc. -- rather than a new one); and a savings
+  banner comparing the full planned multi-store split against the cheapest
+  single store for the whole list (same number Compare's "One store" tab
+  would show), shown whenever that saving is real.
+- New root-stack screen `TripSummary` (`TripSummaryScreen`), sitting
+  alongside `StoreLists`/`Shopping`/`ItemDetail` the same way -- reachable
+  from either entry point via `navigation.navigate("TripSummary")`, same
+  one-`goBack()`-away pattern as every other pushed screen in this file.
 
 ## How to keep this file honest
 
