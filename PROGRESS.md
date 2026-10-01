@@ -788,8 +788,8 @@ screen already computes (`computeStoreLists` for the per-store split,
 -- the same "whole basket at one store" comparison Compare's "One store"
 tab shows -- for the savings baseline), rather than inventing anything new.
 Verified with the manual bracket-balance / styles-used-vs-defined scripts
-and a fresh-clone diff for `App.js`. Not yet confirmed by the owner
-on-device.
+and a fresh-clone diff for `App.js`, AND confirmed by the owner on the real
+device, 1 Oct: "works great."
 - **Two entry points, as agreed with the owner**: a standing "View trip
   summary" (or "Preview trip summary" before anything's checked off) link
   at the top of Store lists, visible any time; and, in Shopping mode,
@@ -809,6 +809,60 @@ on-device.
   alongside `StoreLists`/`Shopping`/`ItemDetail` the same way -- reachable
   from either entry point via `navigation.navigate("TripSummary")`, same
   one-`goBack()`-away pattern as every other pushed screen in this file.
+
+**Task 8 — new "Settings" screen + 5-tab bar restructure — DONE, 1 Oct**,
+entirely client-side (`App.js`), no backend change. Scope confirmed
+explicitly with the owner first, since the backlog's one-line description
+("4-tab bar: List, Compare, Shop, Settings") was ambiguous about what
+happens to the existing "Browse" tab and what "Shop" actually shows --
+resolved as: keep Browse as its own tab (5 tabs total, not 4), "Shop" is
+the existing Store lists screen promoted to a tab, and Settings holds list
+name editing, clearing data, and basic app info. Verified with the manual
+bracket-balance / styles-used-vs-defined scripts and a fresh-clone diff for
+`App.js`. Not yet confirmed by the owner on-device.
+- **"Store lists" is now also the "Shop" tab**, not just something Compare
+  pushes you into. This is the one structurally interesting part of this
+  change, given this app's history with tab-bar bugs (see the React
+  Navigation migration story earlier in this file) -- but it's safe
+  specifically because nothing about tab-bar VISIBILITY changes for Store
+  lists: it's simply always on the tab bar now, the same as "My
+  list"/"Browse"/"Compare" always were. The fragile pattern that caused the
+  original "stuck, no way back" bug (dynamically hiding the tab bar based
+  on which nested route is focused) is never involved here -- Shopping mode
+  and Trip summary are still pushed on the ROOT stack exactly as before
+  (not nested inside the tab), so popping back from them still just lands
+  on whichever tab was open, unchanged. The old standalone root-level
+  "StoreLists" screen was removed (nothing pushes to it any more); Compare's
+  "Split into store lists" button now does `navigation.navigate("ShopTab")`
+  -- a plain same-navigator tab switch -- instead.
+- **New "Settings" tab**, three sections, all picked explicitly from
+  options given to the owner rather than guessed:
+  - **List name**: a full-width editable row (new `SettingsListNameRow`,
+    same commit logic -- trim, default fallback, uppercase -- as the
+    existing compact `ListLabelEditor` on "My list", but a different
+    component for the different visual context). This is an ADDITIONAL
+    place to edit the name, not a replacement -- "My list"'s own inline
+    editor still works exactly as before; removing it was never asked for.
+  - **Data**: "Clear checked-off items" (resets `checkedItemIds` to empty
+    -- for starting a new trip against the same list without manually
+    unchecking everything) and "Clear my list" (removes every item --
+    genuinely destructive, so it's gated behind a native `Alert.alert`
+    confirmation either way). There's no bulk-delete endpoint on the
+    backend, so "Clear my list" just calls the same per-item DELETE
+    `handleRemove` already uses, once per item, awaited in sequence (not
+    `Promise.all`) so each request sees a consistent server-side state
+    rather than racing.
+  - **About**: app version (`APP_VERSION`, a plain hardcoded constant --
+    deliberately NOT read live from `app.json` via `expo-constants`, since
+    that would be a new native dependency just to avoid typing a number
+    twice; keep it in sync with `app.json`'s `"version"` by hand) and the
+    anonymous per-device id (purely for debugging if it's ever needed --
+    same meaningless-string id `DEVICE_ID_STORAGE_KEY` already generates,
+    just displayed here for the first time).
+- Two new tab icons (`TabIcon`'s `"shop"`/`"settings"` shapes) drawn the
+  same plain-View way as every existing tab icon in this file -- a bag
+  shape and a ring-plus-crossed-bars "gear," deliberately still no icon
+  font/library.
 
 ## How to keep this file honest
 
